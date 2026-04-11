@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Dhamaka · contextual spellcheck demo</title>
+    <title>Dhamaka · real on-device spellcheck via Transformers.js</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="../styles.css" />
     <link rel="stylesheet" href="./demos.css" />
@@ -12,31 +12,110 @@
         "dhamaka": "/sdk/index.js",
         "@dhamaka/runtime": "/runtime/index.js",
         "@dhamaka/runtime/engine": "/runtime/engine.js",
-        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js",
+        "@huggingface/transformers": "https://esm.sh/@huggingface/transformers@3"
       }
     }
     </script>
+    <style>
+      .status-card {
+        margin: 1rem 0;
+        padding: 0.9rem 1.1rem;
+        border-radius: 8px;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border-strong);
+        font-size: 13px;
+        color: var(--text-dim);
+      }
+      .status-card .status-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 0.5rem;
+      }
+      .status-card .pulse {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 50%;
+        background: var(--warn);
+        box-shadow: 0 0 10px currentColor;
+        display: inline-block;
+      }
+      .status-card.ready .pulse { background: var(--ok); color: var(--ok); }
+      .status-card.err   .pulse { background: var(--err); color: var(--err); }
+      .progress-bar {
+        height: 6px;
+        background: var(--bg);
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 0.5rem 0 0.25rem;
+        position: relative;
+      }
+      .progress-bar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        width: var(--pct, 0%);
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        transition: width 200ms ease;
+      }
+      .status-card .fineprint {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 0.35rem;
+        line-height: 1.55;
+      }
+      .status-card .file {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-top: 0.15rem;
+      }
+    </style>
   </head>
   <body>
     <main class="demo-page">
       <a class="back-link" href="../">← all demos</a>
-      <h1>contextual spellcheck</h1>
+      <h1>on-device spellcheck</h1>
       <p class="lead">
-        Type or paste some prose into the textarea below. The SmartText wrapper
-        watches every keystroke and flags not just misspellings but homophone
-        confusions that depend on context — the class of mistake that a plain
-        dictionary spellchecker can't catch.
-        <br/><br/>
-        Try: <code>I'll see you their tomorrow</code>,
-        <code>I recieve your message</code>,
-        <code>Its been a long day</code>,
-        <code>Your welcome</code>,
-        <code>Alot of the time</code>.
+        Type anything into the textarea below. Every time you stop typing for
+        a moment, Dhamaka hands the whole paragraph to a real language model
+        running <b>inside this browser tab</b> and asks for corrections. No
+        rules, no hardcoded dictionary, no server — an actual LLM reading your
+        prose and finding every misspelling, homophone confusion, and grammar
+        glitch it can spot.
       </p>
+
+      <div class="status-card" id="status-card">
+        <div class="status-title">
+          <span class="pulse"></span>
+          <span id="status-title-text">warming up the model…</span>
+        </div>
+        <div id="status-msg">
+          First visit on this device downloads a ~250 MB language model
+          (<code>Xenova/LaMini-Flan-T5-248M</code> — a FLAN-tuned 248M-parameter
+          instruction-following model). It's cached in your browser's
+          IndexedDB forever after — every future visit is instant and works
+          offline. Grab a coffee; a model this size takes 30–90 seconds on
+          typical broadband and it only happens once.
+        </div>
+        <div class="progress-bar" id="progress-bar" style="--pct: 0%"></div>
+        <div class="file" id="progress-file">—</div>
+        <div class="fineprint">
+          The model runs through <a href="https://github.com/huggingface/transformers.js" target="_blank" rel="noopener">@huggingface/transformers</a>,
+          loaded lazily from <code>esm.sh</code>. Dhamaka wraps it behind the
+          same task / SmartField / Transform API every other demo uses — the
+          runtime underneath is pluggable, the product layer doesn't move.
+        </div>
+      </div>
 
       <div class="demo-panel">
         <h2>draft</h2>
-        <textarea id="draft" placeholder="start typing…"></textarea>
+        <textarea id="draft" placeholder="waiting for the model to finish loading…" disabled></textarea>
         <div class="out" id="suggestions-out">no issues yet</div>
         <div class="tele">
           <span>
@@ -45,77 +124,159 @@
             &nbsp;·&nbsp;
             source: <strong id="t-source">—</strong>
           </span>
-          <span>resolved in <span class="pill" id="t-ms">— ms</span></span>
+          <span>last call <span class="pill" id="t-ms">— ms</span></span>
         </div>
       </div>
 
       <section class="notes">
-        <h3>what's happening</h3>
+        <h3>what's happening under the hood</h3>
         <pre class="diagram">
-  oninput → SmartText → runTask("spellcheck")
+  oninput (debounced 600ms) → SmartText → runTask("spellcheck", { eager: true })
        │
-       ├─ rules: known-misspelling map           ← 0.1 ms
-       ├─ rules: homophone-in-context regexes    ← 0.2 ms
-       └─ model: distilBERT masked LM fallback   ← (planned)
+       ▼
+  spellcheckTask.slow(text, context, engine)
+       │
+       ├─ prompt: "You are a careful proofreader…"
+       ├─ engine.complete(prompt)    ← @huggingface/transformers
+       │                                (LaMini-Flan-T5-248M)
+       │                                runs in WASM, on this device
+       │
+       └─ parse JSON array of {from, to, reason}
 
-  Every suggestion is clickable — apply it back into the textarea.
+  Nothing leaves the tab. No server, no API key, no rate limit.
+  First visit downloads ~250 MB once, cached in IndexedDB forever.
         </pre>
         <p>
-          Click any suggestion chip to apply the fix directly. The edit
-          dispatches a synthetic input event, so the next re-check runs
-          immediately.
+          The <b>formula demo</b> still keeps its pattern rewrites (discounts,
+          taxes, rounding, etc.) because those have objectively-correct
+          structural answers and rules are a legitimate performance path there.
+          Spellcheck is the opposite: probabilistic, context-dependent, long-
+          tail. Rules there would contradict the thesis, so they're gone.
+        </p>
+        <p>
+          If your browser supports Chrome's <code>window.ai</code> Prompt API
+          (Gemini Nano), Dhamaka will prefer that over Transformers.js — it's
+          free, pre-downloaded, and GPU-accelerated. On every other browser
+          you get Transformers.js. Same SDK, same task, same surface.
         </p>
       </section>
     </main>
 
     <script type="module">
-      import { SmartText } from "dhamaka";
+      import { reflex, SmartText } from "dhamaka";
 
+      const statusCard = document.getElementById("status-card");
+      const statusTitle = document.getElementById("status-title-text");
+      const statusMsg = document.getElementById("status-msg");
+      const progressBar = document.getElementById("progress-bar");
+      const progressFile = document.getElementById("progress-file");
       const draft = document.getElementById("draft");
-      const out   = document.getElementById("suggestions-out");
+      const out = document.getElementById("suggestions-out");
       const tCount = document.getElementById("t-count");
       const tSource = document.getElementById("t-source");
       const tMs = document.getElementById("t-ms");
 
-      let startedAt = 0;
-      draft.addEventListener("input", () => {
-        startedAt = performance.now();
-      });
-
-      const smart = new SmartText(draft, {
-        debounceMs: 80,
-        onSuggestions: (suggestions) => {
-          const ms = Math.max(0, performance.now() - startedAt).toFixed(2);
-          tMs.textContent = `${ms} ms`;
-          tCount.textContent = String(suggestions.length);
-          tSource.textContent = suggestions.length ? "rule" : "—";
-
-          if (!suggestions.length) {
-            out.textContent = "no issues";
-            return;
+      // ─── Configure the reflex service to use Transformers.js + LaMini-Flan-T5
+      reflex.configure({
+        backend: "transformers",
+        task: "text2text-generation",
+        model: "Xenova/LaMini-Flan-T5-248M",
+        onProgress: (ev) => {
+          // Transformers.js progress events: status ∈ { initiate, download, progress, done, ready }
+          if (!ev) return;
+          if (ev.status === "progress" && ev.progress != null) {
+            progressBar.style.setProperty("--pct", `${ev.progress.toFixed(0)}%`);
+            progressFile.textContent = ev.file
+              ? `${ev.file} · ${formatBytes(ev.loaded || 0)} / ${formatBytes(ev.total || 0)}`
+              : `${ev.progress.toFixed(0)}%`;
+          } else if (ev.status === "download") {
+            progressFile.textContent = `downloading ${ev.file || ""}…`;
+          } else if (ev.status === "ready" || ev.status === "done") {
+            progressBar.style.setProperty("--pct", `100%`);
           }
-          out.innerHTML = "";
-          suggestions.forEach((s, i) => {
-            const chip = document.createElement("span");
-            chip.className = "suggest";
-            chip.innerHTML =
-              `<span class="strike">${escape(s.from)}</span>` +
-              `<span class="arrow">→</span>` +
-              `<span class="to">${escape(s.to)}</span>`;
-            chip.title = s.reason || "suggestion";
-            chip.addEventListener("click", () => smart.applySuggestion(i));
-            out.appendChild(chip);
-          });
         },
       });
 
-      function escape(s) {
-        return String(s).replace(/[&<>"]/g, (c) => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-        }[c]));
+      // Warm the engine eagerly so the first keystroke doesn't block on a
+      // cold load. Shows the progress bar while the model downloads.
+      (async () => {
+        try {
+          const t0 = performance.now();
+          await reflex.ensure();
+          const loadMs = Math.round(performance.now() - t0);
+          statusCard.classList.add("ready");
+          statusTitle.textContent = `ready · model loaded in ${(loadMs / 1000).toFixed(1)}s`;
+          statusMsg.innerHTML =
+            `The LaMini-Flan-T5-248M model is live in this tab and fully on-device. ` +
+            `Type anything in the textarea — corrections come back in under a second per call.`;
+          progressFile.textContent = "cached in IndexedDB · offline-safe";
+          draft.disabled = false;
+          draft.placeholder = "start typing…";
+          draft.focus();
+
+          // Hook SmartText up to the spellcheck task in eager mode so every
+          // debounced input event fires a model call (no rules to short-
+          // circuit anything).
+          const smart = new SmartText(draft, {
+            debounceMs: 600,
+            onSuggestions: (suggestions) => {
+              tCount.textContent = String(suggestions.length);
+              tSource.textContent = suggestions.length ? "model" : "—";
+              if (!suggestions.length) {
+                out.textContent = draft.value.trim() ? "looks clean" : "no issues yet";
+                return;
+              }
+              out.innerHTML = "";
+              suggestions.forEach((s, i) => {
+                const chip = document.createElement("span");
+                chip.className = "suggest";
+                chip.innerHTML =
+                  `<span class="strike">${escapeHtml(s.from)}</span>` +
+                  `<span class="arrow">→</span>` +
+                  `<span class="to">${escapeHtml(s.to)}</span>`;
+                chip.title = s.reason || "suggestion";
+                chip.addEventListener("click", () => smart.applySuggestion(i));
+                out.appendChild(chip);
+              });
+            },
+          });
+
+          // Measure per-call latency. SmartText uses the debounce internally
+          // so we time each suggestions event against when the last input
+          // fired.
+          let lastInputAt = 0;
+          draft.addEventListener("input", () => {
+            lastInputAt = performance.now();
+          });
+          draft.addEventListener("smart-text:suggestions", () => {
+            if (lastInputAt) {
+              const dt = Math.round(performance.now() - lastInputAt);
+              tMs.textContent = `${dt} ms`;
+            }
+          });
+        } catch (err) {
+          console.error("spellcheck demo failed to warm up:", err);
+          statusCard.classList.add("err");
+          statusTitle.textContent = "failed to load the model";
+          statusMsg.innerHTML =
+            `<b>Error:</b> ${escapeHtml(String(err?.message || err))}. ` +
+            `Check DevTools → Network for the failing request.<br/>` +
+            `If you're on a browser that blocks ES-module imports from ` +
+            `esm.sh, try Firefox or Chrome. If you're on a first-generation ` +
+            `Safari without WebAssembly streaming, the model loader may be ` +
+            `incompatible — open an issue and tell us what browser+version.`;
+        }
+      })();
+
+      function formatBytes(n) {
+        if (n < 1024) return `${n} B`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+        return `${(n / 1024 / 1024).toFixed(1)} MB`;
+      }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"]/g, (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]),
+        );
       }
     </script>
   </body>

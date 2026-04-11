@@ -77,104 +77,77 @@ export const cityToStateTask = {
 };
 
 // ─── task: contextual spellcheck ──────────────────────────────────────
-
-// Minimal English stoplist + a short confusables set. For real use this
-// would be a distilBERT-class masked LM; for the demo we ship rules that
-// catch the classic homophone mistakes and fall through to the model for
-// anything else.
-const CONFUSABLES = new Map([
-  ["their", ["there", "they're"]],
-  ["there", ["their", "they're"]],
-  ["theyre", ["they're"]],
-  ["your", ["you're"]],
-  ["youre", ["you're", "your"]],
-  ["its", ["it's"]],
-  ["alot", ["a lot"]],
-  ["recieve", ["receive"]],
-  ["seperate", ["separate"]],
-  ["definately", ["definitely"]],
-  ["occured", ["occurred"]],
-  ["untill", ["until"]],
-  ["goverment", ["government"]],
-  ["teh", ["the"]],
-  ["adn", ["and"]],
-]);
-
-// Patterns that disambiguate homophones by looking at neighbouring words.
-// Each rule: if the pattern matches in `context`, prefer the replacement.
-const CONTEXT_RULES = [
-  { pattern: /\b(see|meet|visit)\s+you\s+their\b/i, from: "their", to: "there" },
-  { pattern: /\btheir\s+(is|are|was|were)\b/i,      from: "their", to: "there" },
-  { pattern: /\byour\s+(welcome|right|wrong|going|coming|kidding)\b/i, from: "your", to: "you're" },
-  { pattern: /\bits\s+(a|an|going|been|the)\b/i,    from: "its",   to: "it's" },
-];
+//
+// Model-only. No rules, no hardcoded confusables, no context regexes.
+// The whole thesis of Dhamaka is "let the on-device LLM do the work",
+// and a spellchecker is a paradigmatic model task — probabilistic,
+// context-dependent, long-tail. Any rule we hand-code is a lie about
+// what the product is. So the fast path returns null (deferring to
+// the slow path unconditionally) and the slow path prompts the model
+// for a JSON array of corrections.
+//
+// If no engine is available, the task returns an empty suggestion
+// list rather than inventing something. Silence beats fiction.
 
 export const spellcheckTask = {
   id: "spellcheck",
   description:
-    "Find misspellings and homophone confusions in a block of text.",
+    "Find misspellings and homophone confusions using an on-device LLM.",
 
-  fast(input) {
-    if (!input || typeof input !== "string") return { confidence: 1, source: "rule", suggestions: [] };
-    const suggestions = [];
-
-    // Context-sensitive rules first (catches "see you their").
-    for (const rule of CONTEXT_RULES) {
-      const m = input.match(rule.pattern);
-      if (m) {
-        suggestions.push({
-          from: rule.from,
-          to: rule.to,
-          index: m.index + m[0].toLowerCase().indexOf(rule.from),
-          reason: "homophone in context",
-        });
-      }
-    }
-
-    // Per-word confusables.
-    const wordRegex = /\b([a-zA-Z']+)\b/g;
-    let m;
-    while ((m = wordRegex.exec(input)) !== null) {
-      const word = m[1].toLowerCase();
-      const candidates = CONFUSABLES.get(word);
-      if (!candidates) continue;
-      // Skip if we already flagged this exact position via a context rule.
-      if (suggestions.some((s) => s.index === m.index)) continue;
-      suggestions.push({
-        from: m[1],
-        to: candidates[0],
-        alternatives: candidates.slice(1),
-        index: m.index,
-        reason: "common misspelling",
-      });
-    }
-
-    return {
-      confidence: suggestions.length ? 0.9 : 1.0,
-      source: "rule",
-      suggestions,
-    };
+  // No fast path. Spellcheck is always a model call.
+  fast() {
+    return null;
   },
 
   async slow(input, _context, engine) {
-    // Model fallback for corrections the rule set didn't catch.
-    const prompt =
-      `You are a proofreader. Find misspellings or homophone confusions in ` +
-      `the following text and return a JSON array of {from, to, reason}. ` +
-      `Return an empty array if the text is correct. Text: """${input}"""`;
-    const reply = await engine.complete(prompt, { temperature: 0.0, maxTokens: 300 });
-    try {
-      const suggestions = JSON.parse(reply.trim());
-      return {
-        confidence: 0.6,
-        source: "model",
-        suggestions: Array.isArray(suggestions) ? suggestions : [],
-      };
-    } catch {
-      return { confidence: 0.4, source: "model", suggestions: [] };
+    if (!input || typeof input !== "string" || !input.trim()) {
+      return { confidence: 1, source: "model", suggestions: [] };
     }
+
+    const prompt =
+      `You are a careful proofreader. Read the text between the triple ` +
+      `quotes and find misspellings, homophone confusions (their/there, ` +
+      `your/you're, its/it's, ...), and grammar errors that change meaning. ` +
+      `Respond with ONLY a JSON array of objects, each shaped ` +
+      `{"from": "<wrong>", "to": "<correct>", "reason": "<short why>"}. ` +
+      `If the text is correct, respond with [].\n\n` +
+      `Text: """${input}"""\n\n` +
+      `JSON:`;
+
+    const reply = await engine.complete(prompt, {
+      temperature: 0.0,
+      maxTokens: 400,
+    });
+
+    const suggestions = parseJsonArray(reply);
+    return {
+      confidence: suggestions.length ? 0.8 : 0.9,
+      source: "model",
+      suggestions,
+    };
   },
 };
+
+function parseJsonArray(raw) {
+  if (typeof raw !== "string") return [];
+  // Models sometimes wrap in ```json fences or prepend an explanation.
+  // Extract the first [...] block.
+  const match = raw.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try {
+    const parsed = JSON.parse(match[0]);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s) => s && typeof s === "object" && typeof s.from === "string" && typeof s.to === "string")
+      .map((s) => ({
+        from: s.from,
+        to: s.to,
+        reason: typeof s.reason === "string" ? s.reason : "correction",
+      }));
+  } catch {
+    return [];
+  }
+}
 
 // ─── task: smart paste extraction ─────────────────────────────────────
 

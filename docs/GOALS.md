@@ -178,22 +178,44 @@ on-device, form-intelligent. Nobody lives there.
 This list matters more than the goals list. Every hour spent on a
 non-goal is an hour not spent on the real product.
 
+**Dhamaka is the product layer above the runtime. It is not the
+runtime itself.** @huggingface/transformers is the runtime. window.ai
+is the runtime on Chrome. The Rust crate in `crates/dhamaka-runtime`
+is a v2 swap target — it exists as a learning exercise and a future
+direction, not as the thing that powers the shipping demos. Real
+releases load Transformers.js from esm.sh and route Dhamaka's task
+registry through it. When `window.ai` is present on Chrome it wins
+the factory priority; everywhere else, Transformers.js does.
+
 - **Not a chat SDK.** `Dhamaka.load().complete("hello")` is not the
   product. If a developer wants to ship a chatbot, they should use
-  Transformers.js directly.
-- **Not a general-purpose browser LLM runtime.** Transformers.js already
-  is that. I'm using it, not replacing it.
-- **Not competing on raw model size or tok/s.** WebLLM will beat me on
-  both for years. I don't care.
-- **Not a new inference engine.** The Rust crate in this repo is a
-  learning exercise and a possible v2 swap target. It is not the
-  critical path. Real releases build on Transformers.js (and `window.ai`
-  where available).
+  Transformers.js directly. Dhamaka is the SmartField / Transform /
+  task registry layer above.
+- **Not a general-purpose browser LLM runtime.** Transformers.js
+  already is that, and it has years of quantization, BPE tokenization,
+  and ONNX runtime work behind it we should not try to reinvent.
+- **Not competing on raw model size or tok/s.** WebLLM and
+  Transformers.js itself will beat any from-scratch runtime on both
+  for years. I'm building the product layer above the runtime, not
+  the runtime.
+- **Not a new inference engine.** The Rust crate is a v2 swap target:
+  the end state we converge on *eventually* once quantization + SIMD
+  + WebGPU are solved in our codebase. It is explicitly **not the
+  critical path for shipping demos in 2026**. Real releases build on
+  Transformers.js today.
 - **Not a server product.** Nothing I ship touches a server I run.
 - **Not a commercial SaaS yet.** The first job is proving the category
   works in the open-source tier. Monetization is a v2 question.
 - **Not fighting Chrome's `window.ai`.** I use it as a fast path on
   Chrome. I don't pretend my own runtime is faster than Google's.
+- **Not hardcoding task semantics.** Spellcheck is model-only. Smart
+  paste is model-first with regex fast-paths for obviously-structured
+  fragments. Formula transformation keeps rules for the small set of
+  deterministic rewrites (discount, tax, round, IFERROR) because those
+  have objectively-correct structural answers — rules there are a
+  performance feature, not a crutch. Every other task should feel
+  uncomfortable shipping with a hardcoded list and should fall through
+  to the model by default.
 
 ## Technical principles
 

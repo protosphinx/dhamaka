@@ -25,10 +25,14 @@ let _state = {
  * overrides the config for the next `ensure()` invocation.
  *
  * @param {object} options
- * @param {"auto"|"mock"|"wasm"|"window-ai"} [options.backend]
+ * @param {"auto"|"mock"|"wasm"|"window-ai"|"transformers"} [options.backend]
  * @param {string} [options.wasmUrl]
+ * @param {string} [options.model]       Transformers.js HF model id
+ * @param {string} [options.task]        Transformers.js pipeline task
+ * @param {string} [options.cdn]         Transformers.js CDN override
  * @param {string} [options.systemPrompt]
  * @param {object} [options.entry]    Model manifest entry hint
+ * @param {(p: object) => void} [options.onProgress] First-load progress callback
  */
 export function configure(options = {}) {
   _state.options = options;
