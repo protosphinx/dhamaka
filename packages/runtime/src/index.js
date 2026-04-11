@@ -9,5 +9,6 @@ export { Engine } from "./engine.js";
 export { MockEngine } from "./mock-engine.js";
 export { WasmEngine } from "./wasm-engine.js";
 export { WindowAiBackend } from "./window-ai-backend.js";
+export { TransformersBackend } from "./transformers-backend.js";
 export { Tokenizer } from "./tokenizer.js";
 export { createEngine } from "./factory.js";
