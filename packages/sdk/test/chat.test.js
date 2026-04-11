@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Chat } from "../src/chat.js";
 
-// Minimal fake Dhamaka instance for testing Chat in isolation.
+// Minimal fake Locus instance for testing Chat in isolation.
 function fakeLLM(reply = "mock reply") {
   return {
     async complete(_prompt) {

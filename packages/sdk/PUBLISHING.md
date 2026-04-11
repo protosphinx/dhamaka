@@ -1,4 +1,4 @@
-# Publishing `dhamaka` to npm
+# Publishing `locus` to npm
 
 Releases are tag-driven. Push `vX.Y.Z` and the release workflow
 (`.github/workflows/release.yml`) handles everything: wasm build, tests,
@@ -6,7 +6,7 @@ staging, GitHub release with artifacts, and npm publish.
 
 ## One-time setup
 
-1. Reserve the `dhamaka` name on npm (or, if you already own it, skip).
+1. Reserve the `locus` name on npm (or, if you already own it, skip).
 2. Create an npm automation token: <https://www.npmjs.com/settings/~/tokens>.
    Use an **Automation** token so 2FA doesn't block CI.
 3. Add it to the GitHub repo secrets:
@@ -32,13 +32,13 @@ The tag push triggers the release workflow, which will:
 
 1. Install Rust + `wasm32-unknown-unknown`
 2. `cargo test` the runtime crate
-3. Build `dhamaka-runtime.wasm` via `crates/dhamaka-runtime/build.sh`
+3. Build `locus-runtime.wasm` via `crates/locus-runtime/build.sh`
 4. Run the JS test suite (`npm test`)
 5. Run `scripts/prepare-publish.mjs` to stage `packages/sdk/_staging/`
 6. `npm pack` the staged package
 7. Verify the tag matches the package version
 8. `npm publish --access public --provenance` (if `NPM_TOKEN` is set)
-9. Create a GitHub release named "Dhamaka vX.Y.Z" with release notes
+9. Create a GitHub release named "Locus vX.Y.Z" with release notes
    extracted from `CHANGELOG.md` and the tarball + raw wasm attached
 
 If `NPM_TOKEN` is **not** set, the workflow still runs end-to-end but skips
@@ -51,7 +51,7 @@ You don't need the workflow. If you have your npm credentials locally:
 
 ```bash
 # from the repo root
-crates/dhamaka-runtime/build.sh    # compile the wasm
+crates/locus-runtime/build.sh    # compile the wasm
 node scripts/prepare-publish.mjs   # stage packages/sdk/_staging/
 cd packages/sdk/_staging
 npm publish --access public
@@ -60,34 +60,34 @@ npm publish --access public
 ## What ends up in the tarball
 
 ```
-dhamaka-X.Y.Z.tgz
+locus-X.Y.Z.tgz
 ├── package.json            # standalone, no workspace refs
 ├── README.md
 ├── LICENSE
 ├── CHANGELOG.md
 └── src/
-    ├── index.js            # Dhamaka.load / complete / stream / chat / …
+    ├── index.js            # Locus.load / complete / stream / chat / …
     ├── hub-client.js       # tiered HubClient + FallbackStore
     ├── chat.js             # stateful chat session
     ├── openai-shim.js      # /v1/chat/completions compatibility
-    └── _runtime/           # vendored @dhamaka/runtime
+    └── _runtime/           # vendored @locus/runtime
         ├── index.js
         ├── engine.js
         ├── factory.js
         ├── mock-engine.js
         ├── wasm-engine.js
         ├── tokenizer.js
-        └── dhamaka-runtime.wasm   # 56 KB compiled Rust
+        └── locus-runtime.wasm   # 56 KB compiled Rust
 ```
 
-The published `dhamaka` package depends on **nothing**. It bundles the
-compiled WASM runtime, so `npm install dhamaka` followed by
-`import { Dhamaka } from "dhamaka"` is all a consumer needs.
+The published `locus` package depends on **nothing**. It bundles the
+compiled WASM runtime, so `npm install locus` followed by
+`import { Locus } from "locus"` is all a consumer needs.
 
 ## Version policy
 
 - `major`: breaking ABI changes to the Rust runtime, or breaking changes to
-  the `Dhamaka` SDK class.
+  the `Locus` SDK class.
 - `minor`: new features, new engines, new models in the registry, new
   public SDK methods.
 - `patch`: bug fixes, doc updates, internal refactors.

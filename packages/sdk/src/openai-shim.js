@@ -1,17 +1,17 @@
 // Drop-in OpenAI-compatible shim.
 //
 // Lets any app that already speaks the OpenAI /v1/chat/completions protocol
-// swap its backend for a local Dhamaka instance with a single line of config.
+// swap its backend for a local Locus instance with a single line of config.
 //
-//   import { Dhamaka } from "dhamaka";
-//   import { installOpenAIShim } from "dhamaka/openai";
+//   import { Locus } from "locus";
+//   import { installOpenAIShim } from "locus/openai";
 //
-//   const llm = await Dhamaka.load();
+//   const llm = await Locus.load();
 //   installOpenAIShim(llm);           // intercepts fetch("/v1/chat/completions")
 
 import { Chat } from "./chat.js";
 
-export function installOpenAIShim(dhamaka, { path = "/v1/chat/completions" } = {}) {
+export function installOpenAIShim(locus, { path = "/v1/chat/completions" } = {}) {
   if (typeof globalThis.fetch !== "function") return;
   const originalFetch = globalThis.fetch.bind(globalThis);
 
@@ -38,20 +38,20 @@ export function installOpenAIShim(dhamaka, { path = "/v1/chat/completions" } = {
     const messages = body.messages ?? [];
     const stream = !!body.stream;
 
-    const chat = new Chat(dhamaka);
+    const chat = new Chat(locus);
     chat.messages = messages.slice();
 
     if (!stream) {
-      const reply = await dhamaka.complete(chat._render(), {
+      const reply = await locus.complete(chat._render(), {
         temperature: body.temperature,
         maxTokens: body.max_tokens,
       });
       return new Response(
         JSON.stringify({
-          id: `dhamaka-${Date.now()}`,
+          id: `locus-${Date.now()}`,
           object: "chat.completion",
           created: Math.floor(Date.now() / 1000),
-          model: dhamaka.modelId,
+          model: locus.modelId,
           choices: [
             {
               index: 0,
@@ -68,15 +68,15 @@ export function installOpenAIShim(dhamaka, { path = "/v1/chat/completions" } = {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const token of dhamaka.stream(chat._render(), {
+          for await (const token of locus.stream(chat._render(), {
             temperature: body.temperature,
             maxTokens: body.max_tokens,
           })) {
             const chunk = {
-              id: `dhamaka-${Date.now()}`,
+              id: `locus-${Date.now()}`,
               object: "chat.completion.chunk",
               created: Math.floor(Date.now() / 1000),
-              model: dhamaka.modelId,
+              model: locus.modelId,
               choices: [{ index: 0, delta: { content: token }, finish_reason: null }],
             };
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));

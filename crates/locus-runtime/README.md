@@ -1,12 +1,12 @@
-# dhamaka-runtime
+# locus-runtime
 
-The Dhamaka inference runtime, written in Rust, compiled to WebAssembly.
+The Locus inference runtime, written in Rust, compiled to WebAssembly.
 
-This is the hot path. Everything in here — matmul, RMSNorm, softmax, rotary embeddings, SwiGLU, KV-cached self-attention, temperature/top-k/top-p sampling — runs inside a WASM module instantiated by the Dhamaka SDK in any modern browser tab.
+This is the hot path. Everything in here — matmul, RMSNorm, softmax, rotary embeddings, SwiGLU, KV-cached self-attention, temperature/top-k/top-p sampling — runs inside a WASM module instantiated by the Locus SDK in any modern browser tab.
 
 ## Why Rust
 
-Transformer inference is a lot of f32 math repeated once per generated token. JavaScript can do it, Rust-compiled-to-WASM runs it at roughly native speed. That speed is the whole point of Dhamaka. The tradeoff is that you need a Rust toolchain to build the `.wasm` (or use the prebuilt one checked in under `packages/hub/public/runtime/`).
+Transformer inference is a lot of f32 math repeated once per generated token. JavaScript can do it, Rust-compiled-to-WASM runs it at roughly native speed. That speed is the whole point of Locus. The tradeoff is that you need a Rust toolchain to build the `.wasm` (or use the prebuilt one checked in under `packages/hub/public/runtime/`).
 
 ## Build
 
@@ -15,7 +15,7 @@ Transformer inference is a lot of f32 math repeated once per generated token. Ja
 ./build.sh --check    # also run the native test suite
 ```
 
-The script installs `wasm32-unknown-unknown` on demand, compiles the crate at `opt-level = 3` with fat LTO, and stages the resulting `.wasm` at `packages/hub/public/runtime/dhamaka-runtime.wasm` where the dev server and the hub pick it up.
+The script installs `wasm32-unknown-unknown` on demand, compiles the crate at `opt-level = 3` with fat LTO, and stages the resulting `.wasm` at `packages/hub/public/runtime/locus-runtime.wasm` where the dev server and the hub pick it up.
 
 ## Tests
 
@@ -49,18 +49,18 @@ src/
 JavaScript talks to this crate over a tiny C ABI. The full list is in `src/abi.rs`:
 
 ```text
-dhamaka_version()                      -> u32
-dhamaka_alloc(len)                     -> *mut u8
-dhamaka_free(ptr, len)                 -> void
-dhamaka_init(w, wl, c, cl)             -> *mut Context
-dhamaka_destroy(ctx)                   -> void
-dhamaka_reset(ctx)                     -> void
-dhamaka_set_sampling(ctx, t, k, p, m)  -> void
-dhamaka_feed_prompt(ctx, ptr, len)     -> void
-dhamaka_next_token(ctx, out, cap)      -> i32   (-1 on EOS)
+locus_version()                      -> u32
+locus_alloc(len)                     -> *mut u8
+locus_free(ptr, len)                 -> void
+locus_init(w, wl, c, cl)             -> *mut Context
+locus_destroy(ctx)                   -> void
+locus_reset(ctx)                     -> void
+locus_set_sampling(ctx, t, k, p, m)  -> void
+locus_feed_prompt(ctx, ptr, len)     -> void
+locus_next_token(ctx, out, cap)      -> i32   (-1 on EOS)
 ```
 
-JS writes prompt bytes into WASM linear memory via `dhamaka_alloc`, hands the pointer to `dhamaka_feed_prompt`, then loops on `dhamaka_next_token` to stream UTF-8 bytes back out.
+JS writes prompt bytes into WASM linear memory via `locus_alloc`, hands the pointer to `locus_feed_prompt`, then loops on `locus_next_token` to stream UTF-8 bytes back out.
 
 The SDK's `WasmEngine` (`packages/runtime/src/wasm-engine.js`) is the reference client and runs this ABI end-to-end in both Node (via `WebAssembly.instantiate`) and the browser (via `WebAssembly.instantiateStreaming`).
 

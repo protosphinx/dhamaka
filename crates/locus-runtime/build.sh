@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Dhamaka runtime crate to WebAssembly and stage the resulting
+# Build the Locus runtime crate to WebAssembly and stage the resulting
 # .wasm into packages/hub/public/runtime/ so the dev server picks it up.
 #
 # Usage: ./build.sh [--check]
@@ -9,7 +9,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 TARGET="wasm32-unknown-unknown"
-STAGE="$ROOT/packages/hub/public/runtime/dhamaka-runtime.wasm"
+STAGE="$ROOT/packages/hub/public/runtime/locus-runtime.wasm"
 
 if ! command -v cargo >/dev/null; then
   echo "error: cargo not found. Install Rust via https://rustup.rs" >&2
@@ -24,7 +24,7 @@ fi
 echo "› cargo build --release --target $TARGET"
 cargo build --release --target "$TARGET" --manifest-path "$HERE/Cargo.toml"
 
-SRC="$HERE/target/$TARGET/release/dhamaka_runtime.wasm"
+SRC="$HERE/target/$TARGET/release/locus_runtime.wasm"
 if [ ! -f "$SRC" ]; then
   echo "error: expected wasm at $SRC" >&2
   exit 1

@@ -1,12 +1,12 @@
-// A minimal stateful chat wrapper on top of a loaded Dhamaka instance.
+// A minimal stateful chat wrapper on top of a loaded Locus instance.
 //
 //   const chat = llm.chat({ system: "You are a helpful assistant." });
 //   await chat.send("Hi!");
 //   for await (const t of chat.stream("And again?")) process.stdout.write(t);
 
 export class Chat {
-  constructor(dhamaka, { system } = {}) {
-    this.dhamaka = dhamaka;
+  constructor(locus, { system } = {}) {
+    this.locus = locus;
     this.messages = [];
     if (system) this.messages.push({ role: "system", content: system });
   }
@@ -22,7 +22,7 @@ export class Chat {
 
   async send(content, options) {
     this.messages.push({ role: "user", content });
-    const reply = await this.dhamaka.complete(this._render(), options);
+    const reply = await this.locus.complete(this._render(), options);
     this.messages.push({ role: "assistant", content: reply });
     return reply;
   }
@@ -30,7 +30,7 @@ export class Chat {
   async *stream(content, options) {
     this.messages.push({ role: "user", content });
     let full = "";
-    for await (const token of this.dhamaka.stream(this._render(), options)) {
+    for await (const token of this.locus.stream(this._render(), options)) {
       full += token;
       yield token;
     }

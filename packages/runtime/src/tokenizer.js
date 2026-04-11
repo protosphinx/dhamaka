@@ -1,6 +1,6 @@
 // A placeholder tokenizer.
 //
-// The real Dhamaka tokenizer is the SentencePiece/BPE that ships with
+// The real Locus tokenizer is the SentencePiece/BPE that ships with
 // SmolLM2. It's compiled into the WASM module and loaded from the
 // `tokenizer.json` artifact. This class is a stand-in that lets the
 // MockEngine stream plausible token-sized chunks during development.

@@ -2,9 +2,9 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 960 320"
      role="img"
-     aria-label="Dhamaka — browser-native LLM">
-  <title>Dhamaka</title>
-  <desc>Browser-native LLM. Download once. Run anywhere.</desc>
+     aria-label="Locus — the local AI capability layer for web apps">
+  <title>Locus</title>
+  <desc>The local AI capability layer for web apps. Ship the model to the data.</desc>
 
   <defs>
     <!-- Animated rainbow gradient for the block-letter title. -->
@@ -68,7 +68,7 @@
              dur="9s" repeatCount="indefinite"/>
   </rect>
 
-  <!-- Block-letter DHAMAKA title. -->
+  <!-- Block-letter LOCUS title. -->
   <g font-family="'Cascadia Code','JetBrains Mono','Fira Code','SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace"
      font-weight="700"
      font-size="26"
@@ -77,12 +77,12 @@
      text-anchor="middle"
      xml:space="preserve">
     <text x="480" y="85">
-      <tspan x="480" dy="0">██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗ </tspan>
-      <tspan x="480" dy="1.15em">██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗</tspan>
-      <tspan x="480" dy="1.15em">██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║</tspan>
-      <tspan x="480" dy="1.15em">██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║</tspan>
-      <tspan x="480" dy="1.15em">██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║</tspan>
-      <tspan x="480" dy="1.15em">╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝</tspan>
+      <tspan x="480" dy="0">██╗      ██████╗  ██████╗██╗   ██╗███████╗</tspan>
+      <tspan x="480" dy="1.15em">██║     ██╔═══██╗██╔════╝██║   ██║██╔════╝</tspan>
+      <tspan x="480" dy="1.15em">██║     ██║   ██║██║     ██║   ██║███████╗</tspan>
+      <tspan x="480" dy="1.15em">██║     ██║   ██║██║     ██║   ██║╚════██║</tspan>
+      <tspan x="480" dy="1.15em">███████╗╚██████╔╝╚██████╗╚██████╔╝███████║</tspan>
+      <tspan x="480" dy="1.15em">╚══════╝ ╚═════╝  ╚═════╝ ╚═════╝ ╚══════╝</tspan>
     </text>
   </g>
 
@@ -97,7 +97,7 @@
                  values="#ff4d6d;#ffb84d;#4dffb8;#4dc1ff;#b84dff;#ff4d6d"
                  dur="4s" repeatCount="indefinite"/>
       </tspan>
-      <tspan>  browser-native LLM  ·  download once  ·  run anywhere  </tspan>
+      <tspan>  the local AI capability layer for web apps  </tspan>
       <tspan fill="#4dc1ff">
         ✦
         <animate attributeName="fill"
@@ -106,7 +106,7 @@
       </tspan>
     </text>
     <text x="480" y="300" fill="#5a5a6b" letter-spacing="4">
-      WASM  ·  on-device  ·  private  ·  instant  ·  ~56 KB runtime
+      on-device  ·  zero latency  ·  zero cost  ·  every browser  ·  offline
     </text>
   </g>
 </svg>

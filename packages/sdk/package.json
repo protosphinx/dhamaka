@@ -1,5 +1,5 @@
 {
-  "name": "dhamaka",
+  "name": "locus",
   "version": "0.1.0",
   "description": "A reflex layer for every input on the web. Drop in SmartField / SmartForm / SmartText and get on-device autofill, contextual spellcheck, smart paste, and cross-field inference — zero latency, zero cost, zero privacy exposure.",
   "type": "module",
@@ -19,7 +19,7 @@
     "src"
   ],
   "dependencies": {
-    "@dhamaka/runtime": "0.1.0"
+    "@locus/runtime": "0.1.0"
   },
   "license": "MIT",
   "keywords": [

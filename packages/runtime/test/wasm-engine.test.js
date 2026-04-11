@@ -14,7 +14,7 @@ const WASM_PATH = join(
   "hub",
   "public",
   "runtime",
-  "dhamaka-runtime.wasm",
+  "locus-runtime.wasm",
 );
 
 // Probe once: if the .wasm isn't there (e.g. fresh checkout without running
@@ -46,19 +46,19 @@ function stubFetch(bytes) {
   };
 }
 
-test("WasmEngine: loads the compiled Dhamaka runtime end-to-end", async (t) => {
+test("WasmEngine: loads the compiled Locus runtime end-to-end", async (t) => {
   if (!(await wasmIsPresent())) {
     t.skip(
-      "dhamaka-runtime.wasm not found; run crates/dhamaka-runtime/build.sh first",
+      "locus-runtime.wasm not found; run crates/locus-runtime/build.sh first",
     );
     return;
   }
   const bytes = await readFile(WASM_PATH);
   const restore = stubFetch(bytes);
   try {
-    const engine = new WasmEngine({ wasmUrl: "http://stub/dhamaka-runtime.wasm" });
+    const engine = new WasmEngine({ wasmUrl: "http://stub/locus-runtime.wasm" });
     await engine.load({
-      entry: { id: "dhamaka-micro" },
+      entry: { id: "locus-micro" },
       artifacts: {},
     });
     assert.equal(engine.loaded, true);
@@ -72,14 +72,14 @@ test("WasmEngine: loads the compiled Dhamaka runtime end-to-end", async (t) => {
 
 test("WasmEngine: real Rust forward pass streams tokens", async (t) => {
   if (!(await wasmIsPresent())) {
-    t.skip("dhamaka-runtime.wasm not found");
+    t.skip("locus-runtime.wasm not found");
     return;
   }
   const bytes = await readFile(WASM_PATH);
   const restore = stubFetch(bytes);
   try {
-    const engine = new WasmEngine({ wasmUrl: "http://stub/dhamaka-runtime.wasm" });
-    await engine.load({ entry: { id: "dhamaka-micro" }, artifacts: {} });
+    const engine = new WasmEngine({ wasmUrl: "http://stub/locus-runtime.wasm" });
+    await engine.load({ entry: { id: "locus-micro" }, artifacts: {} });
 
     const tokens = [];
     for await (const token of engine.generate("hello world", {
@@ -106,7 +106,7 @@ test("WasmEngine: real Rust forward pass streams tokens", async (t) => {
 
 test("WasmEngine: is deterministic for identical prompts", async (t) => {
   if (!(await wasmIsPresent())) {
-    t.skip("dhamaka-runtime.wasm not found");
+    t.skip("locus-runtime.wasm not found");
     return;
   }
   const bytes = await readFile(WASM_PATH);
@@ -114,9 +114,9 @@ test("WasmEngine: is deterministic for identical prompts", async (t) => {
   try {
     const runOnce = async () => {
       const engine = new WasmEngine({ wasmUrl: "http://stub/run.wasm" });
-      await engine.load({ entry: { id: "dhamaka-micro" }, artifacts: {} });
+      await engine.load({ entry: { id: "locus-micro" }, artifacts: {} });
       const out = [];
-      for await (const t of engine.generate("Dhamaka is", { maxTokens: 8 })) {
+      for await (const t of engine.generate("Locus is", { maxTokens: 8 })) {
         out.push(t);
       }
       await engine.unload();
@@ -133,14 +133,14 @@ test("WasmEngine: is deterministic for identical prompts", async (t) => {
 
 test("WasmEngine: respects AbortSignal", async (t) => {
   if (!(await wasmIsPresent())) {
-    t.skip("dhamaka-runtime.wasm not found");
+    t.skip("locus-runtime.wasm not found");
     return;
   }
   const bytes = await readFile(WASM_PATH);
   const restore = stubFetch(bytes);
   try {
     const engine = new WasmEngine({ wasmUrl: "http://stub/run.wasm" });
-    await engine.load({ entry: { id: "dhamaka-micro" }, artifacts: {} });
+    await engine.load({ entry: { id: "locus-micro" }, artifacts: {} });
 
     const controller = new AbortController();
     const tokens = [];

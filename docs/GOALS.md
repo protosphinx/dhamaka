@@ -1,14 +1,52 @@
 # Goals
 
-> The north-star document for this project. Written to keep me honest about
+> The north-star document for Locus. Written to keep me honest about
 > what I'm building, what I'm *not* building, and what the winning shape of
 > the product actually is.
 
-## The one-liner
+## ✦ The thesis
 
-**A cross-browser JavaScript SDK that gives every `<input>` and `<textarea>`
-on the web on-device AI reflexes. Zero network latency, zero API cost,
-zero privacy exposure. Drop it in, every field gets smarter.**
+A web application already holds everything an AI call needs to be useful.
+The user's data is in the tab. The app's schema, state, and affordances
+are in JavaScript memory. The actions the user can take are already
+expressed in code. The only reason AI calls travel to a server is
+historical — because until very recently, the models were too big to
+ship. That's no longer true. Local models are small enough, fast enough,
+and good enough to run inside the browser tab.
+
+So the inversion is:
+
+> **Stop sending the data to the model. Ship the model to the data.**
+
+Every architectural decision in Locus follows from that one sentence.
+The four capability families (Reflex, Transform, Search, Agent) are all
+different shapes of one fundamental operation: *reason over the context
+the app already has, in the place the app already is.*
+
+If a feature needs a server, it's not Locus. If a feature could work
+offline, with no account, on any browser, using only the context the
+app already holds — it belongs here.
+
+## ✦ The four capability families
+
+| family       | call shape                                          | example (shipping)             |
+|--------------|-----------------------------------------------------|--------------------------------|
+| 🪞 Reflex    | reactive, continuous, on `oninput`                  | city → state / country / tz    |
+| 🔧 Transform | imperative, one-shot, instruction-driven            | rewrite a formula in erp.ai    |
+| 🔎 Search    | semantic retrieval over in-memory data *(planned)*  | "find the anomaly in this col" |
+| 🤖 Agent     | multi-step tool use over app-exposed actions *(v2)* | "clean this dataset, save it"  |
+
+All four share the same engine (`window.ai` → Rust WASM → Mock), the
+same task registry, and the same reflex service. Adding a family is a
+matter of adding tasks, not forking the SDK.
+
+## ✦ The one-liner
+
+**Locus is the local AI capability layer for web apps.** Any web app
+can drop it in and add on-device reflexes, transformations, and
+reasoning — every call runs 100% in the user's browser tab, zero
+network latency, zero API cost, zero privacy exposure, works on every
+browser, works offline.
 
 ## What this is (and why it's a pivot)
 
@@ -140,7 +178,7 @@ on-device, form-intelligent. Nobody lives there.
 This list matters more than the goals list. Every hour spent on a
 non-goal is an hour not spent on the real product.
 
-- **Not a chat SDK.** `Dhamaka.load().complete("hello")` is not the
+- **Not a chat SDK.** `Locus.load().complete("hello")` is not the
   product. If a developer wants to ship a chatbot, they should use
   Transformers.js directly.
 - **Not a general-purpose browser LLM runtime.** Transformers.js already
@@ -236,8 +274,8 @@ No Rust runtime in v0.1. The crate stays in the repo as reference code.
 
 ## v0.2 — making it a product
 
-- A proper task registry (`dhamaka-autofill`, `dhamaka-spellcheck`,
-  `dhamaka-complete`, `dhamaka-rewrite`, `dhamaka-paste-extract`)
+- A proper task registry (`locus-autofill`, `locus-spellcheck`,
+  `locus-complete`, `locus-rewrite`, `locus-paste-extract`)
 - Per-task micro-models, each loaded lazily the first time the task is
   used on the page
 - React / Vue / Svelte bindings (`useSmartField`) so framework devs
@@ -310,30 +348,41 @@ Three things make this the right moment:
 
 ## Naming
 
-The current name is **Dhamaka**. Dhamaka means "explosion / blast" in
-Hindi, which is the opposite of what this product is: small, quiet,
-local, tucked into a tab. The name is wrong for the product and will be
-replaced before the first public release.
+The project is called **Locus**. Latin for "the place" — and that's
+literally the thesis. The locus of intelligence in a web app is the
+app itself: the data is already in the tab, the schema is already in
+JavaScript memory, the user's intent is already visible in the DOM.
+The model belongs at the locus, not on some remote server thousands of
+kilometres away.
 
-Candidates I'm considering, all framed around "small, intuitive, always
-on, helps you without getting in the way":
+Five letters, one syllable, unambiguous pronunciation (LOH-kuhs). Not
+overloaded by any major framework or LLM project. The tagline writes
+itself: *the local AI capability layer for web apps*. Every
+architecture decision in this repo is a consequence of taking that
+framing literally.
 
-- **Hunch** — "I have a hunch you meant California." Matches the
-  semantic-autofill framing perfectly. 5 letters, one syllable, under-
-  used in tech. Current top pick.
-- **Mote** — "a mote of an LLM in every tab." Matches the size story
-  (tiny, ambient, everywhere). 4 letters.
-- **Reflex** — literal: keystroke-level reflexes for every input.
-- **Pith** — essence, distilled. Under-used, zero collisions.
-- **Wit** — quick, clever, small.
-
-Name lock-in is a v0.1 blocker but not a v0.0 blocker. I can ship the
-spike under the current name and rename on the release commit.
+The project was previously called Dhamaka (Hindi for "explosion"),
+which was exactly backwards — explosions are loud and external, Locus
+is quiet and internal. The rename happened before the first public
+release.
 
 ## The one thing to remember
 
-**I am not building a browser LLM. I am building a reflex layer for
-every input field on the web, using on-device inference as the physical
-substrate that makes it affordable.**
+**Your app already has everything an AI call needs to be useful. The
+user's data is already in the tab. The app's schema, state, and
+affordances are already in JavaScript memory. The only reason AI calls
+travel to a server is historical, and that history is ending.**
+
+**Stop sending the data to the model. Ship the model to the data.**
+
+Every capability family in Locus is a consequence of that one
+inversion. Reflex understands what the user typed in the field they
+typed it. Transform rewrites what the app holds, using the app's own
+context. Search retrieves from the user's own data. Agent acts through
+actions the app already exposes. None of it needs a server.
+
+When in doubt, optimize for: *would this call still work if the user's
+laptop had no network connection and no account with any AI provider?*
+If yes, it's Locus's job. If no, it doesn't belong here.
 
 When in doubt, optimize for that sentence.
