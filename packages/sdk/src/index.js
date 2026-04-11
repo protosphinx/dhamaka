@@ -39,12 +39,23 @@ export class Dhamaka {
   constructor(modelId, options) {
     this.modelId = modelId;
     this.options = options;
-    this.hub = new HubClient({
-      hubUrl: options.hubUrl ?? DEFAULT_HUB_URL,
-    });
+    const hubUrl = options.hubUrl ?? DEFAULT_HUB_URL;
+    this.hub = new HubClient({ hubUrl });
+    // The WASM runtime binary lives on the hub origin at /runtime/…, same
+    // place the hub serves model weights from. Resolve it against the hub
+    // URL so the fetch works in development (http://localhost:5174/…) and
+    // production (https://hub.dhamaka.dev/…) without config.
+    let wasmUrl = options.wasmUrl;
+    if (!wasmUrl && typeof URL !== "undefined") {
+      try {
+        wasmUrl = new URL("runtime/dhamaka-runtime.wasm", hubUrl).href;
+      } catch {
+        // fall through — createEngine will degrade to MockEngine in Node
+      }
+    }
     this.engine = createEngine({
       backend: options.backend ?? "auto",
-      wasmUrl: options.wasmUrl,
+      wasmUrl,
     });
     this._cached = false;
     this._loadedAt = 0;

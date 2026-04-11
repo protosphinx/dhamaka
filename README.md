@@ -81,24 +81,28 @@ One download. Every site after that is an instant cache hit.
   │   ┌────────────┐             ┌──────────────────┐            │
   │   │ packages/  │             │ packages/runtime │            │
   │   │    hub     │             │  ┌────────────┐  │            │
-  │   │            │             │  │ MockEngine │  │ dev/today  │
+  │   │            │             │  │ WasmEngine │  │ default    │
   │   │ iframe +   │             │  ├────────────┤  │            │
-  │   │ IndexedDB  │             │  │ WasmEngine │  │ next up    │
+  │   │ IndexedDB  │             │  │ MockEngine │  │ dev only   │
   │   │ + OPFS     │             │  └─────┬──────┘  │            │
   │   └────────────┘             │        │         │            │
   │                              │        ▼         │            │
-  │                              │  .wasm + SIMD    │            │
-  │                              │  (WebGPU fast    │            │
-  │                              │   path optional) │            │
-  │                              └──────────────────┘            │
+  │                   ┌──────────────────────────────────────┐   │
+  │                   │  crates/dhamaka-runtime (Rust)       │   │
+  │                   │    matmul · RMSNorm · softmax        │   │
+  │                   │    RoPE · KV cache · SwiGLU          │   │
+  │                   │    temperature / top-k / top-p       │   │
+  │                   │    → dhamaka-runtime.wasm (56 KB)    │   │
+  │                   └──────────────────────────────────────┘   │
   └──────────────────────────────────────────────────────────────┘
 ```
 
 | package                 | what it does                                                  |
 |-------------------------|---------------------------------------------------------------|
+| [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the real inference engine — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — compiled to WebAssembly |
 | [`dhamaka`](packages/sdk)              | public SDK: `Dhamaka.load()`, chat, streaming, OpenAI shim |
-| [`@dhamaka/runtime`](packages/runtime) | the inference engine interface + `MockEngine` (today) + `WasmEngine` (next) |
-| [`@dhamaka/hub`](packages/hub)         | the tiny static origin that hosts the cross-site model cache |
+| [`@dhamaka/runtime`](packages/runtime) | the JS engine interface: `WasmEngine` (default) + `MockEngine` (dev) |
+| [`@dhamaka/hub`](packages/hub)         | the tiny static origin that hosts the cross-site model cache and the `.wasm` runtime |
 | [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
 | [`@dhamaka/playground`](packages/playground) | a live demo + a zero-dep dev server that runs the whole stack |
 
@@ -153,6 +157,11 @@ Each variant is its own content-addressed artifact. Once a user downloads any on
 ```bash
 git clone https://github.com/protosphinx/dhamaka
 cd dhamaka
+
+# one-time: compile the Rust runtime to WebAssembly
+crates/dhamaka-runtime/build.sh
+
+# run the dev stack
 npm run dev
 ```
 
@@ -163,7 +172,9 @@ npm run dev
   Dhamaka dev stack running. Ctrl+C to stop.
 ```
 
-Open **http://localhost:5173**, hit **load**, and you're chatting with a locally-served LLM. The playground hot-reads the SDK + runtime sources, so every edit shows up on refresh — no bundler, no build step.
+Open **http://localhost:5173**, hit **load**, and you're chatting with a locally-served LLM whose every token comes out of real Rust-compiled-to-WASM transformer math. The playground hot-reads the SDK + runtime sources, so every JS edit shows up on refresh. Re-run `build.sh` to pick up Rust edits.
+
+> Don't have Rust installed? The compiled `.wasm` is checked in under `packages/hub/public/runtime/` so `npm run dev` works on a fresh clone too. Install Rust only if you want to modify the inference engine itself.
 
 ---
 
@@ -239,6 +250,16 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 ## ✦ what's real today
 
 ```
+  [x]  Rust inference runtime compiled to a 56 KB WebAssembly module
+       (matmul, RMSNorm, softmax, rotary, KV-cached self-attention,
+       SwiGLU/SiLU, top-k + top-p + temperature sampling)
+  [x]  27 native cargo tests covering every primitive
+  [x]  C ABI (dhamaka_alloc/free/init/feed_prompt/next_token/…) exposed
+       to WebAssembly as #[no_mangle] extern "C" exports
+  [x]  JS WasmEngine that loads the compiled .wasm and drives the ABI
+       end-to-end in both Node and browsers
+  [x]  4 Node-side integration tests that instantiate the real .wasm and
+       stream tokens through the Rust forward pass
   [x]  hub ↔ sdk postMessage bridge (get / list / delete / progress)
   [x]  IndexedDB-backed hub storage with SHA-256 integrity checks
   [x]  zero-copy ArrayBuffer transfer from hub → consumer
@@ -252,17 +273,19 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   [x]  manifest.schema.json (JSON Schema draft-07) for tooling
   [x]  playground UI with progress bars, telemetry, cache-hit badge,
        stateful chat, abort/stop button, and reset-history
-  [x]  zero-dependency dev server that serves hub + playground on two ports
-  [x]  40 tests covering runtime, SDK, hub, and OpenAI shim
-  [x]  GitHub Actions CI running tests on Node 20 + 22
+  [x]  zero-dependency dev server that serves hub + playground + .wasm
+       on two ports with correct MIME + CORS
+  [x]  45 JS tests + 27 Rust tests, all green
+  [x]  GitHub Actions CI that builds the Rust crate, uploads the .wasm
+       artifact, and runs the JS test suite against it on Node 20 + 22
 
-  [ ]  the actual WASM transformer runtime (ABI sketched, loader ready)
-  [ ]  SmolLM2-360M Q4 weights hosted on hub.dhamaka.dev
+  [ ]  Real SmolLM2-360M Q4 weights hosted on hub.dhamaka.dev
+  [ ]  SIMD128 build of the runtime
   [ ]  WebGPU fast path
-  [ ]  the other registered models (code / sql / json / summarize / embed)
+  [ ]  The other registered models (code / sql / json / summarize / embed)
 ```
 
-The entire developer-facing surface runs today against a `MockEngine` that streams canned responses at ~45 tok/s. When the WASM module lands, `createEngine` will prefer `WasmEngine` automatically — no SDK changes required.
+**v0.1 honesty note:** the Rust runtime runs real transformer math — real matmul, real attention, real sampling, all inside WebAssembly — but the weights it loads for v0.1 are a tiny random model (32-dim hidden, 2 layers, 64-entry vocab). Output is stream-of-tokens, not coherent English. When the SmolLM2-360M Q4 artifacts drop, they flow through the exact same `dhamaka_init` entry point and the SDK doesn't move.
 
 ---
 

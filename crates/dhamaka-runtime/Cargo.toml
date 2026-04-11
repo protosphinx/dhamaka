@@ -1,0 +1,18 @@
+[package]
+name = "dhamaka-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "Dhamaka inference runtime. Compiles to WebAssembly for in-browser LLM inference."
+license = "MIT"
+repository = "https://github.com/protosphinx/dhamaka"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

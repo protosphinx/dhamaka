@@ -12,3 +12,9 @@ models/*.bin
 models/*.onnx
 models/*.gguf
 !models/manifest.json
+
+# Rust build output. The compiled .wasm is staged into
+# packages/hub/public/runtime/ by build.sh and *is* committed so users
+# without a Rust toolchain can run the dev stack. The target/ dir is not.
+crates/*/target/
+Cargo.lock

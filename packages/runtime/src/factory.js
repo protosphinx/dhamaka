@@ -14,7 +14,19 @@ export function createEngine(options = {}) {
   if (backend === "mock") return new MockEngine(options);
   if (backend === "wasm") return new WasmEngine(options);
 
-  // auto: prefer wasm if a url is configured, otherwise fall back to mock.
+  // auto:
+  //   - if a wasmUrl is explicitly configured, use WasmEngine
+  //   - else in a browser where WebAssembly + fetch exist, use WasmEngine
+  //     with the default wasm path (served by the hub at /runtime/…)
+  //   - else (Node, or WebAssembly missing) fall back to MockEngine so tests
+  //     and CLI workflows still run
   if (options.wasmUrl) return new WasmEngine(options);
+  if (
+    typeof WebAssembly !== "undefined" &&
+    typeof fetch === "function" &&
+    typeof window !== "undefined"
+  ) {
+    return new WasmEngine(options);
+  }
   return new MockEngine(options);
 }
