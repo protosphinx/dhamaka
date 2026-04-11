@@ -10,7 +10,11 @@
   "scripts": {
     "dev": "node packages/playground/server.js",
     "start": "node packages/playground/server.js",
-    "test": "node --test --test-reporter=spec 'packages/runtime/test/*.test.js' 'packages/sdk/test/*.test.js' 'packages/hub/test/*.test.js'"
+    "test": "node --test --test-reporter=spec 'packages/runtime/test/*.test.js' 'packages/sdk/test/*.test.js' 'packages/hub/test/*.test.js'",
+    "build:wasm": "crates/dhamaka-runtime/build.sh",
+    "build:wasm:check": "crates/dhamaka-runtime/build.sh --check",
+    "prepublish-stage": "node scripts/prepare-publish.mjs",
+    "release:dry": "node scripts/prepare-publish.mjs && cd packages/sdk/_staging && npm pack --dry-run"
   },
   "license": "MIT",
   "author": "Dhamaka contributors",
