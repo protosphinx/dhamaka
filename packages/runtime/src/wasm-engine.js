@@ -1,125 +1,177 @@
-// WasmEngine — the real one.
+// WasmEngine — the real Rust-backed inference engine.
 //
-// This is the seam where the compiled WebAssembly inference runtime plugs in.
-// The actual WASM module (Rust → wasm32-unknown-unknown, SIMD enabled, with
-// an optional WebGPU fast path) is under construction. Until it lands, this
-// file documents the exact interface the module must expose and provides a
-// loader that will Just Work™ once the .wasm drops into place.
+// Loads the compiled Dhamaka runtime (`dhamaka-runtime.wasm`, built from
+// the `crates/dhamaka-runtime` Rust crate), instantiates it, and drives
+// generation through the C ABI documented in `crates/dhamaka-runtime/src/abi.rs`:
 //
-// The planned ABI (candle/llama.cpp-style, kept intentionally small):
+//   dhamaka_version()                      -> u32
+//   dhamaka_alloc(len)                     -> *mut u8
+//   dhamaka_free(ptr, len)                 -> void
+//   dhamaka_init(w, wl, c, cl)             -> *mut Context
+//   dhamaka_destroy(ctx)                   -> void
+//   dhamaka_set_sampling(ctx, t, k, p, m)  -> void
+//   dhamaka_feed_prompt(ctx, ptr, len)     -> void
+//   dhamaka_next_token(ctx, out, cap)      -> i32  (-1 on EOS)
+//   dhamaka_reset(ctx)                     -> void
 //
-//   dhamaka_init(weights_ptr, weights_len, config_ptr, config_len) -> ctx
-//   dhamaka_tokenize(ctx, text_ptr, text_len) -> { tokens_ptr, tokens_len }
-//   dhamaka_feed(ctx, tokens_ptr, tokens_len) -> void
-//   dhamaka_sample(ctx, temperature, top_p, top_k) -> token_id
-//   dhamaka_detokenize(ctx, token_id) -> { text_ptr, text_len }
-//   dhamaka_reset(ctx) -> void
-//   dhamaka_free(ctx) -> void
-//
-// Memory is managed with a bump allocator exposed through dhamaka_alloc /
-// dhamaka_free_bytes so the JS side can hand large buffers in without copies.
+// JS writes prompt bytes into WASM linear memory via `dhamaka_alloc`, then
+// loops on `dhamaka_next_token` to stream UTF-8 token bytes back out.
 
 import { Engine } from "./engine.js";
-import { Tokenizer } from "./tokenizer.js";
+
+const ABI_VERSION = 1;
+const DEFAULT_WASM_URL = "/runtime/dhamaka-runtime.wasm";
 
 export class WasmEngine extends Engine {
   constructor(options = {}) {
     super();
-    this.wasmUrl = options.wasmUrl ?? null;
-    this._module = null;
+    this.wasmUrl = options.wasmUrl ?? DEFAULT_WASM_URL;
     this._instance = null;
     this._ctx = 0;
-    this.tokenizer = new Tokenizer();
+    this._decoder = new TextDecoder();
+    this._encoder = new TextEncoder();
   }
 
   async _instantiate() {
     if (this._instance) return this._instance;
-    if (!this.wasmUrl) {
+    const res = await fetch(this.wasmUrl);
+    if (!res.ok) {
       throw new Error(
-        "WasmEngine: no WASM module configured. The Dhamaka WASM runtime is still " +
-          "being built — use MockEngine for development, or pass { wasmUrl } once " +
-          "the real module is available.",
+        `WasmEngine: failed to fetch ${this.wasmUrl} (${res.status}). ` +
+          `Did you run crates/dhamaka-runtime/build.sh?`,
       );
     }
-    const res = await fetch(this.wasmUrl);
-    if (!res.ok) throw new Error(`WasmEngine: fetch failed: ${res.status}`);
-    const { instance, module } = await WebAssembly.instantiateStreaming(res, {
+    const imports = {
       env: {
-        // Host imports the WASM module may call into. Kept deliberately minimal.
-        abort: (msg, file, line, col) => {
-          throw new Error(`wasm abort at ${file}:${line}:${col} (${msg})`);
-        },
-        now: () => performance.now(),
-        log: (ptr, len) => {
-          // Optional diagnostic channel — noop by default.
-          void ptr; void len;
+        // The Rust crate is pure compute — no host imports required. We
+        // still provide stubs for any panic/abort that leaks through.
+        abort: () => {
+          throw new Error("wasm: abort");
         },
       },
-    });
-    this._module = module;
+    };
+    const { instance } = await WebAssembly.instantiateStreaming
+      ? await WebAssembly.instantiateStreaming(res, imports)
+      : await WebAssembly.instantiate(await res.arrayBuffer(), imports);
+
+    const got = instance.exports.dhamaka_version?.() >>> 0;
+    if (got !== ABI_VERSION) {
+      throw new Error(
+        `WasmEngine: ABI mismatch. Expected ${ABI_VERSION}, got ${got}`,
+      );
+    }
     this._instance = instance;
     return instance;
   }
 
+  _memory() {
+    return new Uint8Array(this._instance.exports.memory.buffer);
+  }
+
+  _writeBytes(bytes) {
+    if (bytes == null || bytes.byteLength === 0) return { ptr: 0, len: 0 };
+    const { dhamaka_alloc } = this._instance.exports;
+    const ptr = dhamaka_alloc(bytes.byteLength) >>> 0;
+    this._memory().set(bytes, ptr);
+    return { ptr, len: bytes.byteLength };
+  }
+
+  _freeBytes(ptr, len) {
+    if (!ptr || !len) return;
+    this._instance.exports.dhamaka_free(ptr, len);
+  }
+
   async load({ entry, artifacts } = {}) {
     const inst = await this._instantiate();
-    const { dhamaka_init, dhamaka_alloc } = inst.exports;
-    if (!dhamaka_init || !dhamaka_alloc) {
-      throw new Error("WasmEngine: module is missing required exports");
+    const { dhamaka_init } = inst.exports;
+
+    // v0.1 of the runtime uses a deterministic random model seeded from the
+    // config bytes. When real weights arrive, they flow through the same
+    // entry point unchanged.
+    const weightsBytes = artifacts?.weights ?? new Uint8Array();
+    const configBytes =
+      artifacts?.config ?? this._encoder.encode(entry?.id ?? "dhamaka-micro");
+
+    const w = this._writeBytes(weightsBytes);
+    const c = this._writeBytes(configBytes);
+
+    this._ctx = dhamaka_init(w.ptr, w.len, c.ptr, c.len) >>> 0;
+    if (!this._ctx) {
+      throw new Error("WasmEngine: dhamaka_init returned null");
     }
 
-    const weights = artifacts?.weights;
-    const config = artifacts?.config;
-    if (!weights || !config) {
-      throw new Error("WasmEngine: artifacts.weights and artifacts.config required");
-    }
+    // Free the temporary input buffers — the runtime has copied what it
+    // needs.
+    this._freeBytes(w.ptr, w.len);
+    this._freeBytes(c.ptr, c.len);
 
-    const wPtr = dhamaka_alloc(weights.byteLength);
-    const cPtr = dhamaka_alloc(config.byteLength);
-    const mem = new Uint8Array(inst.exports.memory.buffer);
-    mem.set(weights, wPtr);
-    mem.set(config, cPtr);
-
-    this._ctx = dhamaka_init(wPtr, weights.byteLength, cPtr, config.byteLength);
-    if (!this._ctx) throw new Error("WasmEngine: dhamaka_init returned null");
-
-    if (artifacts?.tokenizer) {
-      await this.tokenizer.loadFromBytes(artifacts.tokenizer);
-    }
     this._entry = entry ?? null;
     this.loaded = true;
   }
 
-  async *generate(_prompt, _options = {}) {
-    // Intentionally routed through the real ABI once the module is in place.
-    // Implementation sketch:
-    //
-    //   const tokens = tokenizer.encode(prompt)
-    //   dhamaka_feed(ctx, tokens)
-    //   while (emitted < maxTokens && !signal.aborted) {
-    //     const id = dhamaka_sample(ctx, temperature, topP, topK)
-    //     if (isEos(id)) return
-    //     yield tokenizer.decode(id)
-    //     emitted++
-    //   }
-    throw new Error(
-      "WasmEngine.generate() is not implemented yet. The Dhamaka WASM runtime is " +
-        "under construction. Use MockEngine for now.",
-    );
+  async *generate(prompt, options = {}) {
+    if (!this.loaded || !this._ctx) {
+      throw new Error("WasmEngine: load() must be called before generate()");
+    }
+    const inst = this._instance;
+    const {
+      dhamaka_set_sampling,
+      dhamaka_feed_prompt,
+      dhamaka_next_token,
+      dhamaka_reset,
+    } = inst.exports;
+
+    const temperature = options.temperature ?? 0.7;
+    const topK = options.topK ?? 40;
+    const topP = options.topP ?? 0.95;
+    const maxTokens = options.maxTokens ?? 256;
+    const signal = options.signal;
+
+    dhamaka_reset(this._ctx);
+    dhamaka_set_sampling(this._ctx, temperature, topK, topP, maxTokens);
+
+    // Feed the prompt.
+    const promptBytes = this._encoder.encode(prompt ?? "");
+    const p = this._writeBytes(promptBytes);
+    try {
+      dhamaka_feed_prompt(this._ctx, p.ptr, p.len);
+    } finally {
+      this._freeBytes(p.ptr, p.len);
+    }
+
+    // Stream tokens. Each call writes up to OUT_CAP bytes into a scratch
+    // buffer we hand to the runtime, then we decode as UTF-8 and yield.
+    const OUT_CAP = 64;
+    const outPtr = inst.exports.dhamaka_alloc(OUT_CAP) >>> 0;
+    try {
+      while (true) {
+        if (signal?.aborted) return;
+        const n = dhamaka_next_token(this._ctx, outPtr, OUT_CAP);
+        if (n < 0) return; // EOS / max tokens
+        if (n === 0) continue;
+        const bytes = this._memory().slice(outPtr, outPtr + n);
+        yield this._decoder.decode(bytes, { stream: true });
+      }
+    } finally {
+      this._freeBytes(outPtr, OUT_CAP);
+    }
   }
 
   async unload() {
-    const inst = this._instance;
-    if (inst && this._ctx && inst.exports.dhamaka_free) {
-      inst.exports.dhamaka_free(this._ctx);
+    if (this._instance && this._ctx) {
+      this._instance.exports.dhamaka_destroy(this._ctx);
     }
     this._ctx = 0;
     this._instance = null;
-    this._module = null;
     await super.unload();
   }
 
   info() {
-    return { ...super.info(), backend: "wasm" };
+    return {
+      ...super.info(),
+      backend: "wasm",
+      wasmUrl: this.wasmUrl,
+      abiVersion: ABI_VERSION,
+    };
   }
 }

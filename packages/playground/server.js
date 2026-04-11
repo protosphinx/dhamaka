@@ -76,6 +76,10 @@ function staticHandler({ label, base, mounts = {} }) {
         "cache-control": "no-store",
         // Allow the hub iframe to be embedded by the playground origin.
         "cross-origin-resource-policy": "cross-origin",
+        // Allow cross-origin fetches (the SDK on :5173 pulls the .wasm
+        // runtime from the hub origin on :5174). Without this,
+        // WebAssembly.instantiateStreaming refuses to run the module.
+        "access-control-allow-origin": "*",
       });
       res.end(data);
       log(label, req.method, pathname, 200);
