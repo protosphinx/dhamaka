@@ -17,12 +17,29 @@ import { createEngine } from "@dhamaka/runtime";
 import { HubClient } from "./hub-client.js";
 import { Chat } from "./chat.js";
 
-// ─── the new surface (the pivot) ──────────────────────────────────────
+// Auto-register the Transform-family formula tasks. This is a
+// side-effect import — pulling in `dhamaka` at all registers every
+// built-in task so apps don't have to chase per-family imports.
+import "./tasks/formula.js";
+
+// ─── Reflex family ────────────────────────────────────────────────────
 
 export { SmartField } from "./smart-field.js";
 export { SmartForm } from "./smart-form.js";
 export { SmartText } from "./smart-text.js";
 export { attachSmartPaste } from "./paste-extract.js";
+
+// ─── Transform family ─────────────────────────────────────────────────
+
+export { Transform } from "./transform.js";
+export {
+  formulaTransformTask,
+  formulaExplainTask,
+  formulaDebugTask,
+} from "./tasks/formula.js";
+
+// ─── shared infrastructure ────────────────────────────────────────────
+
 export { reflex } from "./reflex.js";
 export {
   runTask,

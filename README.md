@@ -9,16 +9,16 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/banner.svg">
   <source media="(prefers-color-scheme: light)" srcset="./docs/banner.svg">
-  <img src="./docs/banner.svg" alt="Dhamaka — browser-native LLM. Download once. Run anywhere." width="100%">
+  <img src="./docs/banner.svg" alt="Dhamaka — the local AI capability layer for web apps." width="100%">
 </picture>
 
 <br/>
 
-**`✦ SmartField`** &nbsp;·&nbsp; **`🧠 on-device`** &nbsp;·&nbsp; **`⚡ 0 ms`** &nbsp;·&nbsp; **`🔒 private`** &nbsp;·&nbsp; **`🆓 $0/call`** &nbsp;·&nbsp; **`🌐 every browser`**
+**`🧠 on-device`** &nbsp;·&nbsp; **`⚡ 0 ms`** &nbsp;·&nbsp; **`🔒 private`** &nbsp;·&nbsp; **`🆓 $0/call`** &nbsp;·&nbsp; **`🌐 every browser`** &nbsp;·&nbsp; **`📴 offline`**
 
 <br/>
 
-<sub>The banner above is animated — the block letters cycle through a rainbow gradient and the stars pulse. If your renderer doesn't support SMIL (rare), here's the static form:</sub>
+<sub>The banner above is animated — the block letters cycle through a rainbow gradient and the stars pulse. Static fallback:</sub>
 
 ```
  ██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗
@@ -28,8 +28,8 @@
  ██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║
  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
 
-   a reflex layer for every input field on the web
-   on-device · zero latency · zero cost
+   the local AI capability layer for web apps
+   on-device · zero latency · zero cost · every browser
 ```
 
 </div>
@@ -38,113 +38,194 @@
 
 ## ✦ what is this
 
-**A cross-browser JavaScript SDK that gives every `<input>` and `<textarea>` on the web on-device AI reflexes.** Drop it in, every form gets intelligent. Runs 100% in the user's tab — no API keys, no round trips, no rate limits, no privacy exposure, no monthly bill.
+**Dhamaka is a JavaScript SDK that lets any web app add AI capabilities that run 100% in the user's browser tab.** No servers. No API keys. No round trips. No rate limits. No privacy exposure. Your prompts never leave the device, your model weights never leave the device, your users' data never leaves the device.
 
-Three things ship today:
+It is **not** another general-purpose browser LLM runtime. Transformers.js, WebLLM, wllama, and Chrome's `window.ai` already occupy that layer. Dhamaka sits three layers above them — a task-oriented capability layer that any product can drop in to add on-device reflexes, transformations, and reasoning without building any of the plumbing.
 
-- **`SmartField`** — a tiny wrapper around an `<input>` that routes keystrokes through a task-oriented inference pipeline (autofill, completion, format validation) and fires a resolved event with the result.
-- **`SmartForm`** — declares cross-field inference rules (`"city → state"`, `"city → timezone"`) on a `<form>` and propagates results automatically. Manual edits are respected.
-- **`SmartText`** — watches a `<textarea>` for contextual spellcheck and proofreading — the kind that catches "see you their" and "your welcome", not just dictionary misses.
+### Four capability families, one SDK
 
-Plus `attachSmartPaste(form)` so pasted business cards / signatures / contact blobs split themselves into the right fields synchronously.
+```
+  ┌────────────────────────────────────────────────────────────────────┐
+  │  Dhamaka — local AI capability layer                               │
+  ├────────────────────────────────────────────────────────────────────┤
+  │                                                                    │
+  │  🪞 Reflex    reactive, keystroke-level, rules-first               │
+  │              SmartField · SmartForm · SmartText · attachSmartPaste │
+  │              use when: every <input> should feel intelligent       │
+  │                                                                    │
+  │  🔧 Transform imperative, one-shot, instruction-driven             │
+  │              Transform · Formula.* · Text.* · Code.*               │
+  │              use when: an app needs "rewrite this X given Y"       │
+  │                                                                    │
+  │  🔎 Search    semantic search over in-memory data (later)          │
+  │              use when: users search their own local data           │
+  │                                                                    │
+  │  🤖 Agent     multi-step tool use over app-exposed actions (v2)    │
+  │              use when: the app has actions and the user has intent │
+  │                                                                    │
+  ├────────────────────────────────────────────────────────────────────┤
+  │  shared: task registry · reflex service · engine backends          │
+  │  (window.ai → Rust WASM → MockEngine)                              │
+  └────────────────────────────────────────────────────────────────────┘
+```
 
-Under the hood every task is **rules-first, model-second**: a tiny gazetteer / regex / static table answers 80% of real inputs in microseconds, and an on-device LLM handles the semantic long tail only when the fast path is uncertain.
+Two families are shipping today — **Reflex** and **Transform**. The other two are planned. Every family shares the same engine, the same task registry, and the same deploy story, so adding a new family is a matter of adding tasks, not forking the SDK.
 
 ---
 
-## ✦ the killer use cases
+## ✦ the hero use case — formula editing in erp.ai
 
-Every one of these is impossible as a server-side product because network latency, per-call cost, or rate limits kill it. Every one becomes trivial when inference is free and instant:
+Dhamaka's flagship Transform integration is the formula editor in **[erp.ai](https://erp.ai)**. ERP formulas are the single most sensitive thing a company owns — pricing models, margins, payroll math, commission tiers, inventory rules, compliance checks. The idea of shipping them to a third-party AI provider is a non-starter for any serious enterprise, which is exactly why Microsoft's Copilot-for-Excel is blocked in so many orgs.
 
-- Type "San Francisco" → state, country, timezone, currency fill in live before you finish typing
-- Type "i'll see you their tomorrow" → "their" flagged as wrong, "there" suggested, one click to fix
-- Paste a business card blob into a form → name, email, phone, company, website split themselves into the right fields
-- Type "forest green" in a hex-color field → `#228B22`
-- Type "next Tuesday" in a date field → parsed to an ISO date
-- Type "1 Infinite Loop" → city, state, ZIP auto-complete
-- Type an email ending in `@stripe.com` → company field auto-fills "Stripe"
-- Type "SF" in a city field → expanded to "San Francisco, California, USA, Pacific Time"
-- Start typing in French in an English field → live translation offer
-- Submit a form with mismatched shipping/billing ZIP and state → natural-language explanation of the conflict
+Dhamaka lets erp.ai ship **Copilot-for-your-formulas that runs in the user's tab** — every formula edit, every explain-this, every debug-this call happens locally. No SOC2 questionnaires, no data-residency contracts, no per-user AI subscription, no latency on per-cell edits, no rate limits when 50 analysts hit the same sheet at once.
 
-All of them run on-device, per keystroke, for free, on every browser, in <50 ms.
+```js
+import { Transform } from "dhamaka";
+const t = new Transform();
+
+// User selects a cell showing `=SUM(A1:A10) * 1.08` and types
+// "add a 10% discount for employees"
+const r = await t.formula(
+  "=SUM(A1:A10) * 1.08",
+  "add a 10% discount for employees",
+  { dialect: "excel", headers: ["amount", "isEmployee"] },
+);
+// r.output       → "=(SUM(A1:A10) * 1.08) * 0.9"
+// r.source       → "rule"   (the discount pattern matched the fast path)
+// r.explanation  → "Multiplied by 0.9 to apply a 10% discount."
+// r.confidence   → 0.95
+```
+
+That call resolved in under a millisecond — no model ran, because "add a 10% discount" is a pattern the rules layer recognises and rewrites structurally. When the instruction is something weirder ("pull the tax rate from the third sheet and apply it only to rows where the vendor country is DE"), the same call transparently escalates to the on-device LLM.
+
+More formula-family calls on the same primitive:
+
+```js
+// Explain a formula in plain English
+await t.explain("=IFERROR(VLOOKUP(A2, Prices!A:B, 2, FALSE), 0)");
+// → "This formula uses IFERROR catches errors from the wrapped expression…
+//    and VLOOKUP looks up a value in the first column of a table…"
+
+// Diagnose and fix a broken formula
+await t.debug("=A1/B1", { error: "#DIV/0!" });
+// → "The formula is dividing by a zero or empty cell. Wrap the denominator
+//    in IFERROR: =IFERROR(A1/B1, 0)."
+```
+
+Every one of these runs on-device. Every one is free. Every one is instant. Every one works offline. None of them touch a server erp.ai has to run or pay for.
 
 ---
 
-## ✦ three working demos
+## ✦ other use cases this unlocks
+
+The pattern generalises to **any web app where AI calls need to be free, private, instant, and cross-browser** — i.e. almost any app where users are typing real data into real forms:
+
+**ERP / finance / analytics**
+- Formula editing, explanation, debugging (the erp.ai integration above)
+- Natural-language filters over spreadsheet ranges
+- "Find the anomaly in this column" / "what's driving this trend"
+- Smart CSV import: auto-detect headers, map to schema, flag bad rows
+
+**Forms / checkout / onboarding**
+- Type "San Francisco" → state, country, timezone, currency populate live
+- Smart paste: business cards split into name / email / phone / company
+- Contextual spellcheck that catches "see you their" and "your welcome"
+- Cross-field inference: ZIP → city, email domain → company, date range → duration
+
+**Writing tools**
+- Tone rewriting ("make it formal / shorter / friendlier") on any `<textarea>`
+- Inline translation as the user types in a different language
+- Proofreading with context-aware suggestions
+
+**Internal tools / admin panels**
+- Natural-language search over in-memory tables
+- "Fix this row's data" / "what fields are missing" / "is this a duplicate"
+- Free-text classification of incoming records
+
+Every one of these is impossible as a server-side product because network latency, per-call cost, privacy exposure, rate limits, or offline support kills it. Every one becomes trivial when inference is free and local.
+
+---
+
+## ✦ working demos
 
 Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try them live:
 
-| demo | what it shows | primitive |
-|---|---|---|
-| **[Address autofill](packages/playground/public/demos/autofill.html)** | Type a city → state / country / timezone / currency populate synchronously | `SmartField` + `SmartForm` |
-| **[Contextual spellcheck](packages/playground/public/demos/spellcheck.html)** | Homophone-in-context detection, not just dictionary matches | `SmartText` |
-| **[Smart paste](packages/playground/public/demos/paste.html)** | Paste a contact blob, watch it split into the right fields | `attachSmartPaste` |
+| demo | family | what it shows | primitive |
+|---|---|---|---|
+| **[Address autofill](packages/playground/public/demos/autofill.html)** | Reflex | City → state / country / timezone / currency populate synchronously | `SmartField` + `SmartForm` |
+| **[Contextual spellcheck](packages/playground/public/demos/spellcheck.html)** | Reflex | Homophone-in-context detection, not just dictionary matches | `SmartText` |
+| **[Smart paste](packages/playground/public/demos/paste.html)** | Reflex | Paste a contact blob, watch it split into the right fields | `attachSmartPaste` |
+| **[Formula editor](packages/playground/public/demos/formula.html)** *(in progress)* | Transform | erp.ai-style spreadsheet, live formula rewrites from plain-English instructions | `Transform.formula()` |
 
 ---
 
 ## ✦ the stack
 
 ```
-  ┌─────────────────────────────────────────────────────────────────┐
-  │                                                                 │
-  │   your page                                                     │
-  │   ┌─────────────────────────────────────────────────────────┐   │
-  │   │   <input id="city"> ─┐   <input id="state"> ─┐          │   │
-  │   │                       │                        │         │   │
-  │   │   import {            │                        │         │   │
-  │   │     SmartField,       │                        │         │   │
-  │   │     SmartForm         │                        │         │   │
-  │   │   } from "dhamaka";   │                        │         │   │
-  │   └───────────────────────┼────────────────────────┼─────────┘   │
-  │                           │                        │             │
-  │                           ▼                        ▼             │
-  │   ┌─────────────────────────────────────────────────────────┐   │
-  │   │   SmartField / SmartForm / SmartText / attachSmartPaste │   │
-  │   │   (task-oriented API developers actually touch)         │   │
-  │   └──────────────┬──────────────────────────────────────────┘   │
-  │                  │                                               │
-  │                  ▼   runTask("city-to-state", …)                 │
-  │   ┌─────────────────────────────────────────────────────────┐   │
-  │   │   task registry   ←  rules → fuzzy → model              │   │
-  │   │   (city-to-state, spellcheck, paste-extract, …)          │   │
-  │   └──────────────┬──────────────────────────────────────────┘   │
-  │                  │ (only when rules are uncertain)               │
-  │                  ▼                                               │
-  │   ┌─────────────────────────────────────────────────────────┐   │
-  │   │   reflex service   ← resident engine (warm, KV-cached)  │   │
-  │   └──────────────┬──────────────────────────────────────────┘   │
-  │                  │                                               │
-  │                  ▼                                               │
-  │   ┌─────────────────────────────────────────────────────────┐   │
-  │   │   engine backends                                       │   │
-  │   │   ┌──────────────┐ ┌────────────┐ ┌─────────────┐       │   │
-  │   │   │  window.ai   │ │ WasmEngine │ │ MockEngine  │       │   │
-  │   │   │ (Chrome)     │ │ (Rust .wasm│ │ (Node /     │       │   │
-  │   │   │ Gemini Nano  │ │  56 KB)    │ │  tests)     │       │   │
-  │   │   └──────────────┘ └────────────┘ └─────────────┘       │   │
-  │   │        ↑                ↑               ↑               │   │
-  │   │        └── auto-detect in priority order ──┘            │   │
-  │   └─────────────────────────────────────────────────────────┘   │
-  └─────────────────────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────────────────┐
+  │  your app                                                            │
+  │                                                                      │
+  │   <input>      <input>      <textarea>      <cell formula>           │
+  │      │            │              │                 │                 │
+  │      ▼            ▼              ▼                 ▼                 │
+  │  ╔════════════════════════════╗ ╔══════════════════════════════════╗ │
+  │  ║     🪞 Reflex family       ║ ║    🔧 Transform family           ║ │
+  │  ║                            ║ ║                                  ║ │
+  │  ║   SmartField               ║ ║   Transform.run({…})             ║ │
+  │  ║   SmartForm                ║ ║   Transform.formula(…)           ║ │
+  │  ║   SmartText                ║ ║   Transform.explain(…)           ║ │
+  │  ║   attachSmartPaste         ║ ║   Transform.debug(…)             ║ │
+  │  ║                            ║ ║                                  ║ │
+  │  ║   (reactive, keystroke,    ║ ║   (imperative, one-shot,         ║ │
+  │  ║    rules-first)            ║ ║    instruction-driven)           ║ │
+  │  ╚═════════════╦══════════════╝ ╚═══════════════╦══════════════════╝ │
+  │                │                                │                     │
+  │                └────────────────┬───────────────┘                     │
+  │                                 ▼                                     │
+  │         ┌────────────────────────────────────────────┐                │
+  │         │  task registry                             │                │
+  │         │  city-to-state · spellcheck · paste-extract│                │
+  │         │  formula-transform · formula-explain · …   │                │
+  │         │  (every task: rules → fuzzy → model)       │                │
+  │         └──────────────────┬─────────────────────────┘                │
+  │                            │                                         │
+  │                            ▼                                         │
+  │         ┌────────────────────────────────────────────┐                │
+  │         │  reflex service   ← resident engine        │                │
+  │         │                     (warm, KV-cached)      │                │
+  │         └──────────────────┬─────────────────────────┘                │
+  │                            │                                         │
+  │                            ▼                                         │
+  │         ┌────────────────────────────────────────────┐                │
+  │         │  engine backends (auto-selected)           │                │
+  │         │  ┌───────────┐ ┌──────────┐ ┌────────────┐ │                │
+  │         │  │ window.ai │ │WasmEngine│ │ MockEngine │ │                │
+  │         │  │ (Chrome)  │ │ (56 KB   │ │  (Node /   │ │                │
+  │         │  │  Gemini   │ │  Rust    │ │  tests)    │ │                │
+  │         │  │  Nano)    │ │  .wasm)  │ │            │ │                │
+  │         │  └───────────┘ └──────────┘ └────────────┘ │                │
+  │         └────────────────────────────────────────────┘                │
+  └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**The shape that matters:** the SDK is the product. The runtime underneath is a dependency that can be swapped (Chrome's `window.ai` when present, the Rust `.wasm` otherwise, `MockEngine` for tests) without moving the surface developers touch.
+**The shape that matters:** the SDK is the product, split into capability families (Reflex, Transform, and soon Search / Agent) that share everything below them — task registry, reflex service, engine backends. Adding a new family is a matter of adding tasks, not forking the SDK. The runtime underneath is a swappable dependency (Chrome's `window.ai` when present, the Rust `.wasm` otherwise, `MockEngine` for tests) — the surface developers touch never moves.
 
 | package | what it does |
 |---|---|
-| [`dhamaka`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, task registry, reflex service. The thing you actually install. |
+| [`dhamaka`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, `Transform`, task registry, reflex service. The thing you actually install. |
 | [`@dhamaka/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
 | [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled fallback runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 56 KB `.wasm`, used when `window.ai` isn't available |
 | [`@dhamaka/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
 | [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
-| [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + three live demos |
+| [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + live demos for every capability family |
 
 ---
 
 ## ✦ the task registry
 
-Developers think in **tasks**, not in models. Each task is a small, typed function that turns an input string into a structured inference. The SDK decides what runs — a lookup table, a regex, a fuzzy match, or an on-device LLM — based on which path is fastest for the shape of the input.
+Developers think in **tasks**, not in models. Each task is a small, typed function that turns an input (plus optional instruction and context) into a structured inference. The SDK decides what runs — a lookup table, a regex, a fuzzy match, a pattern rewrite, or an on-device LLM — based on which path is fastest for the shape of the input. Registered tasks are available to every capability family that wants them.
+
+### Reflex family
 
 | task id              | status | what it does                                                       | backend layers                             |
 |----------------------|:------:|--------------------------------------------------------------------|--------------------------------------------|
@@ -156,12 +237,23 @@ Developers think in **tasks**, not in models. Each task is a small, typed functi
 | `color-name`         |   ◎    | "forest green" → `#228B22`                                         | static table → embedding similarity        |
 | `format-validate`    |   ◎    | live phone / SSN / IBAN / ZIP validation with natural-language errors | regex → LLM                             |
 | `tab-complete`       |   ◎    | per-keystroke next-token completion                                | n-gram → tiny causal LM                    |
-| `tone-rewrite`       |   ◎    | "make it formal / concise / friendly"                              | small instruction-tuned LM                 |
 | `cross-field-infer`  |   ◎    | fill related fields from one hint                                  | SmartForm rules + LLM                      |
+
+### Transform family
+
+| task id              | status | what it does                                                       | backend layers                             |
+|----------------------|:------:|--------------------------------------------------------------------|--------------------------------------------|
+| `formula-transform`  |   ⬤    | rewrite a spreadsheet / ERP formula from a plain-English instruction | pattern rewrites → LLM                   |
+| `formula-explain`    |   ⬤    | explain what a formula does in plain English                       | function gloss table → LLM                 |
+| `formula-debug`      |   ⬤    | diagnose a formula error and suggest a fix                         | error-code advice → LLM                    |
+| `tone-rewrite`       |   ◎    | rewrite prose "more formal / shorter / friendlier"                 | small instruction-tuned LM                 |
+| `translate`          |   ◎    | translate a paragraph between languages                            | `window.ai` Translator API → LLM fallback  |
+| `code-refactor`      |   ◎    | refactor a code snippet following a natural-language instruction   | small code LM                              |
+| `code-explain`       |   ◎    | explain a code snippet in plain English                            | small code LM                              |
 
 ⬤ shipping  ·  ◎ planned
 
-`registerTask(customTask)` lets any app ship their own task on top of the same pipeline.
+`registerTask(customTask)` lets any app ship their own task on top of the same pipeline — any app's domain-specific transformation (refactoring your DSL, normalising your data, applying your style guide) can plug into Dhamaka's rules-first / model-fallback architecture without forking the SDK.
 
 ---
 
@@ -214,7 +306,11 @@ Open **http://localhost:5173** and click into any of the three demos. The playgr
 
 ## ✦ the API
 
-### SmartField — one field, one task
+Dhamaka ships two capability families today. Pick the one that matches the shape of what you're building: **Reflex** for reactive keystroke-level intelligence on `<input>` and `<textarea>` elements, **Transform** for imperative one-shot "rewrite this X given instruction Y" calls.
+
+### 🪞 Reflex family — reactive, continuous, rules-first
+
+#### `SmartField` — one field, one task
 
 ```js
 import { SmartField } from "dhamaka";
@@ -231,7 +327,7 @@ new SmartField(document.querySelector("#city"), {
 
 Every keystroke fires the task. Rules-first, so typical inputs resolve in under a millisecond with no model involvement. The task registry decides when (and whether) to escalate to the LLM.
 
-### SmartForm — cross-field inference
+#### `SmartForm` — cross-field inference
 
 ```js
 import { SmartField, SmartForm } from "dhamaka";
@@ -251,7 +347,7 @@ new SmartForm(form, {
 
 Type "San Francisco" in the city field, the state / country / timezone / currency fields fill themselves from the same task result — synchronously, no debounce, no network. Manually edit any target field and it's locked out of automatic propagation until `smartForm.unlock()`.
 
-### SmartText — contextual spellcheck on every textarea
+#### `SmartText` — contextual spellcheck on every textarea
 
 ```js
 import { SmartText } from "dhamaka";
@@ -271,7 +367,7 @@ smart.applySuggestion(0);
 
 Catches classic homophone-in-context mistakes ("see you their", "your welcome", "alot of", "its a good idea") that a plain dictionary spellchecker misses.
 
-### Smart paste — any form, any blob
+#### `attachSmartPaste` — any form, any blob
 
 ```js
 import { attachSmartPaste } from "dhamaka";
@@ -287,6 +383,82 @@ form.addEventListener("smart-paste:extracted", (e) => {
 ```
 
 Paste a contact blob (business card, signature, LinkedIn blurb) and the `name`, `email`, `phone`, `company`, `website`, `twitter` fields populate themselves. Fields the user has already typed into are never overwritten.
+
+### 🔧 Transform family — imperative, one-shot, instruction-driven
+
+#### `Transform` — generic "input + instruction + context → output"
+
+```js
+import { Transform } from "dhamaka";
+
+const t = new Transform();
+
+// Generic one-shot via any registered task
+const r = await t.run({
+  task: "formula-transform",
+  input: "=SUM(A1:A10) * 1.08",
+  instruction: "add a 10% discount for employees",
+  context: { dialect: "excel", headers: ["amount", "isEmployee"] },
+});
+// r.output      → "=(SUM(A1:A10) * 1.08) * 0.9"
+// r.source      → "rule"         (pattern matched the fast path)
+// r.confidence  → 0.95
+// r.explanation → "Multiplied by 0.9 to apply a 10% discount."
+```
+
+One call, one answer, all local. If the task's rules layer can handle the instruction it resolves in microseconds with zero model calls. Otherwise it transparently escalates to the on-device LLM with a well-structured prompt including context, dialect, and schema hints — the app doesn't have to know which path ran.
+
+#### `Transform.formula` / `.explain` / `.debug` — formula shortcuts
+
+Convenience wrappers for the three shipping formula tasks, so erp.ai-style integrations are one import and three methods:
+
+```js
+const t = new Transform();
+
+// Rewrite a formula from a natural-language instruction
+await t.formula("=SUM(A1:A10) * 1.08", "add a 10% discount for employees");
+// → { output: "=(SUM(A1:A10) * 1.08) * 0.9", source: "rule", confidence: 0.95 }
+
+// Explain a formula in plain English
+await t.explain("=IFERROR(VLOOKUP(A2, Prices!A:B, 2, FALSE), 0)");
+// → { output: "This formula uses IFERROR catches errors… and VLOOKUP looks up…" }
+
+// Diagnose an error and suggest a fix
+await t.debug("=A1/B1", { error: "#DIV/0!" });
+// → { output: "The formula is dividing by a zero or empty cell. Wrap…" }
+```
+
+Every call runs 100% in the browser tab. No network, no API key, no per-call cost, no rate limit, no data leaving the user's machine — which is what makes this integration viable for products like erp.ai where formulas contain pricing, margins, payroll math, and commission tiers that cannot be sent to a third-party AI provider under any circumstances.
+
+#### Registering your own transform task
+
+Every Dhamaka-powered app can register custom tasks on top of the same rules-first / model-fallback architecture:
+
+```js
+import { registerTask, Transform } from "dhamaka";
+
+registerTask({
+  id: "product-sku-normalize",
+  description: "Normalize messy product SKUs to the canonical format",
+  fast(input) {
+    const m = input.match(/^([A-Z]{2,4})[-_\s]?(\d{4,8})$/i);
+    if (!m) return null;
+    return {
+      confidence: 0.95,
+      source: "rule",
+      fields: { output: `${m[1].toUpperCase()}-${m[2]}` },
+    };
+  },
+  async slow(input, _ctx, engine) {
+    const prompt = `Normalize this SKU to "XX-NNNN" format: "${input}". SKU:`;
+    const out = await engine.complete(prompt, { temperature: 0 });
+    return { confidence: 0.6, source: "model", fields: { output: out.trim() } };
+  },
+});
+
+// Now any Transform call with task: "product-sku-normalize" works
+await new Transform().run({ task: "product-sku-normalize", input: "abc 123456" });
+```
 
 ### Configure the engine (optional)
 
@@ -355,35 +527,56 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 ## ✦ what's real today
 
 ```
-  SmartField SDK (the product surface)
-  [x]  SmartField   — task-routed oninput reflexes on a single <input>
-  [x]  SmartForm    — cross-field inference rules with manual-edit locks
-  [x]  SmartText    — contextual spellcheck on a <textarea>
-  [x]  attachSmartPaste — regex+heuristic extraction, onpaste
-  [x]  reflex service — resident engine, lazy-loaded, one per page
-  [x]  task registry + registerTask() for custom tasks
+  🪞 Reflex family  (the product surface for input-level reflexes)
+  [x]  SmartField       — task-routed oninput reflexes on a single <input>
+  [x]  SmartForm        — cross-field inference rules with manual-edit locks
+  [x]  SmartText        — contextual spellcheck on a <textarea>
+  [x]  attachSmartPaste — regex + heuristic extraction, onpaste
 
-  Built-in tasks (rules → fuzzy → model)
-  [x]  city-to-state: 100+ city gazetteer, alias + diacritic normalisation,
-       Levenshtein fuzzy fallback, LLM long-tail handler
-  [x]  spellcheck: common misspellings + homophone-in-context rules, LLM
-       fallback for the unrecognised long tail
-  [x]  paste-extract: email / phone / URL / Twitter regex + name heuristic
-       + non-freemail-domain company inference, LLM fallback for gaps
+  Built-in Reflex tasks  (rules → fuzzy → model)
+  [x]  city-to-state : 100+ city gazetteer, alias + diacritic normalisation,
+                       Levenshtein fuzzy fallback, LLM long-tail handler
+  [x]  spellcheck    : common misspellings + homophone-in-context rules,
+                       LLM fallback for the unrecognised long tail
+  [x]  paste-extract : email / phone / URL / Twitter regex + name heuristic
+                       + non-freemail-domain company inference, LLM fallback
 
-  Engine backends (auto-selected by priority)
-  [x]  WindowAiBackend — Chrome 138+ Prompt API / Gemini Nano
-  [x]  WasmEngine      — 56 KB Rust runtime compiled to wasm32
-  [x]  MockEngine      — deterministic stand-in for Node / tests
+  🔧 Transform family  (the product surface for imperative one-shot calls)
+  [x]  Transform           — generic run({ task, input, instruction, context })
+  [x]  Transform.formula() — rewrite a formula from a plain-English instruction
+  [x]  Transform.explain() — explain a formula in plain English
+  [x]  Transform.debug()   — diagnose a formula error and suggest a fix
+
+  Built-in Transform tasks  (rules → pattern rewrites → model)
+  [x]  formula-transform : 10 structural rewrite patterns shipping at launch —
+                           percent discount, percent tax, round to N decimals,
+                           multiply / divide by N, IFERROR wrapping, null-safe
+                           wrapping, currency conversion, negate, absolute value.
+                           LLM fallback for anything the patterns can't match.
+  [x]  formula-explain   : function-gloss table covering SUM / AVERAGE / MIN /
+                           MAX / COUNT / IF / IFERROR / ROUND / VLOOKUP / XLOOKUP
+                           / SUMIFS / INDEX / MATCH / TEXT / LEN / TRIM / … plus
+                           arithmetic-tree detection. LLM fallback for composites.
+  [x]  formula-debug     : advice table for every common error code (#DIV/0!,
+                           #N/A, #REF!, #VALUE!, #NAME?, #NUM!, #NULL!, #SPILL!),
+                           static detection of divide-by-cell risk, LLM fallback.
+
+  Shared infrastructure  (every family rides on top of this)
+  [x]  reflex service       — resident engine, lazy-loaded, one per page
+  [x]  task registry        — registerTask / getTask / runTask + built-ins
+  [x]  Engine abstract interface with three backends
+  [x]  WindowAiBackend      — Chrome 138+ Prompt API / Gemini Nano
+  [x]  WasmEngine           — 56 KB Rust runtime compiled to wasm32
+  [x]  MockEngine           — deterministic stand-in for Node / tests
   [x]  createEngine() auto-detection: window.ai → wasm → mock
 
-  Rust runtime (the fallback inference engine)
+  Rust runtime  (the compiled fallback inference engine)
   [x]  matmul, RMSNorm, softmax, rotary, KV-cached self-attention,
        SwiGLU/SiLU, top-k + top-p + temperature sampling
   [x]  #[no_mangle] extern "C" ABI exposed to WebAssembly
   [x]  27 native cargo tests covering every primitive
 
-  Cross-site cache (the moat)
+  Cross-site cache  (the moat)
   [x]  hub ↔ sdk postMessage bridge (get / list / delete / progress)
   [x]  IndexedDB-backed hub storage with SHA-256 integrity checks
   [x]  zero-copy ArrayBuffer transfer from hub → consumer
@@ -393,27 +586,34 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   [x]  SDK auto-detection of the extension with tiered mode reporting
 
   Playground + tests + CI
-  [x]  3 live working demos (address autofill, spellcheck, smart paste)
+  [x]  3 shipping demos: address autofill, contextual spellcheck, smart paste
+  [~]  formula demo (erp.ai-style spreadsheet) — in flight, next commit
   [x]  zero-dependency dev server with correct MIME + CORS
   [x]  OpenAI /v1/chat/completions shim (for legacy Dhamaka.load() users)
-  [x]  102 tests total — 27 Rust (cargo test) + 75 JS (node --test),
-       including 4 integration tests that drive the real compiled .wasm
+  [x]  102 tests — 27 Rust (cargo test) + 75 JS (node --test), including
+       4 integration tests that drive the real compiled .wasm
   [x]  GitHub Actions CI: Rust crate build → wasm artifact upload → JS
        tests on Node 20 + 22, plus a dev-server smoke test
 
   In flight (see docs/GOALS.md)
+  [ ]  Transform tests: Transform class, formula task patterns, explain table,
+       debug error-code table, model-escalation fallthrough
+  [ ]  Formula demo page in the playground (erp.ai-style spreadsheet with
+       live pattern-rewritten formula edits)
+  [ ]  Text family: tone-rewrite, translate, summarize
+  [ ]  Code family: code-refactor, code-explain, code-fix
+  [ ]  Search family: semantic search over in-memory data
+  [ ]  Agent family: multi-step tool use over app-exposed actions
   [ ]  SharedWorker upgrade (current reflex is a module-level singleton;
        same API, swap drop-in for multi-tab residency)
   [ ]  Transformers.js adapter so the fallback engine can load HF models
        instead of the tiny Rust-random model
-  [ ]  Task registry expansion: address-autofill, date-parse, color-name,
-       format-validate, tab-complete, tone-rewrite, cross-field-infer
   [ ]  Real SmolLM2-360M Q4 weights hosted on the hub
   [ ]  SIMD128 + WebGPU fast paths
   [ ]  Extension published on the Chrome Web Store
 ```
 
-**v0.1 honesty note:** the Rust runtime does real transformer math end-to-end in WebAssembly, but the weights it loads for v0.1 are a 32-dim random-init demo model — so if a task actually escalates to the LLM layer, the output isn't coherent English. The **three shipping demos deliberately resolve entirely in the rules / fuzzy layers** so you can feel the product without depending on the long-tail model. When real weights arrive, the same task code transparently upgrades.
+**v0.1 honesty note:** the Rust runtime does real transformer math end-to-end in WebAssembly, but the weights it loads for v0.1 are a 32-dim random-init demo model — so when a task escalates to the LLM layer, the model output isn't coherent English yet. **Every shipping task deliberately resolves entirely in its rules layer for the demo inputs** so you can feel the product without depending on the long-tail model. The formula family in particular was designed so the 10 most common ERP formula edits (discounts, taxes, rounding, multipliers, null-safety) are all pattern rewrites that produce correct output with no model call at all. When real weights arrive, the same task code transparently upgrades to handle the long tail.
 
 ---
 
