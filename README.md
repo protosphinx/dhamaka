@@ -6,21 +6,31 @@
 
 <div align="center">
 
-```
-      ██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗
-      ██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗
-      ██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║
-      ██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║
-      ██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║
-      ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/banner.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./docs/banner.svg">
+  <img src="./docs/banner.svg" alt="Dhamaka — browser-native LLM. Download once. Run anywhere." width="100%">
+</picture>
 
-          ╭─────────────────────────────────────────────────╮
-          │   a browser-native LLM that lives in your tab   │
-          │   download once · run on every site · forever   │
-          ╰─────────────────────────────────────────────────╯
-```
+<br/>
 
-**`💥 WASM`** &nbsp;·&nbsp; **`🧠 on-device`** &nbsp;·&nbsp; **`🔒 private`** &nbsp;·&nbsp; **`⚡ instant`** &nbsp;·&nbsp; **`🪶 ~100MB`**
+**`💥 WASM`** &nbsp;·&nbsp; **`🦀 Rust`** &nbsp;·&nbsp; **`🧠 on-device`** &nbsp;·&nbsp; **`🔒 private`** &nbsp;·&nbsp; **`⚡ instant`** &nbsp;·&nbsp; **`🪶 ~56 KB runtime`**
+
+<br/>
+
+<sub>The banner above is animated — the block letters cycle through a rainbow gradient and the stars pulse. If your renderer doesn't support SMIL (rare), here's the static form:</sub>
+
+```
+ ██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗
+ ██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗
+ ██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║
+ ██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║
+ ██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║
+ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+
+   a browser-native LLM that lives in your tab
+   download once · run on every site · forever
+```
 
 </div>
 
