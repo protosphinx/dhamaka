@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+.cache/
+.DS_Store
+*.log
+.env
+.env.local
+coverage/
+*.wasm.map
+models/*.bin
+models/*.onnx
+models/*.gguf
+!models/manifest.json
