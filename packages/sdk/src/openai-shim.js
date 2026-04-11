@@ -19,7 +19,22 @@ export function installOpenAIShim(dhamaka, { path = "/v1/chat/completions" } = {
     const url = typeof input === "string" ? input : input?.url ?? "";
     if (!url.endsWith(path)) return originalFetch(input, init);
 
-    const body = init?.body ? JSON.parse(init.body) : {};
+    let body = {};
+    const raw = init?.body;
+    if (raw) {
+      try {
+        if (typeof raw === "string") body = JSON.parse(raw);
+        else if (raw instanceof ArrayBuffer) body = JSON.parse(new TextDecoder().decode(raw));
+        else if (ArrayBuffer.isView(raw)) body = JSON.parse(new TextDecoder().decode(raw));
+        else if (typeof raw.text === "function") body = JSON.parse(await raw.text());
+        else body = JSON.parse(String(raw));
+      } catch {
+        return new Response(
+          JSON.stringify({ error: { message: "invalid JSON body" } }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      }
+    }
     const messages = body.messages ?? [];
     const stream = !!body.stream;
 

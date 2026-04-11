@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: syntax check
+        run: |
+          find packages -name '*.js' -not -path '*/node_modules/*' \
+            | xargs -n1 node --check
+
+      - name: run tests
+        run: npm test
+
+      - name: smoke test dev server
+        run: |
+          node packages/playground/server.js &
+          SERVER_PID=$!
+          sleep 2
+          for url in \
+            "http://localhost:5174/" \
+            "http://localhost:5174/hub.js" \
+            "http://localhost:5174/manifest.json" \
+            "http://localhost:5173/" \
+            "http://localhost:5173/sdk/index.js" \
+            "http://localhost:5173/runtime/index.js"; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+            if [ "$code" != "200" ]; then
+              echo "FAIL: $url returned $code"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            echo "OK: $url"
+          done
+          kill $SERVER_PID 2>/dev/null || true

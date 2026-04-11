@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "node packages/playground/server.js",
     "start": "node packages/playground/server.js",
-    "test": "node --test packages/*/test/*.test.js"
+    "test": "node --test --test-reporter=spec 'packages/runtime/test/*.test.js' 'packages/sdk/test/*.test.js' 'packages/hub/test/*.test.js'"
   },
   "license": "MIT",
   "author": "Dhamaka contributors",

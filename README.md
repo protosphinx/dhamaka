@@ -99,6 +99,7 @@ One download. Every site after that is an instant cache hit.
 | [`dhamaka`](packages/sdk)              | public SDK: `Dhamaka.load()`, chat, streaming, OpenAI shim |
 | [`@dhamaka/runtime`](packages/runtime) | the inference engine interface + `MockEngine` (today) + `WasmEngine` (next) |
 | [`@dhamaka/hub`](packages/hub)         | the tiny static origin that hosts the cross-site model cache |
+| [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
 | [`@dhamaka/playground`](packages/playground) | a live demo + a zero-dep dev server that runs the whole stack |
 
 ---
@@ -242,17 +243,22 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   [x]  IndexedDB-backed hub storage with SHA-256 integrity checks
   [x]  zero-copy ArrayBuffer transfer from hub → consumer
   [x]  Dhamaka.load, complete, stream, chat, info, evict
-  [x]  site-local fallback cache when the hub iframe isn't reachable
+  [x]  fallback cache (real IndexedDB in browsers, in-memory in Node)
+  [x]  Storage Access API tier for unpartitioned storage on strict browsers
+  [x]  Manifest V3 browser extension (phase 2) — sidesteps partitioning
+  [x]  SDK auto-detection of the extension, with tiered mode reporting
   [x]  OpenAI /v1/chat/completions shim (streaming + non-streaming)
   [x]  manifest + multi-artifact model layout + signed-hash verification
-  [x]  playground UI with progress bars, telemetry, cache-hit badge
+  [x]  manifest.schema.json (JSON Schema draft-07) for tooling
+  [x]  playground UI with progress bars, telemetry, cache-hit badge,
+       stateful chat, abort/stop button, and reset-history
   [x]  zero-dependency dev server that serves hub + playground on two ports
+  [x]  40 tests covering runtime, SDK, hub, and OpenAI shim
+  [x]  GitHub Actions CI running tests on Node 20 + 22
 
   [ ]  the actual WASM transformer runtime (ABI sketched, loader ready)
   [ ]  SmolLM2-360M Q4 weights hosted on hub.dhamaka.dev
   [ ]  WebGPU fast path
-  [ ]  Storage Access API flow
-  [ ]  browser extension (phase 2)
   [ ]  the other registered models (code / sql / json / summarize / embed)
 ```
 

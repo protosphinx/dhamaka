@@ -245,7 +245,71 @@ async function handlePing({ requestId }, reply) {
     pong: true,
     version: "0.1.0",
     origin: location.origin,
+    tier: await currentStorageTier(),
   });
+}
+
+// ─── Storage Access API ────────────────────────────────────────────────────
+//
+// Modern browsers partition third-party iframe storage by top-level site. A
+// hub iframe embedded on site-A gets a different IndexedDB than the same
+// hub iframe embedded on site-B, which kills the cross-site sharing trick.
+//
+// The Storage Access API lets the iframe ask for unpartitioned storage after
+// the user has interacted with the hub origin at least once as a first party.
+// This function tries to detect + request it, and reports which tier we got.
+//
+// Tiers:
+//   "shared"        → cross-site unpartitioned storage (the dream)
+//   "storage-access"→ granted via Storage Access API
+//   "partitioned"   → per-top-site IndexedDB (still persistent, not shared)
+//   "unknown"       → couldn't determine
+
+async function currentStorageTier() {
+  try {
+    if (typeof document === "undefined") return "unknown";
+
+    // If we're not actually embedded in anything, storage is first-party.
+    if (window.top === window.self) return "shared";
+
+    if (typeof document.hasStorageAccess === "function") {
+      const has = await document.hasStorageAccess();
+      if (has) return "storage-access";
+    }
+    return "partitioned";
+  } catch {
+    return "unknown";
+  }
+}
+
+async function handleRequestStorageAccess({ requestId }, reply) {
+  if (typeof document === "undefined" || typeof document.requestStorageAccess !== "function") {
+    reply({
+      type: "dhamaka:response",
+      requestId,
+      granted: false,
+      tier: "partitioned",
+      reason: "Storage Access API not supported",
+    });
+    return;
+  }
+  try {
+    await document.requestStorageAccess();
+    reply({
+      type: "dhamaka:response",
+      requestId,
+      granted: true,
+      tier: await currentStorageTier(),
+    });
+  } catch (err) {
+    reply({
+      type: "dhamaka:response",
+      requestId,
+      granted: false,
+      tier: "partitioned",
+      reason: String(err?.message || err),
+    });
+  }
 }
 
 // ─── Message router ────────────────────────────────────────────────────────
@@ -287,6 +351,9 @@ window.addEventListener("message", async (event) => {
       case "dhamaka:delete":
         await handleDelete(msg, reply);
         break;
+      case "dhamaka:request-storage-access":
+        await handleRequestStorageAccess(msg, reply);
+        break;
       default:
         reply({
           type: "dhamaka:error",
@@ -304,7 +371,15 @@ window.addEventListener("message", async (event) => {
 });
 
 // Announce ready so the parent can resolve its load promise deterministically.
-window.parent?.postMessage(
-  { type: "dhamaka:ready", version: "0.1.0", origin: location.origin },
-  "*",
-);
+(async () => {
+  const tier = await currentStorageTier();
+  window.parent?.postMessage(
+    {
+      type: "dhamaka:ready",
+      version: "0.1.0",
+      origin: location.origin,
+      tier,
+    },
+    "*",
+  );
+})();
