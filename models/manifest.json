@@ -1,0 +1,131 @@
+{
+  "$schema": "https://hub.dhamaka.dev/manifest.schema.json",
+  "version": 1,
+  "updated": "2026-04-11",
+  "default": "dhamaka-micro",
+  "models": [
+    {
+      "id": "dhamaka-micro",
+      "name": "Dhamaka Micro",
+      "description": "The default on-device chat model. Small enough to download once and keep forever.",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm2",
+      "params": "360M",
+      "contextLength": 2048,
+      "quantization": "Q4_K_M",
+      "size": 104857600,
+      "artifacts": {
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-micro/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-micro/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-micro/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["chat", "completion", "streaming"],
+      "default": true
+    },
+    {
+      "id": "dhamaka-code",
+      "name": "Dhamaka Code",
+      "description": "Code completion and explanation. Trained on permissive-license source.",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm2",
+      "params": "360M",
+      "contextLength": 4096,
+      "quantization": "Q4_K_M",
+      "size": 110100480,
+      "artifacts": {
+        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["code", "completion", "streaming"],
+      "status": "planned"
+    },
+    {
+      "id": "dhamaka-sql",
+      "name": "Dhamaka SQL",
+      "description": "Natural language to SQL across common dialects.",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm2",
+      "params": "360M",
+      "contextLength": 2048,
+      "quantization": "Q4_K_M",
+      "size": 108000000,
+      "artifacts": {
+        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["sql", "text-to-sql"],
+      "status": "planned"
+    },
+    {
+      "id": "dhamaka-json",
+      "name": "Dhamaka JSON",
+      "description": "Structured output and function-calling specialist.",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm2",
+      "params": "360M",
+      "contextLength": 2048,
+      "quantization": "Q4_K_M",
+      "size": 105000000,
+      "artifacts": {
+        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["json", "function-calling", "structured-output"],
+      "status": "planned"
+    },
+    {
+      "id": "dhamaka-summarize",
+      "name": "Dhamaka Summarize",
+      "description": "Long-context summarization tuned for articles and transcripts.",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "family": "smollm2",
+      "params": "360M",
+      "contextLength": 8192,
+      "quantization": "Q4_K_M",
+      "size": 112000000,
+      "artifacts": {
+        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["summarization", "long-context"],
+      "status": "planned"
+    },
+    {
+      "id": "dhamaka-embed",
+      "name": "Dhamaka Embed",
+      "description": "Tiny embedding model for semantic search and RAG.",
+      "base": "sentence-transformers/all-MiniLM-L6-v2",
+      "family": "minilm",
+      "params": "22M",
+      "contextLength": 512,
+      "quantization": "Q8_0",
+      "size": 23068672,
+      "artifacts": {
+        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/weights.q8.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
+        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+      },
+      "license": "Apache-2.0",
+      "capabilities": ["embeddings", "rag"],
+      "status": "planned"
+    }
+  ]
+}

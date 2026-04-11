@@ -1,0 +1,32 @@
+{
+  "name": "dhamaka",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Browser-native LLM that runs in WASM. Download once, use on every Dhamaka-powered site forever.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "node packages/playground/server.js",
+    "start": "node packages/playground/server.js",
+    "test": "node --test packages/*/test/*.test.js"
+  },
+  "license": "MIT",
+  "author": "Dhamaka contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/protosphinx/dhamaka"
+  },
+  "keywords": [
+    "llm",
+    "wasm",
+    "browser",
+    "ai",
+    "on-device",
+    "local-first",
+    "privacy",
+    "smollm",
+    "inference"
+  ]
+}

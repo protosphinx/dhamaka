@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka — Browser-Native LLM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="A lightweight LLM that runs entirely in your browser via WASM. Download once. Use on every Dhamaka-powered site forever." />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A5%3C/text%3E%3C/svg%3E" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <pre class="logo">
+ ____  _                            _
+|  _ \| |__   __ _ _ __ ___   __ _| | ____ _
+| | | | '_ \ / _` | '_ ` _ \ / _` | |/ / _` |
+| |_| | | | | (_| | | | | | | (_| |   < (_| |
+|____/|_| |_|\__,_|_| |_| |_|\__,_|_|\_\__,_|
+</pre>
+        <div class="tagline">
+          browser-native LLM &middot; download once &middot; run anywhere
+        </div>
+      </div>
+      <div class="status" id="status">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">booting…</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Model</h2>
+          <select id="model-select" class="select">
+            <option value="dhamaka-micro">dhamaka-micro &middot; 360M &middot; Q4</option>
+            <option value="dhamaka-code" disabled>dhamaka-code (soon)</option>
+            <option value="dhamaka-sql" disabled>dhamaka-sql (soon)</option>
+            <option value="dhamaka-json" disabled>dhamaka-json (soon)</option>
+            <option value="dhamaka-summarize" disabled>dhamaka-summarize (soon)</option>
+            <option value="dhamaka-embed" disabled>dhamaka-embed (soon)</option>
+          </select>
+          <button id="load-btn" class="btn primary">load</button>
+          <button id="evict-btn" class="btn subtle">evict cache</button>
+        </section>
+
+        <section class="panel">
+          <h2>Telemetry</h2>
+          <dl class="telemetry">
+            <dt>cache</dt><dd id="t-cache">—</dd>
+            <dt>mode</dt><dd id="t-mode">—</dd>
+            <dt>load</dt><dd id="t-load">—</dd>
+            <dt>tok/s</dt><dd id="t-tps">—</dd>
+            <dt>memory</dt><dd id="t-mem">—</dd>
+            <dt>backend</dt><dd id="t-backend">—</dd>
+          </dl>
+        </section>
+
+        <section class="panel">
+          <h2>Storage</h2>
+          <ul id="local-models" class="local-list">
+            <li class="muted">nothing cached yet</li>
+          </ul>
+        </section>
+
+        <section class="panel muted-panel">
+          <p class="fineprint">
+            Dhamaka runs entirely in your browser. Nothing you type here is sent
+            to a server. Model bytes live in local storage.
+          </p>
+        </section>
+      </aside>
+
+      <section class="chat">
+        <div id="messages" class="messages">
+          <div class="msg system">
+            <div class="who">system</div>
+            <div class="content">
+              Welcome to Dhamaka. Click <b>load</b> on the left to pull the
+              default model. On your first visit you'll see a download; every
+              visit after that (on any Dhamaka-powered site) should be an
+              instant cache hit.
+            </div>
+          </div>
+        </div>
+
+        <div class="progress" id="progress">
+          <div class="bar" id="progress-bar"></div>
+          <div class="label" id="progress-label"></div>
+        </div>
+
+        <form id="composer" class="composer">
+          <textarea
+            id="prompt"
+            placeholder="ask Dhamaka anything…"
+            rows="2"
+            disabled
+          ></textarea>
+          <button id="send-btn" class="btn primary" type="submit" disabled>send</button>
+        </form>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
