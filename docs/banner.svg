@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 960 320"
+     role="img"
+     aria-label="Dhamaka — browser-native LLM">
+  <title>Dhamaka</title>
+  <desc>Browser-native LLM. Download once. Run anywhere.</desc>
+
+  <defs>
+    <!-- Animated rainbow gradient for the block-letter title. -->
+    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4d6d">
+        <animate attributeName="stop-color"
+                 values="#ff4d6d;#ff9a3c;#ffd93d;#6bcb77;#4dc1ff;#b84dff;#ff4d6d"
+                 dur="8s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="33%" stop-color="#ffb84d">
+        <animate attributeName="stop-color"
+                 values="#ffb84d;#ffd93d;#6bcb77;#4dc1ff;#b84dff;#ff4d6d;#ffb84d"
+                 dur="8s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="66%" stop-color="#4dffb8">
+        <animate attributeName="stop-color"
+                 values="#4dffb8;#6bcb77;#4dc1ff;#b84dff;#ff4d6d;#ff9a3c;#4dffb8"
+                 dur="8s" repeatCount="indefinite"/>
+      </stop>
+      <stop offset="100%" stop-color="#4dc1ff">
+        <animate attributeName="stop-color"
+                 values="#4dc1ff;#b84dff;#ff4d6d;#ff9a3c;#ffd93d;#6bcb77;#4dc1ff"
+                 dur="8s" repeatCount="indefinite"/>
+      </stop>
+    </linearGradient>
+
+    <!-- Soft neon glow behind the title. -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Pulsing radial spotlight behind everything. -->
+    <radialGradient id="spot" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#ff4d6d" stop-opacity="0.20"/>
+      <stop offset="60%" stop-color="#4dc1ff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#0a0a10" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background card. -->
+  <rect width="960" height="320" rx="14" fill="#0a0a10"/>
+
+  <!-- Animated spotlight wash. -->
+  <circle cx="480" cy="150" r="420" fill="url(#spot)">
+    <animate attributeName="r"
+             values="380;460;380"
+             dur="6s" repeatCount="indefinite"/>
+    <animate attributeName="opacity"
+             values="0.55;1;0.55"
+             dur="6s" repeatCount="indefinite"/>
+  </circle>
+
+  <!-- Scanline shimmer across the title. -->
+  <rect x="0" y="40" width="960" height="6" fill="#ffffff" opacity="0.05">
+    <animate attributeName="y"
+             values="40;260;40"
+             dur="9s" repeatCount="indefinite"/>
+  </rect>
+
+  <!-- Block-letter DHAMAKA title. -->
+  <g font-family="'Cascadia Code','JetBrains Mono','Fira Code','SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace"
+     font-weight="700"
+     font-size="26"
+     fill="url(#rainbow)"
+     filter="url(#glow)"
+     text-anchor="middle"
+     xml:space="preserve">
+    <text x="480" y="85">
+      <tspan x="480" dy="0">██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗ </tspan>
+      <tspan x="480" dy="1.15em">██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗</tspan>
+      <tspan x="480" dy="1.15em">██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║</tspan>
+      <tspan x="480" dy="1.15em">██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║</tspan>
+      <tspan x="480" dy="1.15em">██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║</tspan>
+      <tspan x="480" dy="1.15em">╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝</tspan>
+    </text>
+  </g>
+
+  <!-- Tagline with pulsing accent stars. -->
+  <g font-family="'Cascadia Code','JetBrains Mono','Fira Code','SF Mono',Menlo,Consolas,monospace"
+     font-size="15"
+     text-anchor="middle">
+    <text x="480" y="275" fill="#cfcfd8" letter-spacing="1.5">
+      <tspan fill="#ff4d6d">
+        ✦
+        <animate attributeName="fill"
+                 values="#ff4d6d;#ffb84d;#4dffb8;#4dc1ff;#b84dff;#ff4d6d"
+                 dur="4s" repeatCount="indefinite"/>
+      </tspan>
+      <tspan>  browser-native LLM  ·  download once  ·  run anywhere  </tspan>
+      <tspan fill="#4dc1ff">
+        ✦
+        <animate attributeName="fill"
+                 values="#4dc1ff;#b84dff;#ff4d6d;#ffb84d;#4dffb8;#4dc1ff"
+                 dur="4s" repeatCount="indefinite"/>
+      </tspan>
+    </text>
+    <text x="480" y="300" fill="#5a5a6b" letter-spacing="4">
+      WASM  ·  on-device  ·  private  ·  instant  ·  ~56 KB runtime
+    </text>
+  </g>
+</svg>
