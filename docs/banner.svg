@@ -105,7 +105,10 @@
                  dur="4s" repeatCount="indefinite"/>
       </tspan>
     </text>
-    <text x="480" y="300" fill="#5a5a6b" letter-spacing="4">
+    <text x="480" y="295" fill="#cfcfd8" letter-spacing="6" font-weight="700">
+      dhamaka.dev
+    </text>
+    <text x="480" y="312" fill="#5a5a6b" letter-spacing="3" font-size="12">
       on-device  ·  zero latency  ·  zero cost  ·  every browser  ·  offline
     </text>
   </g>

@@ -27,9 +27,10 @@
  ██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║
  ██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║
  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+                      d h a m a k a . d e v
 
    the local AI capability layer for web apps
-   on-device · zero latency · zero cost · every browser
+   on-device · zero latency · zero cost · every browser · offline
 ```
 
 </div>
