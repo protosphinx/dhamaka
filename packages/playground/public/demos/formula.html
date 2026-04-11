@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka · formula editor demo (erp.ai)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./demos.css" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+    <style>
+      .sheet-wrap {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--bg-elev-2);
+        margin-top: 0.5rem;
+      }
+      .formula-bar {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: stretch;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+      }
+      .formula-bar .addr {
+        padding: 0.6rem 0.9rem;
+        border-right: 1px solid var(--border);
+        color: var(--accent);
+        font-weight: 700;
+        min-width: 4rem;
+        display: flex;
+        align-items: center;
+      }
+      .formula-bar input {
+        border: none;
+        background: transparent;
+        color: var(--text);
+        padding: 0.6rem 0.9rem;
+        font-family: var(--mono);
+        font-size: 13px;
+        width: 100%;
+        border-radius: 0;
+      }
+      .formula-bar input:focus {
+        outline: none;
+        background: #1a1220;
+      }
+      table.sheet {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      table.sheet th,
+      table.sheet td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.55rem;
+        text-align: right;
+        color: var(--text);
+        min-width: 4.5rem;
+        white-space: nowrap;
+      }
+      table.sheet thead th {
+        background: var(--bg);
+        color: var(--text-dim);
+        font-weight: 600;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 10px;
+      }
+      table.sheet tbody th {
+        background: var(--bg);
+        color: var(--text-dim);
+        text-align: center;
+        font-weight: 600;
+        font-size: 10px;
+      }
+      table.sheet td {
+        background: var(--bg-elev);
+        cursor: pointer;
+        position: relative;
+        user-select: none;
+      }
+      table.sheet td:hover {
+        background: #1a1220;
+      }
+      table.sheet td.selected {
+        background: #2a1530;
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+      }
+      table.sheet td.has-formula::after {
+        content: "f";
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        font-size: 9px;
+        color: var(--accent-3);
+        font-style: italic;
+      }
+      table.sheet td.updated {
+        animation: cell-flash 0.6s ease;
+      }
+      @keyframes cell-flash {
+        0%   { background: #4dffb8; color: #0a0a10; }
+        100% { background: var(--bg-elev); color: var(--text); }
+      }
+      .ask-ai {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+        align-items: center;
+        margin-top: 1rem;
+        padding: 0.8rem;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+      }
+      .ask-ai .ai-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--accent);
+        padding: 0 0.25rem;
+      }
+      .ask-ai input {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.6rem 0.75rem;
+        font-family: var(--mono);
+        font-size: 13px;
+        margin: 0;
+      }
+      .ask-ai button {
+        padding: 0.55rem 1rem;
+        background: var(--accent);
+        color: #0a0a10;
+        border: none;
+        border-radius: 6px;
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .ask-ai button:hover { filter: brightness(1.15); }
+      .ask-ai button:disabled { opacity: 0.4; cursor: not-allowed; }
+      .suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+        margin-top: 0.65rem;
+      }
+      .suggestions .chip {
+        padding: 0.25rem 0.55rem;
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        color: var(--text-dim);
+        font-size: 11px;
+        cursor: pointer;
+      }
+      .suggestions .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .before-after {
+        margin-top: 0.75rem;
+        padding: 0.6rem 0.8rem;
+        background: #0a0a10;
+        border: 1px dashed var(--border);
+        border-radius: 6px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dim);
+        line-height: 1.7;
+      }
+      .before-after .label {
+        display: inline-block;
+        width: 3.5rem;
+        color: var(--text-muted);
+      }
+      .before-after .old { color: #ff8a95; }
+      .before-after .new { color: var(--accent-3); }
+      .before-after .why { color: var(--text-dim); font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <main class="demo-page">
+      <a class="back-link" href="../">← all demos</a>
+      <h1>formula editor (erp.ai-style)</h1>
+      <p class="lead">
+        Click a cell below to select it. The formula bar shows the formula.
+        Type a natural-language instruction in the <b>ask AI</b> box and the
+        formula rewrites in place — entirely locally, entirely synchronously.
+        Every transformation in this demo is done by a pattern-match layer
+        in <code>Transform.formula()</code>, so there's no model call and no
+        network hit at all.
+        <br/><br/>
+        Try: <code>add a 10% discount for employees</code>,
+        <code>apply 8% tax</code>,
+        <code>round to 2 decimals</code>,
+        <code>handle empty cells</code>,
+        <code>wrap in iferror</code>,
+        <code>multiply by 1.5</code>,
+        <code>take absolute value</code>.
+      </p>
+
+      <div class="sheet-wrap">
+        <div class="formula-bar">
+          <div class="addr" id="cell-addr">A1</div>
+          <input id="formula-input" placeholder="click a cell to edit" readonly />
+        </div>
+        <table class="sheet" id="sheet">
+          <thead>
+            <tr>
+              <th></th>
+              <th>A</th><th>B</th><th>C</th><th>D</th><th>E</th>
+            </tr>
+          </thead>
+          <tbody id="sheet-body"><!-- rows injected below --></tbody>
+        </table>
+      </div>
+
+      <div class="ask-ai">
+        <span class="ai-label">✦ ask AI</span>
+        <input id="ai-input" placeholder="describe what you want to change…" />
+        <button id="ai-run" type="button">apply</button>
+      </div>
+
+      <div class="suggestions" id="suggestions">
+        <span class="chip" data-inst="add a 10% discount for employees">add a 10% discount</span>
+        <span class="chip" data-inst="apply 8% sales tax">apply 8% tax</span>
+        <span class="chip" data-inst="round to 2 decimals">round to 2 decimals</span>
+        <span class="chip" data-inst="handle empty cells">null-safe</span>
+        <span class="chip" data-inst="wrap in iferror">wrap in iferror</span>
+        <span class="chip" data-inst="multiply by 1.5">multiply by 1.5</span>
+        <span class="chip" data-inst="take absolute value">abs</span>
+        <span class="chip" data-inst="negate it">negate</span>
+        <span class="chip" data-inst="convert to EUR">convert to EUR</span>
+      </div>
+
+      <div class="before-after" id="before-after">
+        <div><span class="label">before</span><span id="ba-old">—</span></div>
+        <div><span class="label">after</span><span id="ba-new">—</span></div>
+        <div><span class="label">source</span><span id="ba-src">—</span></div>
+        <div><span class="label">why</span><span class="why" id="ba-why">select a cell with a formula and ask the AI to change it</span></div>
+      </div>
+
+      <section class="notes">
+        <h3>what's happening</h3>
+        <pre class="diagram">
+  click cell → select → formula bar shows formula
+       │
+       ▼
+  type instruction in ask-AI → Transform.formula(input, instruction)
+       │
+       ├─ fast path: 10 pattern rewrites
+       │              (discount, tax, round, null-safe, iferror,
+       │               multiply, divide, abs, negate, currency)
+       │
+       └─ slow path: LLM fallback (not needed for this demo)
+       ▼
+  structured result: { output, source, confidence, explanation }
+  cell gets the new formula, before/after panel updates, flash animation
+        </pre>
+        <p>
+          Every transformation you see here is pattern-rewritten structurally
+          in microseconds. Open DevTools → Network: nothing goes out. Unplug
+          your internet: it still works.
+        </p>
+        <p>
+          The same <code>Transform.formula()</code> call falls through to an
+          on-device LLM for instructions the rules can't match. That path
+          isn't exercised in this demo (the shipping v0.1 weights are a tiny
+          random-init model, not real enough yet to write formulas) but when
+          the real SmolLM2-360M weights arrive, the same code transparently
+          handles the long tail.
+        </p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { Transform } from "dhamaka";
+
+      // ─── initial sheet state ──────────────────────────────────────
+      //
+      // A fake quarterly-revenue-by-region grid with formulas in the
+      // totals row and the growth column.
+
+      const INIT = {
+        A1: { value: "Region",      formula: null },
+        B1: { value: "Q1",          formula: null },
+        C1: { value: "Q2",          formula: null },
+        D1: { value: "Total",       formula: null },
+        E1: { value: "Growth",      formula: null },
+
+        A2: { value: "North",       formula: null },
+        B2: { value: "12000",       formula: null },
+        C2: { value: "15600",       formula: null },
+        D2: { value: "27600",       formula: "=B2 + C2" },
+        E2: { value: "0.3",         formula: "=(C2 - B2) / B2" },
+
+        A3: { value: "South",       formula: null },
+        B3: { value: "9800",        formula: null },
+        C3: { value: "11200",       formula: null },
+        D3: { value: "21000",       formula: "=B3 + C3" },
+        E3: { value: "0.143",       formula: "=(C3 - B3) / B3" },
+
+        A4: { value: "East",        formula: null },
+        B4: { value: "14500",       formula: null },
+        C4: { value: "13100",       formula: null },
+        D4: { value: "27600",       formula: "=B4 + C4" },
+        E4: { value: "-0.097",      formula: "=(C4 - B4) / B4" },
+
+        A5: { value: "West",        formula: null },
+        B5: { value: "7200",        formula: null },
+        C5: { value: "9450",        formula: null },
+        D5: { value: "16650",       formula: "=B5 + C5" },
+        E5: { value: "0.313",       formula: "=(C5 - B5) / B5" },
+
+        A6: { value: "Total",       formula: null },
+        B6: { value: "43500",       formula: "=SUM(B2:B5)" },
+        C6: { value: "49350",       formula: "=SUM(C2:C5)" },
+        D6: { value: "92850",       formula: "=SUM(D2:D5)" },
+        E6: { value: "0.134",       formula: "=(C6 - B6) / B6" },
+      };
+
+      const cells = new Map(Object.entries(INIT));
+
+      // ─── render ────────────────────────────────────────────────────
+
+      const body = document.getElementById("sheet-body");
+      const formulaInput = document.getElementById("formula-input");
+      const cellAddr = document.getElementById("cell-addr");
+      const aiInput = document.getElementById("ai-input");
+      const aiRun = document.getElementById("ai-run");
+      const baOld = document.getElementById("ba-old");
+      const baNew = document.getElementById("ba-new");
+      const baSrc = document.getElementById("ba-src");
+      const baWhy = document.getElementById("ba-why");
+
+      let selectedId = "D2";
+
+      function render() {
+        body.innerHTML = "";
+        for (let r = 1; r <= 6; r++) {
+          const tr = document.createElement("tr");
+          const rowHead = document.createElement("th");
+          rowHead.textContent = String(r);
+          tr.appendChild(rowHead);
+          for (const col of ["A", "B", "C", "D", "E"]) {
+            const id = col + r;
+            const cell = cells.get(id) || { value: "", formula: null };
+            const td = document.createElement("td");
+            td.dataset.id = id;
+            td.textContent = cell.value;
+            if (cell.formula) td.classList.add("has-formula");
+            if (id === selectedId) td.classList.add("selected");
+            td.addEventListener("click", () => select(id));
+            tr.appendChild(td);
+          }
+          body.appendChild(tr);
+        }
+        syncFormulaBar();
+      }
+
+      function select(id) {
+        selectedId = id;
+        document.querySelectorAll("table.sheet td").forEach((el) => {
+          el.classList.toggle("selected", el.dataset.id === id);
+        });
+        syncFormulaBar();
+        aiInput.focus();
+      }
+
+      function syncFormulaBar() {
+        cellAddr.textContent = selectedId;
+        const cell = cells.get(selectedId) || { value: "", formula: null };
+        formulaInput.value = cell.formula ?? String(cell.value ?? "");
+      }
+
+      // ─── Transform wiring ──────────────────────────────────────────
+
+      const t = new Transform();
+
+      async function applyInstruction(instruction) {
+        const cell = cells.get(selectedId);
+        if (!cell || !cell.formula) {
+          baWhy.textContent = "pick a cell that contains a formula (the ones marked with the little f)";
+          return;
+        }
+        const before = cell.formula;
+        const result = await t.formula(before, instruction, {
+          dialect: "excel",
+          headers: ["Region", "Q1", "Q2", "Total", "Growth"],
+        });
+
+        if (!result.output || result.output === before) {
+          baWhy.textContent = "no pattern matched that instruction — try one of the chip suggestions, or rephrase";
+          baSrc.textContent = result.source ?? "—";
+          return;
+        }
+
+        cells.set(selectedId, { ...cell, formula: result.output });
+        render();
+
+        // Flash the just-updated cell
+        const td = document.querySelector(`td[data-id="${selectedId}"]`);
+        if (td) {
+          td.classList.add("updated");
+          setTimeout(() => td.classList.remove("updated"), 700);
+        }
+
+        baOld.className = "old";
+        baOld.textContent = before;
+        baNew.className = "new";
+        baNew.textContent = result.output;
+        baSrc.textContent =
+          (result.source ?? "rule") +
+          (result.confidence != null ? ` · ${(result.confidence * 100).toFixed(0)}% confidence` : "");
+        baWhy.textContent = result.explanation ?? "pattern match";
+      }
+
+      aiRun.addEventListener("click", () => {
+        const instruction = aiInput.value.trim();
+        if (!instruction) return;
+        applyInstruction(instruction);
+      });
+
+      aiInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          aiRun.click();
+        }
+      });
+
+      document.querySelectorAll(".suggestions .chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          aiInput.value = chip.dataset.inst;
+          aiRun.click();
+        });
+      });
+
+      render();
+    </script>
+  </body>
+</html>

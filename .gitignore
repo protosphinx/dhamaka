@@ -24,3 +24,7 @@ Cargo.lock
 # scripts/prepare-publish.mjs on every release.
 packages/sdk/_staging/
 packages/sdk/*.tgz
+
+# GitHub Pages build output, rebuilt from scratch by
+# packages/playground/build-site.mjs on every deploy.
+packages/playground/_site/
