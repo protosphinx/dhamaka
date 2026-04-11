@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { installOpenAIShim } from "../src/openai-shim.js";
 
-function fakeLocus({ reply = "hello from mock" } = {}) {
+function fakeDhamaka({ reply = "hello from mock" } = {}) {
   return {
-    modelId: "locus-test",
+    modelId: "dhamaka-test",
     async complete() {
       return reply;
     },
@@ -17,7 +17,7 @@ function fakeLocus({ reply = "hello from mock" } = {}) {
 test("openai shim: non-stream returns a well-formed ChatCompletion", async () => {
   const originalFetch = globalThis.fetch;
   try {
-    const llm = fakeLocus();
+    const llm = fakeDhamaka();
     installOpenAIShim(llm);
     const res = await fetch("/v1/chat/completions", {
       method: "POST",
@@ -29,7 +29,7 @@ test("openai shim: non-stream returns a well-formed ChatCompletion", async () =>
     assert.equal(res.status, 200);
     const json = await res.json();
     assert.equal(json.object, "chat.completion");
-    assert.equal(json.model, "locus-test");
+    assert.equal(json.model, "dhamaka-test");
     assert.equal(json.choices[0].message.role, "assistant");
     assert.equal(json.choices[0].message.content, "hello from mock");
     assert.equal(json.choices[0].finish_reason, "stop");
@@ -41,7 +41,7 @@ test("openai shim: non-stream returns a well-formed ChatCompletion", async () =>
 test("openai shim: stream returns SSE chunks ending with [DONE]", async () => {
   const originalFetch = globalThis.fetch;
   try {
-    const llm = fakeLocus({ reply: "one two three" });
+    const llm = fakeDhamaka({ reply: "one two three" });
     installOpenAIShim(llm);
     const res = await fetch("/v1/chat/completions", {
       method: "POST",
@@ -68,7 +68,7 @@ test("openai shim: passes through non-matching URLs to the original fetch", asyn
     return new Response("passthrough", { status: 200 });
   };
   try {
-    const llm = fakeLocus();
+    const llm = fakeDhamaka();
     installOpenAIShim(llm);
     const res = await fetch("https://example.test/other");
     assert.equal(called, true);

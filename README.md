@@ -9,7 +9,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/banner.svg">
   <source media="(prefers-color-scheme: light)" srcset="./docs/banner.svg">
-  <img src="./docs/banner.svg" alt="Locus — the local AI capability layer for web apps." width="100%">
+  <img src="./docs/banner.svg" alt="Dhamaka — the local AI capability layer for web apps." width="100%">
 </picture>
 
 <br/>
@@ -44,28 +44,28 @@ A web application already holds everything an AI call needs to be useful. The us
 
 That's no longer true. Local models are now small enough, fast enough, and good enough to run inside a browser tab. Which means the whole mental model of cloud AI — *data travels to model* — is upside down. Flip it. Ship the model to the data.
 
-Every architectural decision in Locus follows from that one inversion. The four capability families below are not a feature list — they're the four *shapes* a call can take once you accept that the model lives where the data already is:
+Every architectural decision in Dhamaka follows from that one inversion. The four capability families below are not a feature list — they're the four *shapes* a call can take once you accept that the model lives where the data already is:
 
 - **🪞 Reflex** — understand what the user typed, in the field they typed it
 - **🔧 Transform** — rewrite what the app holds, using the app's own context
 - **🔎 Search** — retrieve from the user's own data, locally *(planned)*
 - **🤖 Agent** — act through the actions the app already exposes *(v2)*
 
-When in doubt, optimize for this test: *would this call still work if the user's laptop had no network connection and no account with any AI provider?* If yes, it belongs in Locus. If no, it doesn't.
+When in doubt, optimize for this test: *would this call still work if the user's laptop had no network connection and no account with any AI provider?* If yes, it belongs in Dhamaka. If no, it doesn't.
 
 ---
 
 ## ✦ what is this
 
-**Locus is a JavaScript SDK that lets any web app add AI capabilities that run 100% in the user's browser tab.** No servers. No API keys. No round trips. No rate limits. No privacy exposure. Your prompts never leave the device, your model weights never leave the device, your users' data never leaves the device.
+**Dhamaka is a JavaScript SDK that lets any web app add AI capabilities that run 100% in the user's browser tab.** No servers. No API keys. No round trips. No rate limits. No privacy exposure. Your prompts never leave the device, your model weights never leave the device, your users' data never leaves the device.
 
-It is **not** another general-purpose browser LLM runtime. Transformers.js, WebLLM, wllama, and Chrome's `window.ai` already occupy that layer. Locus sits three layers above them — a task-oriented capability layer that any product can drop in to add on-device reflexes, transformations, and reasoning without building any of the plumbing.
+It is **not** another general-purpose browser LLM runtime. Transformers.js, WebLLM, wllama, and Chrome's `window.ai` already occupy that layer. Dhamaka sits three layers above them — a task-oriented capability layer that any product can drop in to add on-device reflexes, transformations, and reasoning without building any of the plumbing.
 
 ### Four capability families, one SDK
 
 ```
   ┌────────────────────────────────────────────────────────────────────┐
-  │  Locus — local AI capability layer                               │
+  │  Dhamaka — local AI capability layer                               │
   ├────────────────────────────────────────────────────────────────────┤
   │                                                                    │
   │  🪞 Reflex    reactive, keystroke-level, rules-first               │
@@ -94,12 +94,12 @@ Two families are shipping today — **Reflex** and **Transform**. The other two 
 
 ## ✦ the hero use case — formula editing in erp.ai
 
-Locus's flagship Transform integration is the formula editor in **[erp.ai](https://erp.ai)**. ERP formulas are the single most sensitive thing a company owns — pricing models, margins, payroll math, commission tiers, inventory rules, compliance checks. The idea of shipping them to a third-party AI provider is a non-starter for any serious enterprise, which is exactly why Microsoft's Copilot-for-Excel is blocked in so many orgs.
+Dhamaka's flagship Transform integration is the formula editor in **[erp.ai](https://erp.ai)**. ERP formulas are the single most sensitive thing a company owns — pricing models, margins, payroll math, commission tiers, inventory rules, compliance checks. The idea of shipping them to a third-party AI provider is a non-starter for any serious enterprise, which is exactly why Microsoft's Copilot-for-Excel is blocked in so many orgs.
 
-Locus lets erp.ai ship **Copilot-for-your-formulas that runs in the user's tab** — every formula edit, every explain-this, every debug-this call happens locally. No SOC2 questionnaires, no data-residency contracts, no per-user AI subscription, no latency on per-cell edits, no rate limits when 50 analysts hit the same sheet at once.
+Dhamaka lets erp.ai ship **Copilot-for-your-formulas that runs in the user's tab** — every formula edit, every explain-this, every debug-this call happens locally. No SOC2 questionnaires, no data-residency contracts, no per-user AI subscription, no latency on per-cell edits, no rate limits when 50 analysts hit the same sheet at once.
 
 ```js
-import { Transform } from "locus";
+import { Transform } from "dhamaka";
 const t = new Transform();
 
 // User selects a cell showing `=SUM(A1:A10) * 1.08` and types
@@ -231,12 +231,12 @@ Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try th
 
 | package | what it does |
 |---|---|
-| [`locus`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, `Transform`, task registry, reflex service. The thing you actually install. |
-| [`@locus/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
-| [`locus-runtime` (Rust)](crates/locus-runtime) | the compiled fallback runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 56 KB `.wasm`, used when `window.ai` isn't available |
-| [`@locus/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
-| [`@locus/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
-| [`@locus/playground`](packages/playground) | zero-dep dev server running hub + playground + live demos for every capability family |
+| [`dhamaka`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, `Transform`, task registry, reflex service. The thing you actually install. |
+| [`@dhamaka/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
+| [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled fallback runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 56 KB `.wasm`, used when `window.ai` isn't available |
+| [`@dhamaka/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
+| [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
+| [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + live demos for every capability family |
 
 ---
 
@@ -272,7 +272,7 @@ Developers think in **tasks**, not in models. Each task is a small, typed functi
 
 ⬤ shipping  ·  ◎ planned
 
-`registerTask(customTask)` lets any app ship their own task on top of the same pipeline — any app's domain-specific transformation (refactoring your DSL, normalising your data, applying your style guide) can plug into Locus's rules-first / model-fallback architecture without forking the SDK.
+`registerTask(customTask)` lets any app ship their own task on top of the same pipeline — any app's domain-specific transformation (refactoring your DSL, normalising your data, applying your style guide) can plug into Dhamaka's rules-first / model-fallback architecture without forking the SDK.
 
 ---
 
@@ -300,11 +300,11 @@ In browsers, the factory prefers `window.ai` when available and falls back to th
 ## ✦ five-minute quickstart
 
 ```bash
-git clone https://github.com/protosphinx/locus
-cd locus
+git clone https://github.com/protosphinx/dhamaka
+cd dhamaka
 
 # one-time: compile the Rust runtime to WebAssembly
-crates/locus-runtime/build.sh
+crates/dhamaka-runtime/build.sh
 
 # run the dev stack
 npm run dev
@@ -314,7 +314,7 @@ npm run dev
   ✦ hub         http://localhost:5174
   ✦ playground  http://localhost:5173
 
-  Locus dev stack running. Ctrl+C to stop.
+  Dhamaka dev stack running. Ctrl+C to stop.
 ```
 
 Open **http://localhost:5173** and click into any of the three demos. The playground hot-reads the SDK + runtime sources, so every JS edit shows up on refresh. Re-run `build.sh` only when editing the Rust runtime.
@@ -325,14 +325,14 @@ Open **http://localhost:5173** and click into any of the three demos. The playgr
 
 ## ✦ the API
 
-Locus ships two capability families today. Pick the one that matches the shape of what you're building: **Reflex** for reactive keystroke-level intelligence on `<input>` and `<textarea>` elements, **Transform** for imperative one-shot "rewrite this X given instruction Y" calls.
+Dhamaka ships two capability families today. Pick the one that matches the shape of what you're building: **Reflex** for reactive keystroke-level intelligence on `<input>` and `<textarea>` elements, **Transform** for imperative one-shot "rewrite this X given instruction Y" calls.
 
 ### 🪞 Reflex family — reactive, continuous, rules-first
 
 #### `SmartField` — one field, one task
 
 ```js
-import { SmartField } from "locus";
+import { SmartField } from "dhamaka";
 
 new SmartField(document.querySelector("#city"), {
   task: "city-to-state",
@@ -349,7 +349,7 @@ Every keystroke fires the task. Rules-first, so typical inputs resolve in under 
 #### `SmartForm` — cross-field inference
 
 ```js
-import { SmartField, SmartForm } from "locus";
+import { SmartField, SmartForm } from "dhamaka";
 
 const form = document.querySelector("#checkout");
 
@@ -369,7 +369,7 @@ Type "San Francisco" in the city field, the state / country / timezone / currenc
 #### `SmartText` — contextual spellcheck on every textarea
 
 ```js
-import { SmartText } from "locus";
+import { SmartText } from "dhamaka";
 
 const textarea = document.querySelector("textarea");
 
@@ -389,7 +389,7 @@ Catches classic homophone-in-context mistakes ("see you their", "your welcome", 
 #### `attachSmartPaste` — any form, any blob
 
 ```js
-import { attachSmartPaste } from "locus";
+import { attachSmartPaste } from "dhamaka";
 
 const form = document.querySelector("#contact-form");
 attachSmartPaste(form, {
@@ -408,7 +408,7 @@ Paste a contact blob (business card, signature, LinkedIn blurb) and the `name`, 
 #### `Transform` — generic "input + instruction + context → output"
 
 ```js
-import { Transform } from "locus";
+import { Transform } from "dhamaka";
 
 const t = new Transform();
 
@@ -451,10 +451,10 @@ Every call runs 100% in the browser tab. No network, no API key, no per-call cos
 
 #### Registering your own transform task
 
-Every Locus-powered app can register custom tasks on top of the same rules-first / model-fallback architecture:
+Every Dhamaka-powered app can register custom tasks on top of the same rules-first / model-fallback architecture:
 
 ```js
-import { registerTask, Transform } from "locus";
+import { registerTask, Transform } from "dhamaka";
 
 registerTask({
   id: "product-sku-normalize",
@@ -482,31 +482,31 @@ await new Transform().run({ task: "product-sku-normalize", input: "abc 123456" }
 ### Configure the engine (optional)
 
 ```js
-import { reflex } from "locus";
+import { reflex } from "dhamaka";
 
 reflex.configure({
   backend: "auto",            // "window-ai" | "wasm" | "mock" | "auto"
-  wasmUrl: "/runtime/locus-runtime.wasm",
+  wasmUrl: "/runtime/dhamaka-runtime.wasm",
 });
 ```
 
 Most apps never call this — `auto` picks the fastest backend available (Chrome's `window.ai` → the compiled Rust `.wasm` → `MockEngine`).
 
-### Legacy: raw `Locus.load()` for direct model access
+### Legacy: raw `Dhamaka.load()` for direct model access
 
 For apps that want raw completion / streaming / chat (LLM chatbots, content generation, etc.) — not the SmartField surface — the lower-level class is still available:
 
 ```js
-import { Locus } from "locus";
+import { Dhamaka } from "dhamaka";
 
-const llm = await Locus.load();
+const llm = await Dhamaka.load();
 for await (const token of llm.stream("hello")) process.stdout.write(token);
 ```
 
 And the drop-in OpenAI `/v1/chat/completions` shim:
 
 ```js
-import { installOpenAIShim } from "locus/openai";
+import { installOpenAIShim } from "dhamaka/openai";
 installOpenAIShim(llm);
 ```
 
@@ -514,13 +514,13 @@ installOpenAIShim(llm);
 
 ## ✦ download once, use everywhere — the honest version
 
-Modern browsers increasingly **partition third-party storage** by the top-level site for privacy. That makes the classic "shared iframe" trick weaker than it used to be. Locus handles this by degrading gracefully at three tiers:
+Modern browsers increasingly **partition third-party storage** by the top-level site for privacy. That makes the classic "shared iframe" trick weaker than it used to be. Dhamaka handles this by degrading gracefully at three tiers:
 
 ```
   ╭──────────────────────────────────────────────────────────────╮
   │                                                              │
   │   tier 1 · shared hub iframe  (the dream)                    │
-  │            one download per user, across all Locus sites   │
+  │            one download per user, across all Dhamaka sites   │
   │            ↓ falls back to ↓                                 │
   │                                                              │
   │   tier 2 · Storage Access API                                │
@@ -539,7 +539,7 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   ╰──────────────────────────────────────────────────────────────╯
 ```
 
-`Locus.hub.mode()` tells your app which tier it actually got, so you can show a "⚡ shared cache hit" badge when it matters and silently degrade when it doesn't.
+`Dhamaka.hub.mode()` tells your app which tier it actually got, so you can show a "⚡ shared cache hit" badge when it matters and silently degrade when it doesn't.
 
 ---
 
@@ -608,7 +608,7 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   [x]  3 shipping demos: address autofill, contextual spellcheck, smart paste
   [~]  formula demo (erp.ai-style spreadsheet) — in flight, next commit
   [x]  zero-dependency dev server with correct MIME + CORS
-  [x]  OpenAI /v1/chat/completions shim (for legacy Locus.load() users)
+  [x]  OpenAI /v1/chat/completions shim (for legacy Dhamaka.load() users)
   [x]  102 tests — 27 Rust (cargo test) + 75 JS (node --test), including
        4 integration tests that drive the real compiled .wasm
   [x]  GitHub Actions CI: Rust crate build → wasm artifact upload → JS
@@ -657,11 +657,11 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 
 ```bash
 # everything (Rust native + JS + end-to-end wasm)
-cargo test --manifest-path crates/locus-runtime/Cargo.toml
+cargo test --manifest-path crates/dhamaka-runtime/Cargo.toml
 npm test
 
 # just the Rust crate
-cd crates/locus-runtime && cargo test
+cd crates/dhamaka-runtime && cargo test
 
 # just the JS side
 npm test
@@ -704,7 +704,7 @@ Drives the SmartField SDK, the hub, the tasks pipeline, and the real compiled `.
 
 ### end-to-end
 
-The four `wasm-engine.test.js` tests are the moat. They stub `globalThis.fetch` to read the compiled `locus-runtime.wasm` off disk, then drive the real ABI:
+The four `wasm-engine.test.js` tests are the moat. They stub `globalThis.fetch` to read the compiled `dhamaka-runtime.wasm` off disk, then drive the real ABI:
 
 ```
 ┌─ Node ────────────────────────────────────────────────────────────┐
@@ -712,12 +712,12 @@ The four `wasm-engine.test.js` tests are the moat. They stub `globalThis.fetch` 
 │      │                                                            │
 │      │  WebAssembly.instantiate(fs.readFile(.wasm))                │
 │      ▼                                                            │
-│  [ locus_version   ==> 1                               ]        │
-│  [ locus_alloc     ==> ptr                             ]        │
+│  [ dhamaka_version   ==> 1                               ]        │
+│  [ dhamaka_alloc     ==> ptr                             ]        │
 │  [ write prompt bytes into WASM linear memory            ]        │
-│  [ locus_init      ==> ctx                             ]        │
-│  [ locus_feed_prompt(ctx, ptr, len)                    ]        │
-│  [ loop { locus_next_token(ctx, out, 64) ==> n bytes } ]        │
+│  [ dhamaka_init      ==> ctx                             ]        │
+│  [ dhamaka_feed_prompt(ctx, ptr, len)                    ]        │
+│  [ loop { dhamaka_next_token(ctx, out, 64) ==> n bytes } ]        │
 │  [ decode UTF-8, yield token                             ]        │
 └───────────────────────────────────────────────────────────────────┘
 ```

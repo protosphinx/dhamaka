@@ -1,4 +1,4 @@
-// @locus/runtime — inference engine entry point.
+// @dhamaka/runtime — inference engine entry point.
 //
 // The runtime exposes a single small interface, Engine, that every backend
 // (Chrome window.ai, our Rust WASM runtime, or the mock dev engine) must

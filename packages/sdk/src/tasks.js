@@ -310,7 +310,7 @@ registerTask(pasteExtractTask);
  * @param {string} input
  * @param {object} [options]
  * @param {object} [options.context]
- * @param {import("@locus/runtime").Engine} [options.engine]
+ * @param {import("@dhamaka/runtime").Engine} [options.engine]
  * @param {number} [options.threshold=0.5]
  */
 export async function runTask(taskId, input, options = {}) {
@@ -329,7 +329,7 @@ export async function runTask(taskId, input, options = {}) {
     } catch (err) {
       // Model path failure shouldn't break the page — log and fall through.
       if (typeof console !== "undefined") {
-        console.warn(`[locus] task ${taskId} model path failed:`, err);
+        console.warn(`[dhamaka] task ${taskId} model path failed:`, err);
       }
     }
   }

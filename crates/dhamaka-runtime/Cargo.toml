@@ -1,10 +1,10 @@
 [package]
-name = "locus-runtime"
+name = "dhamaka-runtime"
 version = "0.1.0"
 edition = "2021"
-description = "Locus inference runtime. Compiles to WebAssembly for in-browser LLM inference."
+description = "Dhamaka inference runtime. Compiles to WebAssembly for in-browser LLM inference."
 license = "MIT"
-repository = "https://github.com/protosphinx/locus"
+repository = "https://github.com/protosphinx/dhamaka"
 publish = false
 
 [lib]

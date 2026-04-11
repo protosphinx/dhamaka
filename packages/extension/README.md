@@ -1,6 +1,6 @@
-# @locus/extension
+# @dhamaka/extension
 
-The Locus browser extension. Ships the cross-site model cache as a native browser extension, which sidesteps third-party storage partitioning entirely.
+The Dhamaka browser extension. Ships the cross-site model cache as a native browser extension, which sidesteps third-party storage partitioning entirely.
 
 ## Why
 
@@ -23,8 +23,8 @@ Modern browsers partition third-party iframe storage by top-level site. That mea
                                                                            └─────────────┘
 ```
 
-1. `content.js` injects a tiny marker (`window.__locus_extension__`) so the SDK can detect the extension is installed.
-2. When `Locus.load()` runs, `HubClient._install()` sees the marker and switches to extension mode instead of injecting the hub iframe.
+1. `content.js` injects a tiny marker (`window.__dhamaka_extension__`) so the SDK can detect the extension is installed.
+2. When `Dhamaka.load()` runs, `HubClient._install()` sees the marker and switches to extension mode instead of injecting the hub iframe.
 3. Messages flow page → content script → background worker. The worker handles storage in its own IndexedDB and responds with the cached bytes.
 4. The SDK's `hub.mode()` reports `"extension"` so apps can display "shared across every site" confidently.
 
@@ -33,7 +33,7 @@ Modern browsers partition third-party iframe storage by top-level site. That mea
 1. Open `chrome://extensions` in Chrome or Edge.
 2. Enable **Developer mode**.
 3. Click **Load unpacked** and select `packages/extension/`.
-4. Visit any Locus-powered site — `Locus.hub.mode()` should now return `"extension"`.
+4. Visit any Dhamaka-powered site — `Dhamaka.hub.mode()` should now return `"extension"`.
 
 ## Status
 

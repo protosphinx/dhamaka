@@ -12,12 +12,12 @@ test("MockEngine: throws if generate is called before load", async () => {
 test("MockEngine: load sets loaded=true and records the entry", async () => {
   const engine = new MockEngine({ tokensPerSecond: 1000 });
   await engine.load({
-    entry: { id: "locus-micro", params: "360M", quantization: "Q4_K_M", contextLength: 2048 },
+    entry: { id: "dhamaka-micro", params: "360M", quantization: "Q4_K_M", contextLength: 2048 },
     artifacts: { weights: new Uint8Array(16) },
   });
   assert.equal(engine.loaded, true);
   const info = engine.info();
-  assert.equal(info.id, "locus-micro");
+  assert.equal(info.id, "dhamaka-micro");
   assert.equal(info.backend, "mock");
   assert.equal(info.tokensPerSecond, 1000);
 });

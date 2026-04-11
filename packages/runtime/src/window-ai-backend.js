@@ -1,4 +1,4 @@
-// @locus/runtime — window.ai backend.
+// @dhamaka/runtime — window.ai backend.
 //
 // Chrome 138+ ships Gemini Nano as a resident on-device model accessible
 // via the Prompt API (`window.ai.languageModel`). When the API is present

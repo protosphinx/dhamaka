@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://hub.locus.dev/manifest.schema.json",
-  "title": "Locus Manifest",
-  "description": "A manifest of models hosted by a Locus hub.",
+  "$id": "https://hub.dhamaka.dev/manifest.schema.json",
+  "title": "Dhamaka Manifest",
+  "description": "A manifest of models hosted by a Dhamaka hub.",
   "type": "object",
   "required": ["version", "models"],
   "additionalProperties": false,

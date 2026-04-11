@@ -9,7 +9,7 @@
 // formula", "explain this cell", "translate this paragraph", "refactor this
 // function", "summarise this range". One call, one answer, all local.
 //
-//   import { Transform } from "locus";
+//   import { Transform } from "dhamaka";
 //
 //   const t = new Transform();
 //   const result = await t.run({

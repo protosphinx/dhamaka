@@ -1,5 +1,5 @@
 // MockEngine — a deterministic, dependency-free "LLM" that lets the whole
-// Locus stack run end-to-end today. It is NOT a language model. It's a
+// Dhamaka stack run end-to-end today. It is NOT a language model. It's a
 // canned-response generator that streams tokens with realistic latency so the
 // SDK, hub, playground, and developer workflow can all be exercised while the
 // real WASM inference runtime is under construction.
@@ -11,16 +11,16 @@ import { Tokenizer } from "./tokenizer.js";
 
 const DEFAULT_RESPONSES = [
   "I'm the MockEngine — the real WASM runtime isn't wired in yet, but every " +
-    "other piece of Locus (the hub, the SDK, streaming, caching, the chat " +
+    "other piece of Dhamaka (the hub, the SDK, streaming, caching, the chat " +
     "loop) is running for real. Ask me anything; I'll make up something plausible.",
-  "Locus's whole trick is that the model downloads once and then every site " +
+  "Dhamaka's whole trick is that the model downloads once and then every site " +
     "you visit reuses it. You're talking to a placeholder right now, but the " +
     "pipeline you're using is the same one the real model will travel through.",
   "The default micro model will be SmolLM2-360M-Instruct, quantized to Q4, " +
     "around one hundred megabytes on disk. Small enough to download once and " +
     "keep forever.",
   "Open DevTools and check IndexedDB on the hub origin — you should see the " +
-    "cached model record. Visit a second Locus-powered site and it will hit " +
+    "cached model record. Visit a second Dhamaka-powered site and it will hit " +
     "that same cache without redownloading anything.",
 ];
 

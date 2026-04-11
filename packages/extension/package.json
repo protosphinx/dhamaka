@@ -1,7 +1,7 @@
 {
-  "name": "@locus/extension",
+  "name": "@dhamaka/extension",
   "version": "0.1.0",
-  "description": "The Locus browser extension. Stores models once per machine and serves them to every Locus-powered site via a content script bridge — sidestepping storage partitioning entirely.",
+  "description": "The Dhamaka browser extension. Stores models once per machine and serves them to every Dhamaka-powered site via a content script bridge — sidestepping storage partitioning entirely.",
   "type": "module",
   "private": true,
   "files": [

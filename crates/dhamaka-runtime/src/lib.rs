@@ -1,6 +1,6 @@
-//! # locus-runtime
+//! # dhamaka-runtime
 //!
-//! The Locus inference runtime, written in Rust and compiled to WebAssembly.
+//! The Dhamaka inference runtime, written in Rust and compiled to WebAssembly.
 //!
 //! ## Why Rust
 //!
@@ -8,7 +8,7 @@
 //! rotary embeddings, residual adds — repeated once per generated token.
 //! JavaScript can do this, but Rust compiled to WebAssembly runs it at
 //! roughly native speed, inside any modern browser tab, with zero runtime
-//! dependencies. That's the entire point of Locus.
+//! dependencies. That's the entire point of Dhamaka.
 //!
 //! ## What's in here
 //!
@@ -22,19 +22,19 @@
 //! ## ABI (see `abi.rs` for the full list)
 //!
 //! ```text
-//! locus_version()              -> u32
-//! locus_alloc(len)             -> *mut u8
-//! locus_free(ptr, len)         -> void
-//! locus_init(w, wl, c, cl)     -> *mut Context
-//! locus_destroy(ctx)           -> void
-//! locus_feed_prompt(ctx, p, l) -> void
-//! locus_next_token(ctx, o, ol) -> i32   (bytes written, or -1 on EOS)
-//! locus_reset(ctx)             -> void
+//! dhamaka_version()              -> u32
+//! dhamaka_alloc(len)             -> *mut u8
+//! dhamaka_free(ptr, len)         -> void
+//! dhamaka_init(w, wl, c, cl)     -> *mut Context
+//! dhamaka_destroy(ctx)           -> void
+//! dhamaka_feed_prompt(ctx, p, l) -> void
+//! dhamaka_next_token(ctx, o, ol) -> i32   (bytes written, or -1 on EOS)
+//! dhamaka_reset(ctx)             -> void
 //! ```
 //!
-//! JS calls `locus_alloc` to get a pointer into wasm linear memory, writes
-//! the prompt bytes there, hands the pointer to `locus_feed_prompt`, and
-//! then loops on `locus_next_token` to stream UTF-8 token bytes back.
+//! JS calls `dhamaka_alloc` to get a pointer into wasm linear memory, writes
+//! the prompt bytes there, hands the pointer to `dhamaka_feed_prompt`, and
+//! then loops on `dhamaka_next_token` to stream UTF-8 token bytes back.
 
 pub mod abi;
 pub mod model;

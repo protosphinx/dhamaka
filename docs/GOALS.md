@@ -1,6 +1,6 @@
 # Goals
 
-> The north-star document for Locus. Written to keep me honest about
+> The north-star document for Dhamaka. Written to keep me honest about
 > what I'm building, what I'm *not* building, and what the winning shape of
 > the product actually is.
 
@@ -18,12 +18,12 @@ So the inversion is:
 
 > **Stop sending the data to the model. Ship the model to the data.**
 
-Every architectural decision in Locus follows from that one sentence.
+Every architectural decision in Dhamaka follows from that one sentence.
 The four capability families (Reflex, Transform, Search, Agent) are all
 different shapes of one fundamental operation: *reason over the context
 the app already has, in the place the app already is.*
 
-If a feature needs a server, it's not Locus. If a feature could work
+If a feature needs a server, it's not Dhamaka. If a feature could work
 offline, with no account, on any browser, using only the context the
 app already holds — it belongs here.
 
@@ -42,7 +42,7 @@ matter of adding tasks, not forking the SDK.
 
 ## ✦ The one-liner
 
-**Locus is the local AI capability layer for web apps.** Any web app
+**Dhamaka is the local AI capability layer for web apps.** Any web app
 can drop it in and add on-device reflexes, transformations, and
 reasoning — every call runs 100% in the user's browser tab, zero
 network latency, zero API cost, zero privacy exposure, works on every
@@ -178,7 +178,7 @@ on-device, form-intelligent. Nobody lives there.
 This list matters more than the goals list. Every hour spent on a
 non-goal is an hour not spent on the real product.
 
-- **Not a chat SDK.** `Locus.load().complete("hello")` is not the
+- **Not a chat SDK.** `Dhamaka.load().complete("hello")` is not the
   product. If a developer wants to ship a chatbot, they should use
   Transformers.js directly.
 - **Not a general-purpose browser LLM runtime.** Transformers.js already
@@ -274,8 +274,8 @@ No Rust runtime in v0.1. The crate stays in the repo as reference code.
 
 ## v0.2 — making it a product
 
-- A proper task registry (`locus-autofill`, `locus-spellcheck`,
-  `locus-complete`, `locus-rewrite`, `locus-paste-extract`)
+- A proper task registry (`dhamaka-autofill`, `dhamaka-spellcheck`,
+  `dhamaka-complete`, `dhamaka-rewrite`, `dhamaka-paste-extract`)
 - Per-task micro-models, each loaded lazily the first time the task is
   used on the page
 - React / Vue / Svelte bindings (`useSmartField`) so framework devs
@@ -348,23 +348,20 @@ Three things make this the right moment:
 
 ## Naming
 
-The project is called **Locus**. Latin for "the place" — and that's
-literally the thesis. The locus of intelligence in a web app is the
-app itself: the data is already in the tab, the schema is already in
-JavaScript memory, the user's intent is already visible in the DOM.
-The model belongs at the locus, not on some remote server thousands of
-kilometres away.
+The project is called **Dhamaka**. The domain is `dhamaka.dev`. The name
+is loud on purpose — it's a small, quiet piece of code that does a very
+big thing (moving AI inference out of the cloud and into the browser
+tab), and a name with some pop matches that asymmetry. The word means
+"explosion / blast" in Hindi and Urdu, and the reclamation is the joke:
+the "blast" isn't the runtime, it's what happens to the cloud-AI
+economics once the model ships with the page.
 
-Five letters, one syllable, unambiguous pronunciation (LOH-kuhs). Not
-overloaded by any major framework or LLM project. The tagline writes
-itself: *the local AI capability layer for web apps*. Every
-architecture decision in this repo is a consequence of taking that
-framing literally.
-
-The project was previously called Dhamaka (Hindi for "explosion"),
-which was exactly backwards — explosions are loud and external, Locus
-is quiet and internal. The rename happened before the first public
-release.
+One failed rename attempt is in the git history. Early on I second-
+guessed Dhamaka as "too loud for something this quiet" and renamed
+everything to **Locus** (Latin for "the place"), then reverted the
+entire rename one commit later when the `dhamaka.dev` purchase
+confirmed the original name stays. The story is kept here so future-me
+doesn't re-litigate the decision in month six.
 
 ## The one thing to remember
 
@@ -375,7 +372,7 @@ travel to a server is historical, and that history is ending.**
 
 **Stop sending the data to the model. Ship the model to the data.**
 
-Every capability family in Locus is a consequence of that one
+Every capability family in Dhamaka is a consequence of that one
 inversion. Reflex understands what the user typed in the field they
 typed it. Transform rewrites what the app holds, using the app's own
 context. Search retrieves from the user's own data. Agent acts through
@@ -383,6 +380,4 @@ actions the app already exposes. None of it needs a server.
 
 When in doubt, optimize for: *would this call still work if the user's
 laptop had no network connection and no account with any AI provider?*
-If yes, it's Locus's job. If no, it doesn't belong here.
-
-When in doubt, optimize for that sentence.
+If yes, it's Dhamaka's job. If no, it doesn't belong here.

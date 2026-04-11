@@ -1,7 +1,7 @@
 {
-  "name": "@locus/hub",
+  "name": "@dhamaka/hub",
   "version": "0.1.0",
-  "description": "The Locus model hub: a tiny static origin that stores models once and shares them with every Locus-powered site via a postMessage bridge.",
+  "description": "The Dhamaka model hub: a tiny static origin that stores models once and shares them with every Dhamaka-powered site via a postMessage bridge.",
   "type": "module",
   "main": "public/hub.js",
   "files": [

@@ -1,26 +1,26 @@
 {
-  "$schema": "https://hub.locus.dev/manifest.schema.json",
+  "$schema": "https://hub.dhamaka.dev/manifest.schema.json",
   "version": 1,
-  "default": "locus-micro",
+  "default": "dhamaka-micro",
   "models": [
     {
-      "id": "locus-micro",
-      "name": "Locus Micro",
+      "id": "dhamaka-micro",
+      "name": "Dhamaka Micro",
       "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
       "params": "360M",
       "quantization": "Q4_K_M",
       "size": 104857600,
       "artifacts": {
         "weights": {
-          "url": "./models/locus-micro/weights.q4.bin",
+          "url": "./models/dhamaka-micro/weights.q4.bin",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
         },
         "tokenizer": {
-          "url": "./models/locus-micro/tokenizer.json",
+          "url": "./models/dhamaka-micro/tokenizer.json",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
         },
         "config": {
-          "url": "./models/locus-micro/config.json",
+          "url": "./models/dhamaka-micro/config.json",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
         }
       },

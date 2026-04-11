@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Stage the `locus` npm package.
+// Stage the `dhamaka` npm package.
 //
-// The SDK imports `@locus/runtime` during development via npm workspaces.
+// The SDK imports `@dhamaka/runtime` during development via npm workspaces.
 // When we publish to npm we don't want consumers to have to install two
-// packages, and we don't want to fight the `@locus` scope, so this script
+// packages, and we don't want to fight the `@dhamaka` scope, so this script
 // bundles the runtime source + the compiled wasm into the SDK package as
-// a vendored subtree and rewrites the one `@locus/runtime` import.
+// a vendored subtree and rewrites the one `@dhamaka/runtime` import.
 //
 // Output: packages/sdk/_staging/, a fully self-contained npm package.
 //
@@ -27,18 +27,18 @@ const ROOT = join(__dirname, "..");
 
 const SDK_SRC = join(ROOT, "packages", "sdk");
 const RUNTIME_SRC = join(ROOT, "packages", "runtime", "src");
-const WASM_SRC = join(ROOT, "packages", "hub", "public", "runtime", "locus-runtime.wasm");
+const WASM_SRC = join(ROOT, "packages", "hub", "public", "runtime", "dhamaka-runtime.wasm");
 const STAGING = join(SDK_SRC, "_staging");
 
 const check = process.argv.includes("--check");
 
 async function main() {
-  console.log("› preparing locus publish staging");
+  console.log("› preparing dhamaka publish staging");
 
   // 0. Sanity check: wasm must exist.
   if (!existsSync(WASM_SRC)) {
     console.error(
-      `\n  ✗ compiled wasm not found at ${WASM_SRC}\n    run crates/locus-runtime/build.sh first\n`,
+      `\n  ✗ compiled wasm not found at ${WASM_SRC}\n    run crates/dhamaka-runtime/build.sh first\n`,
     );
     process.exit(1);
   }
@@ -58,24 +58,24 @@ async function main() {
   // 4. Copy the compiled wasm next to the runtime adapter.
   await cp(
     WASM_SRC,
-    join(STAGING, "src", "_runtime", "locus-runtime.wasm"),
+    join(STAGING, "src", "_runtime", "dhamaka-runtime.wasm"),
   );
 
-  // 5. Rewrite the one `@locus/runtime` import in the SDK entry point.
+  // 5. Rewrite the one `@dhamaka/runtime` import in the SDK entry point.
   const indexPath = join(STAGING, "src", "index.js");
   let index = await readFile(indexPath, "utf8");
   const before = index;
   index = index.replaceAll(
-    'from "@locus/runtime"',
+    'from "@dhamaka/runtime"',
     'from "./_runtime/index.js"',
   );
   index = index.replaceAll(
-    "from '@locus/runtime'",
+    "from '@dhamaka/runtime'",
     "from './_runtime/index.js'",
   );
   if (index === before) {
     console.warn(
-      "  ! no @locus/runtime import found to rewrite — " +
+      "  ! no @dhamaka/runtime import found to rewrite — " +
         "make sure packages/sdk/src/index.js still imports the runtime",
     );
   }
@@ -87,8 +87,8 @@ async function main() {
   const wasmEnginePath = join(STAGING, "src", "_runtime", "wasm-engine.js");
   let wasmEngine = await readFile(wasmEnginePath, "utf8");
   wasmEngine = wasmEngine.replace(
-    'const DEFAULT_WASM_URL = "/runtime/locus-runtime.wasm";',
-    'const DEFAULT_WASM_URL = new URL("./locus-runtime.wasm", import.meta.url).href;',
+    'const DEFAULT_WASM_URL = "/runtime/dhamaka-runtime.wasm";',
+    'const DEFAULT_WASM_URL = new URL("./dhamaka-runtime.wasm", import.meta.url).href;',
   );
   await writeFile(wasmEnginePath, wasmEngine);
 
@@ -130,9 +130,9 @@ async function main() {
     license: rootPkg.license || "MIT",
     repository: rootPkg.repository,
     bugs: {
-      url: "https://github.com/protosphinx/locus/issues",
+      url: "https://github.com/protosphinx/dhamaka/issues",
     },
-    homepage: "https://github.com/protosphinx/locus#readme",
+    homepage: "https://github.com/protosphinx/dhamaka#readme",
     engines: {
       node: ">=18",
     },
@@ -153,8 +153,8 @@ async function main() {
 
   // 9. Sanity check: the staged package must pass a basic import smoke test.
   const probe = `
-    import { Locus, Chat, HubClient } from "${join(STAGING, "src", "index.js")}";
-    if (typeof Locus !== "function") process.exit(1);
+    import { Dhamaka, Chat, HubClient } from "${join(STAGING, "src", "index.js")}";
+    if (typeof Dhamaka !== "function") process.exit(1);
     if (typeof Chat !== "function") process.exit(1);
     if (typeof HubClient !== "function") process.exit(1);
     console.log("✓ staged package imports cleanly");
@@ -183,7 +183,7 @@ async function main() {
 
   // 11. Report.
   const wasmStat = await stat(
-    join(STAGING, "src", "_runtime", "locus-runtime.wasm"),
+    join(STAGING, "src", "_runtime", "dhamaka-runtime.wasm"),
   );
   console.log(`
   ✓ staged at ${STAGING}

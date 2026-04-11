@@ -2,9 +2,9 @@
 //
 // Imports the SDK directly from source via the dev server's /sdk mount so you
 // can hack on it without any build step. In production you'd
-// `import { Locus } from "locus"`.
+// `import { Dhamaka } from "dhamaka"`.
 
-import { Locus } from "locus";
+import { Dhamaka } from "dhamaka";
 
 const HUB_URL = `http://localhost:${location.port === "5173" ? 5174 : 5174}/`;
 
@@ -33,7 +33,7 @@ const els = {
   resetBtn: document.getElementById("reset-btn"),
 };
 
-/** @type {import("/sdk/index.js").Locus | null} */
+/** @type {import("/sdk/index.js").Dhamaka | null} */
 let llm = null;
 let chat = null;
 let abortController = null;
@@ -100,7 +100,7 @@ async function loadModel() {
   showProgress(true, 0, "contacting hub…");
 
   try {
-    llm = await Locus.load(modelId, {
+    llm = await Dhamaka.load(modelId, {
       hubUrl: HUB_URL,
       onProgress: (p) => {
         if (p.total) {

@@ -1,4 +1,4 @@
-// A zero-dependency dev server for the Locus stack.
+// A zero-dependency dev server for the Dhamaka stack.
 //
 // Starts two static file servers on two ports so the iframe + postMessage
 // bridge can be exercised across origins during local development:
@@ -128,8 +128,8 @@ const playgroundServer = createServer(
   }),
 );
 
-const HUB_PORT = Number(process.env.LOCUS_HUB_PORT ?? 5174);
-const PLAYGROUND_PORT = Number(process.env.LOCUS_PLAYGROUND_PORT ?? 5173);
+const HUB_PORT = Number(process.env.DHAMAKA_HUB_PORT ?? 5174);
+const PLAYGROUND_PORT = Number(process.env.DHAMAKA_PLAYGROUND_PORT ?? 5173);
 
 hubServer.listen(HUB_PORT, () => {
   process.stdout.write(
@@ -141,7 +141,7 @@ playgroundServer.listen(PLAYGROUND_PORT, () => {
     `  \x1b[36m✦\x1b[0m playground  http://localhost:${PLAYGROUND_PORT}\n\n`,
   );
   process.stdout.write(
-    "  \x1b[2mLocus dev stack running. Ctrl+C to stop.\x1b[0m\n\n",
+    "  \x1b[2mDhamaka dev stack running. Ctrl+C to stop.\x1b[0m\n\n",
   );
 });
 

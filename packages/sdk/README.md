@@ -1,11 +1,11 @@
-# locus
+# dhamaka
 
 The public SDK. This is what consumer apps install.
 
 ```js
-import { Locus } from "locus";
+import { Dhamaka } from "dhamaka";
 
-const llm = await Locus.load("locus-micro", {
+const llm = await Dhamaka.load("dhamaka-micro", {
   onProgress: (p) => console.log(p.received, "/", p.total),
 });
 
@@ -23,13 +23,13 @@ await chat.send("Hi!");
 
 // Info (including whether we got a cache hit)
 console.log(llm.info());
-// → { model: 'locus-micro', cached: true, loadMs: 42, engine: { backend: 'mock', ... } }
+// → { model: 'dhamaka-micro', cached: true, loadMs: 42, engine: { backend: 'mock', ... } }
 ```
 
 ## OpenAI shim
 
 ```js
-import { installOpenAIShim } from "locus/openai";
+import { installOpenAIShim } from "dhamaka/openai";
 installOpenAIShim(llm);
 // now fetch("/v1/chat/completions", ...) is served locally
 ```
@@ -37,7 +37,7 @@ installOpenAIShim(llm);
 ## What's real today
 
 - Hub ↔ SDK postMessage bridge, including progress events and cache hits
-- `Locus.load()`, `complete()`, `stream()`, `chat()`, `info()`
+- `Dhamaka.load()`, `complete()`, `stream()`, `chat()`, `info()`
 - Site-local fallback cache when the hub iframe isn't reachable
 - OpenAI `/v1/chat/completions` shim (streaming + non-streaming)
 - Manifest parsing, integrity verification, and the multi-artifact model layout
@@ -45,5 +45,5 @@ installOpenAIShim(llm);
 ## What's stubbed
 
 - The actual token generation, which is currently provided by `MockEngine`
-  from `@locus/runtime`. Once the WASM module is compiled, `createEngine`
+  from `@dhamaka/runtime`. Once the WASM module is compiled, `createEngine`
   will prefer `WasmEngine` automatically — no SDK changes required.

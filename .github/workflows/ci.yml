@@ -19,16 +19,16 @@ jobs:
           rustup target add wasm32-unknown-unknown
 
       - name: cargo test (native)
-        run: cargo test --manifest-path crates/locus-runtime/Cargo.toml
+        run: cargo test --manifest-path crates/dhamaka-runtime/Cargo.toml
 
       - name: build wasm
-        run: crates/locus-runtime/build.sh
+        run: crates/dhamaka-runtime/build.sh
 
       - name: upload wasm artifact
         uses: actions/upload-artifact@v4
         with:
-          name: locus-runtime-wasm
-          path: packages/hub/public/runtime/locus-runtime.wasm
+          name: dhamaka-runtime-wasm
+          path: packages/hub/public/runtime/dhamaka-runtime.wasm
           if-no-files-found: error
 
   js:
@@ -49,7 +49,7 @@ jobs:
       - name: download wasm artifact
         uses: actions/download-artifact@v4
         with:
-          name: locus-runtime-wasm
+          name: dhamaka-runtime-wasm
           path: packages/hub/public/runtime
 
       - name: syntax check
@@ -69,7 +69,7 @@ jobs:
             "http://localhost:5174/" \
             "http://localhost:5174/hub.js" \
             "http://localhost:5174/manifest.json" \
-            "http://localhost:5174/runtime/locus-runtime.wasm" \
+            "http://localhost:5174/runtime/dhamaka-runtime.wasm" \
             "http://localhost:5173/" \
             "http://localhost:5173/sdk/index.js" \
             "http://localhost:5173/runtime/index.js"; do

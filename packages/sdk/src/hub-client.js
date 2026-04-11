@@ -32,10 +32,10 @@ export class HubClient {
       return this._ready;
     }
 
-    // If the Locus browser extension is installed, prefer it. It
+    // If the Dhamaka browser extension is installed, prefer it. It
     // sidesteps storage partitioning entirely by storing models in its own
     // origin which is the same across every tab on the machine.
-    if (typeof window.__locus_extension__ === "object") {
+    if (typeof window.__dhamaka_extension__ === "object") {
       this._extension = true;
       this._tier = "extension";
       this._ready = Promise.resolve({
@@ -57,9 +57,9 @@ export class HubClient {
       this._listener = (event) => {
         const msg = event.data;
         if (!msg || typeof msg !== "object") return;
-        if (typeof msg.type !== "string" || !msg.type.startsWith("locus:")) return;
+        if (typeof msg.type !== "string" || !msg.type.startsWith("dhamaka:")) return;
 
-        if (msg.type === "locus:ready") {
+        if (msg.type === "dhamaka:ready") {
           this._tier = msg.tier ?? "unknown";
           finish({ fallback: false, origin: msg.origin, tier: this._tier });
           return;
@@ -68,12 +68,12 @@ export class HubClient {
         const entry = this._pending.get(msg.requestId);
         if (!entry) return;
 
-        if (msg.type === "locus:progress") {
+        if (msg.type === "dhamaka:progress") {
           entry.onProgress?.(msg);
-        } else if (msg.type === "locus:response") {
+        } else if (msg.type === "dhamaka:response") {
           this._pending.delete(msg.requestId);
           entry.resolve(msg);
-        } else if (msg.type === "locus:error") {
+        } else if (msg.type === "dhamaka:error") {
           this._pending.delete(msg.requestId);
           entry.reject(new Error(msg.error));
         }
@@ -84,7 +84,7 @@ export class HubClient {
       iframe.src = this.hubUrl;
       iframe.setAttribute("aria-hidden", "true");
       iframe.setAttribute("tabindex", "-1");
-      iframe.title = "Locus Hub";
+      iframe.title = "Dhamaka Hub";
       iframe.style.cssText =
         "position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;left:-9999px;top:-9999px;";
       iframe.onerror = () => {
@@ -136,10 +136,10 @@ export class HubClient {
         if (event.source !== window) return;
         const data = event.data;
         if (!data || typeof data !== "object") return;
-        if (!data.__locusFromExtension) return;
+        if (!data.__dhamakaFromExtension) return;
         if (data.requestId !== requestId) return;
         window.removeEventListener("message", listener);
-        if (data.type === "locus:error") reject(new Error(data.error));
+        if (data.type === "dhamaka:error") reject(new Error(data.error));
         else resolve(data);
       };
       window.addEventListener("message", listener);
@@ -149,19 +149,19 @@ export class HubClient {
   }
 
   async ping() {
-    return this._call("locus:ping", {});
+    return this._call("dhamaka:ping", {});
   }
 
   async get(id, { manifestUrl, onProgress } = {}) {
-    return this._call("locus:get", { id, manifestUrl }, onProgress);
+    return this._call("dhamaka:get", { id, manifestUrl }, onProgress);
   }
 
   async list() {
-    return this._call("locus:list", {});
+    return this._call("dhamaka:list", {});
   }
 
   async delete(id) {
-    return this._call("locus:delete", { id });
+    return this._call("dhamaka:delete", { id });
   }
 
   /**
@@ -187,7 +187,7 @@ export class HubClient {
     if (ready.fallback) {
       return { granted: false, tier: "site-local", reason: "hub unreachable" };
     }
-    return this._call("locus:request-storage-access", {});
+    return this._call("dhamaka:request-storage-access", {});
   }
 }
 
@@ -199,7 +199,7 @@ export class HubClient {
 // In Node (or any DOM-less environment) it falls back to an in-memory Map.
 // ───────────────────────────────────────────────────────────────────────────
 
-const FALLBACK_DB = "locus-fallback";
+const FALLBACK_DB = "dhamaka-fallback";
 const FALLBACK_STORE = "models";
 
 function hasIndexedDB() {
@@ -268,13 +268,13 @@ class FallbackStore {
 
   async handle(msg) {
     switch (msg.type) {
-      case "locus:ping":
+      case "dhamaka:ping":
         return { pong: true, fallback: true, persistent: this._useIdb };
-      case "locus:get":
+      case "dhamaka:get":
         return this._get(msg);
-      case "locus:list":
+      case "dhamaka:list":
         return this._list();
-      case "locus:delete":
+      case "dhamaka:delete":
         return this._delete(msg.id);
       default:
         throw new Error(`fallback: unknown ${msg.type}`);
