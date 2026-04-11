@@ -2,21 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Dhamaka — Browser-Native LLM</title>
+    <title>Dhamaka — on-device reflexes for every input field</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="A lightweight LLM that runs entirely in your browser via WASM. Download once. Use on every Dhamaka-powered site forever." />
+    <meta name="description" content="A reflex layer for every input field on the web. Drop in SmartField and every form gets intelligent. Runs 100% on-device, zero network calls." />
     <link rel="stylesheet" href="./styles.css" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%A5%3C/text%3E%3C/svg%3E" />
-    <script type="importmap">
-    {
-      "imports": {
-        "dhamaka": "/sdk/index.js",
-        "@dhamaka/runtime": "/runtime/index.js",
-        "@dhamaka/runtime/engine": "/runtime/engine.js",
-        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
-      }
-    }
-    </script>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E" />
   </head>
   <body>
     <header class="topbar">
@@ -29,90 +19,77 @@
 |____/|_| |_|\__,_|_| |_| |_|\__,_|_|\_\__,_|
 </pre>
         <div class="tagline">
-          browser-native LLM &middot; download once &middot; run anywhere
+          reflex layer for every input &middot; on-device &middot; zero latency
         </div>
-      </div>
-      <div class="status" id="status">
-        <span class="dot" id="status-dot"></span>
-        <span id="status-text">booting…</span>
       </div>
     </header>
 
     <main class="layout">
-      <aside class="sidebar">
-        <section class="panel">
-          <h2>Model</h2>
-          <select id="model-select" class="select">
-            <option value="dhamaka-micro">dhamaka-micro &middot; 360M &middot; Q4</option>
-            <option value="dhamaka-code" disabled>dhamaka-code (soon)</option>
-            <option value="dhamaka-sql" disabled>dhamaka-sql (soon)</option>
-            <option value="dhamaka-json" disabled>dhamaka-json (soon)</option>
-            <option value="dhamaka-summarize" disabled>dhamaka-summarize (soon)</option>
-            <option value="dhamaka-embed" disabled>dhamaka-embed (soon)</option>
-          </select>
-          <button id="load-btn" class="btn primary">load</button>
-          <button id="evict-btn" class="btn subtle">evict cache</button>
-        </section>
-
-        <section class="panel">
-          <h2>Telemetry</h2>
-          <dl class="telemetry">
-            <dt>cache</dt><dd id="t-cache">—</dd>
-            <dt>mode</dt><dd id="t-mode">—</dd>
-            <dt>load</dt><dd id="t-load">—</dd>
-            <dt>tok/s</dt><dd id="t-tps">—</dd>
-            <dt>memory</dt><dd id="t-mem">—</dd>
-            <dt>backend</dt><dd id="t-backend">—</dd>
-          </dl>
-        </section>
-
-        <section class="panel">
-          <h2>Storage</h2>
-          <ul id="local-models" class="local-list">
-            <li class="muted">nothing cached yet</li>
-          </ul>
-        </section>
-
-        <section class="panel muted-panel">
-          <p class="fineprint">
-            Dhamaka runs entirely in your browser. Nothing you type here is sent
-            to a server. Model bytes live in local storage.
+      <section class="demo-grid">
+        <a href="./demos/autofill.html" class="demo-card">
+          <div class="demo-icon">✦</div>
+          <h2>Address autofill</h2>
+          <p>
+            Type a city — state, country, timezone, and currency fill in live,
+            under 5 ms, no network.
           </p>
-        </section>
-      </aside>
+          <code class="demo-snippet">&lt;smart-field task="city-to-state"&gt;</code>
+        </a>
 
-      <section class="chat">
-        <div id="messages" class="messages">
-          <div class="msg system">
-            <div class="who">system</div>
-            <div class="content">
-              Welcome to Dhamaka. Click <b>load</b> on the left to pull the
-              default model. On your first visit you'll see a download; every
-              visit after that (on any Dhamaka-powered site) should be an
-              instant cache hit.
-            </div>
-          </div>
-        </div>
+        <a href="./demos/spellcheck.html" class="demo-card">
+          <div class="demo-icon">✦</div>
+          <h2>Contextual spellcheck</h2>
+          <p>
+            "I'll see you their" → "there" — catches homophones in context,
+            not just dictionary misses.
+          </p>
+          <code class="demo-snippet">new SmartText(textareaEl)</code>
+        </a>
 
-        <div class="progress" id="progress">
-          <div class="bar" id="progress-bar"></div>
-          <div class="label" id="progress-label"></div>
-        </div>
+        <a href="./demos/paste.html" class="demo-card">
+          <div class="demo-icon">✦</div>
+          <h2>Smart paste</h2>
+          <p>
+            Paste a business card blob — name, email, phone, company, website
+            split into the right fields, synchronously.
+          </p>
+          <code class="demo-snippet">attachSmartPaste(form)</code>
+        </a>
+      </section>
 
-        <form id="composer" class="composer">
-          <textarea
-            id="prompt"
-            placeholder="ask Dhamaka anything…"
-            rows="2"
-            disabled
-          ></textarea>
-          <button id="send-btn" class="btn primary" type="submit" disabled>send</button>
-          <button id="stop-btn" class="btn subtle" type="button" disabled hidden>stop</button>
-          <button id="reset-btn" class="btn subtle" type="button" disabled title="clear chat history">reset</button>
-        </form>
+      <section class="notes">
+        <h3>The architecture</h3>
+        <pre class="diagram">
+  every &lt;input&gt; and &lt;textarea&gt;
+            │
+            ▼
+     [ SmartField ]   ←   rules-first (&lt;1 ms, always runs)
+            │
+            ▼
+       [ reflex ]     ←   resident engine (warm, KV-cached)
+            │
+            ▼
+        [ engine ]    ←   window.ai → WASM → MockEngine
+                          (task-specific models, ~50 ms cold)
+        </pre>
+        <p>
+          Every task layers rules → fuzzy → model. Most real inputs never
+          touch the model at all — they're answered by a lookup table or a
+          regex in microseconds. The model only runs when the fast path is
+          uncertain, and when it does, it's resident in the page, not on a
+          server.
+        </p>
+      </section>
+
+      <section class="notes">
+        <h3>Looking for the old chat demo?</h3>
+        <p>
+          <a href="./chat.html">It's here →</a>. That's the low-level
+          <code>Dhamaka.load()</code> API (direct access to the runtime).
+          It still works, but for most use cases the <code>SmartField</code>
+          primitives above are what you want.
+        </p>
       </section>
     </main>
-
-    <script type="module" src="./app.js"></script>
   </body>
 </html>

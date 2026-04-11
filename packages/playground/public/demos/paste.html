@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka · smart paste demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./demos.css" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <main class="demo-page">
+      <a class="back-link" href="../">← all demos</a>
+      <h1>smart paste</h1>
+      <p class="lead">
+        Paste a block of contact info into the drop zone below — a business
+        card, an email signature, a LinkedIn blurb, whatever. The form fields
+        populate themselves as the paste event is processed. No field is
+        overwritten if you've typed something there first.
+        <br/><br/>
+        Try pasting:
+      </p>
+      <pre class="diagram">Jane Doe
+Senior Platform Engineer
+Acme Corp
+jane.doe@acme.com
++1 (415) 555-1234
+https://acme.com
+@janedoe</pre>
+
+      <form id="contact-form" class="demo-panel" autocomplete="off">
+        <h2>contact</h2>
+        <div class="drop-zone" id="drop-zone">
+          paste a business card or signature here
+          <br/>
+          <small>(or anywhere inside the form)</small>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>name</label>
+            <input name="name" placeholder="—" />
+          </div>
+          <div>
+            <label>company</label>
+            <input name="company" placeholder="—" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>email</label>
+            <input name="email" type="email" placeholder="—" />
+          </div>
+          <div>
+            <label>phone</label>
+            <input name="phone" type="tel" placeholder="—" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>website</label>
+            <input name="website" placeholder="—" />
+          </div>
+          <div>
+            <label>twitter</label>
+            <input name="twitter" placeholder="—" />
+          </div>
+        </div>
+        <div class="tele">
+          <span>
+            last extraction:
+            <strong id="t-count">0 fields</strong>
+            &nbsp;·&nbsp;
+            source: <strong id="t-source">—</strong>
+          </span>
+          <span>confidence: <span class="pill" id="t-conf">—</span></span>
+        </div>
+      </form>
+
+      <section class="notes">
+        <h3>what's happening</h3>
+        <pre class="diagram">
+  onpaste → attachSmartPaste → runTask("paste-extract")
+       │
+       ├─ regex: emails, phones, URLs, @handles  ← 0.3 ms
+       ├─ heuristic: 2–4 cap-case words = name   ← 0.1 ms
+       ├─ rule: non-freemail domain → company    ← 0.1 ms
+       └─ model: fill in name/title/address      ← (planned)
+
+  Fields only populate where the user hasn't typed anything.
+        </pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import { attachSmartPaste } from "dhamaka";
+
+      const form = document.getElementById("contact-form");
+      const dropZone = document.getElementById("drop-zone");
+      const tCount = document.getElementById("t-count");
+      const tSource = document.getElementById("t-source");
+      const tConf = document.getElementById("t-conf");
+
+      attachSmartPaste(form, { dropZone });
+
+      form.addEventListener("smart-paste:extracted", (e) => {
+        const { result } = e.detail;
+        const nFields = Object.keys(result.fields || {}).length;
+        tCount.textContent = `${nFields} field${nFields === 1 ? "" : "s"}`;
+        tSource.textContent = result.source || "—";
+        tConf.textContent = (result.confidence ?? 0).toFixed(2);
+        dropZone.classList.add("active");
+        setTimeout(() => dropZone.classList.remove("active"), 600);
+      });
+    </script>
+  </body>
+</html>

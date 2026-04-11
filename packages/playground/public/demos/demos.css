@@ -1,0 +1,244 @@
+/* Shared demo styles. Import after styles.css. */
+
+.demo-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+.demo-page h1 {
+  font-size: 1.2rem;
+  margin: 0 0 0.25rem;
+  color: var(--accent);
+}
+
+.demo-page .lead {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}
+
+.demo-page .back-link {
+  display: inline-block;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 12px;
+  margin-bottom: 1.5rem;
+}
+.demo-page .back-link:hover { color: var(--accent); }
+
+.demo-panel {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.demo-panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.demo-panel label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 0.6rem 0 0.3rem;
+}
+
+.demo-panel input,
+.demo-panel textarea,
+.demo-panel select {
+  width: 100%;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.demo-panel textarea {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.demo-panel input:focus,
+.demo-panel textarea:focus {
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.field-row--single {
+  grid-template-columns: 1fr;
+}
+
+.field-row label {
+  margin-top: 0;
+}
+
+.tele {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--bg-elev-2);
+  border-radius: 6px;
+  border: 1px dashed var(--border);
+}
+
+.tele strong { color: var(--text); }
+.tele .pill {
+  padding: 0.1rem 0.4rem;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--accent-3);
+}
+
+.out {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  background: #0a0a10;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--mono);
+  min-height: 2.4em;
+}
+
+.suggest {
+  display: inline-block;
+  margin: 0.15rem 0.3rem 0.15rem 0;
+  padding: 0.2rem 0.5rem;
+  background: #1a1220;
+  border: 1px solid #3a2330;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.suggest:hover { border-color: var(--accent); }
+.suggest .strike { color: var(--text-muted); text-decoration: line-through; margin-right: 0.25rem; }
+.suggest .arrow  { color: var(--text-muted); margin: 0 0.25rem; }
+.suggest .to     { color: var(--accent); }
+
+.drop-zone {
+  display: block;
+  padding: 2rem;
+  text-align: center;
+  border: 2px dashed var(--border-strong);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 1rem;
+}
+.drop-zone.active { border-color: var(--accent); color: var(--accent); }
+
+/* Demo-grid cards on the index page */
+.demo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.demo-card {
+  display: block;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 160ms ease;
+}
+
+.demo-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.demo-card .demo-icon {
+  font-size: 20px;
+  color: var(--accent);
+  margin-bottom: 0.5rem;
+}
+
+.demo-card h2 {
+  margin: 0 0 0.4rem;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.demo-card p {
+  margin: 0 0 0.75rem;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+
+.demo-card .demo-snippet {
+  display: block;
+  padding: 0.4rem 0.5rem;
+  background: var(--bg-elev-2);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--accent-3);
+  overflow: auto;
+  white-space: nowrap;
+}
+
+.notes {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+}
+.notes h3 {
+  margin: 0 0 0.6rem;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+.notes p { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin: 0.5rem 0; }
+.notes a { color: var(--accent-2); }
+.notes code { background: var(--bg-elev-2); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 12px; }
+.notes .diagram {
+  background: var(--bg-elev-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 11px;
+  color: var(--text);
+  overflow-x: auto;
+  line-height: 1.4;
+  margin: 0.5rem 0;
+}

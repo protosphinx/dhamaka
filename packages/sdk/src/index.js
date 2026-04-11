@@ -1,9 +1,15 @@
 // ╭──────────────────────────────────────────────────────────────────────╮
 // │  dhamaka — the public SDK                                            │
 // │                                                                      │
-// │    import { Dhamaka } from "dhamaka";                                │
-// │    const llm = await Dhamaka.load();                                 │
-// │    for await (const t of llm.stream("Hello")) process.stdout.write(t)│
+// │  A reflex layer for every input on the web. Drop in a SmartField or │
+// │  SmartForm, get on-device intelligence (autofill, spellcheck, smart  │
+// │  paste, cross-field inference) with zero network latency.            │
+// │                                                                      │
+// │    import { SmartField, SmartForm, SmartText } from "dhamaka";       │
+// │                                                                      │
+// │    new SmartField(document.querySelector("#city"), {                 │
+// │      task: "city-to-state",                                          │
+// │    });                                                               │
 // │                                                                      │
 // ╰──────────────────────────────────────────────────────────────────────╯
 
@@ -11,21 +17,43 @@ import { createEngine } from "@dhamaka/runtime";
 import { HubClient } from "./hub-client.js";
 import { Chat } from "./chat.js";
 
+// ─── the new surface (the pivot) ──────────────────────────────────────
+
+export { SmartField } from "./smart-field.js";
+export { SmartForm } from "./smart-form.js";
+export { SmartText } from "./smart-text.js";
+export { attachSmartPaste } from "./paste-extract.js";
+export { reflex } from "./reflex.js";
+export {
+  runTask,
+  registerTask,
+  getTask,
+  listTasks,
+  cityToStateTask,
+  spellcheckTask,
+  pasteExtractTask,
+} from "./tasks.js";
+
+// ─── legacy / advanced surface ────────────────────────────────────────
+// Kept for people who want direct model access (chat, completion,
+// streaming). Most users should use the SmartField API above.
+
 const DEFAULT_MODEL = "dhamaka-micro";
 const DEFAULT_HUB_URL = "https://hub.dhamaka.dev/";
 
 /**
  * @typedef {object} DhamakaLoadOptions
- * @property {string} [hubUrl]         URL of the Dhamaka hub iframe.
- * @property {string} [manifestUrl]    Override for the model manifest.
- * @property {"auto"|"mock"|"wasm"} [backend]  Runtime backend.
- * @property {string} [wasmUrl]        URL of the WASM module.
+ * @property {string} [hubUrl]
+ * @property {string} [manifestUrl]
+ * @property {"auto"|"mock"|"wasm"|"window-ai"} [backend]
+ * @property {string} [wasmUrl]
  * @property {(p: object) => void} [onProgress]
  */
 
 export class Dhamaka {
   /**
-   * Load a Dhamaka model.
+   * Load a Dhamaka model directly. Lower-level than SmartField — use this
+   * when you want raw completion / streaming / chat access.
    * @param {string} [modelId=DEFAULT_MODEL]
    * @param {DhamakaLoadOptions} [options]
    */
@@ -35,22 +63,18 @@ export class Dhamaka {
     return instance;
   }
 
-  /** @param {string} modelId @param {DhamakaLoadOptions} options */
   constructor(modelId, options) {
     this.modelId = modelId;
     this.options = options;
     const hubUrl = options.hubUrl ?? DEFAULT_HUB_URL;
     this.hub = new HubClient({ hubUrl });
-    // The WASM runtime binary lives on the hub origin at /runtime/…, same
-    // place the hub serves model weights from. Resolve it against the hub
-    // URL so the fetch works in development (http://localhost:5174/…) and
-    // production (https://hub.dhamaka.dev/…) without config.
+
     let wasmUrl = options.wasmUrl;
     if (!wasmUrl && typeof URL !== "undefined") {
       try {
         wasmUrl = new URL("runtime/dhamaka-runtime.wasm", hubUrl).href;
       } catch {
-        // fall through — createEngine will degrade to MockEngine in Node
+        /* fall through */
       }
     }
     this.engine = createEngine({
@@ -68,42 +92,22 @@ export class Dhamaka {
       onProgress: (p) => this.options.onProgress?.(p),
     });
     this._cached = result.cached;
-
-    await this.engine.load({
-      entry: result.entry,
-      artifacts: result.artifacts,
-    });
+    await this.engine.load({ entry: result.entry, artifacts: result.artifacts });
     this._loadedAt = (globalThis.performance ?? Date).now() - t0;
   }
 
-  /**
-   * One-shot completion.
-   * @param {string} prompt
-   * @param {object} [options]
-   */
   async complete(prompt, options) {
     return this.engine.complete(prompt, options);
   }
 
-  /**
-   * Stream tokens as an async iterator.
-   * @param {string} prompt
-   * @param {object} [options]
-   */
   async *stream(prompt, options) {
     yield* this.engine.generate(prompt, options);
   }
 
-  /**
-   * Start a stateful chat session.
-   * @param {object} [options]
-   * @param {string} [options.system]
-   */
   chat(options = {}) {
     return new Chat(this, options);
   }
 
-  /** Runtime + cache information. */
   info() {
     return {
       model: this.modelId,
@@ -113,12 +117,10 @@ export class Dhamaka {
     };
   }
 
-  /** List models currently sitting in the hub's local storage. */
   async localModels() {
     return this.hub.list();
   }
 
-  /** Evict a model from the hub's local storage. */
   async evict(id) {
     return this.hub.delete(id);
   }

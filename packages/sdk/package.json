@@ -1,11 +1,16 @@
 {
   "name": "dhamaka",
   "version": "0.1.0",
-  "description": "Browser-native LLM. Download the model once, use it on every Dhamaka-powered site forever.",
+  "description": "A reflex layer for every input on the web. Drop in SmartField / SmartForm / SmartText and get on-device autofill, contextual spellcheck, smart paste, and cross-field inference — zero latency, zero cost, zero privacy exposure.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./smart-field": "./src/smart-field.js",
+    "./smart-form": "./src/smart-form.js",
+    "./smart-text": "./src/smart-text.js",
+    "./tasks": "./src/tasks.js",
+    "./reflex": "./src/reflex.js",
     "./hub-client": "./src/hub-client.js",
     "./chat": "./src/chat.js",
     "./openai": "./src/openai-shim.js"
@@ -19,11 +24,16 @@
   "license": "MIT",
   "keywords": [
     "llm",
-    "wasm",
-    "browser",
-    "ai",
     "on-device",
     "local-first",
-    "privacy"
+    "privacy",
+    "form",
+    "autofill",
+    "spellcheck",
+    "autocomplete",
+    "smart-field",
+    "browser",
+    "wasm",
+    "window.ai"
   ]
 }
