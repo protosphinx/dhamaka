@@ -1,7 +1,7 @@
 {
-  "name": "@dhamaka/runtime",
+  "name": "@locus/runtime",
   "version": "0.1.0",
-  "description": "The Dhamaka WASM inference runtime. Ships a small transformer engine compiled to WebAssembly plus a mock engine for development.",
+  "description": "The Locus WASM inference runtime. Ships a small transformer engine compiled to WebAssembly plus a mock engine for development.",
   "type": "module",
   "main": "src/index.js",
   "exports": {

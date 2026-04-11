@@ -1,8 +1,8 @@
 {
-  "name": "dhamaka",
+  "name": "locus",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser-native LLM that runs in WASM. Download once, use on every Dhamaka-powered site forever.",
+  "description": "Browser-native LLM that runs in WASM. Download once, use on every Locus-powered site forever.",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -11,16 +11,16 @@
     "dev": "node packages/playground/server.js",
     "start": "node packages/playground/server.js",
     "test": "node --test --test-reporter=spec 'packages/runtime/test/*.test.js' 'packages/sdk/test/*.test.js' 'packages/hub/test/*.test.js'",
-    "build:wasm": "crates/dhamaka-runtime/build.sh",
-    "build:wasm:check": "crates/dhamaka-runtime/build.sh --check",
+    "build:wasm": "crates/locus-runtime/build.sh",
+    "build:wasm:check": "crates/locus-runtime/build.sh --check",
     "prepublish-stage": "node scripts/prepare-publish.mjs",
     "release:dry": "node scripts/prepare-publish.mjs && cd packages/sdk/_staging && npm pack --dry-run"
   },
   "license": "MIT",
-  "author": "Dhamaka contributors",
+  "author": "Locus contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/protosphinx/dhamaka"
+    "url": "https://github.com/protosphinx/locus"
   },
   "keywords": [
     "llm",

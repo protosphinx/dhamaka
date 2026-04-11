@@ -1,6 +1,6 @@
 //! The tiny random-weights model used by v0.1 of the runtime.
 //!
-//! Real Dhamaka releases will load SmolLM2-360M-Instruct from a quantized
+//! Real Locus releases will load SmolLM2-360M-Instruct from a quantized
 //! binary format. Until those weights are packaged, this module builds a
 //! deterministic random model from a seed, which is enough to exercise the
 //! full inference pipeline end-to-end: embedding lookup → N transformer
@@ -8,7 +8,7 @@
 //!
 //! Output from this model is not coherent English — it's whatever the random
 //! weights say. But every step is real transformer math executed in WASM
-//! compiled from Rust, which is the entire point of Dhamaka's runtime layer.
+//! compiled from Rust, which is the entire point of Locus's runtime layer.
 
 use crate::rng::Xorshift64;
 use crate::transformer::{LayerWeights, ModelWeights, FFN_HIDDEN, HIDDEN, N_LAYERS, VOCAB};
@@ -22,7 +22,7 @@ use crate::transformer::{LayerWeights, ModelWeights, FFN_HIDDEN, HIDDEN, N_LAYER
 pub const VOCAB_TABLE: [&str; 64] = [
     " the ", " a ", " of ", " to ", " and ", " in ", " that ", " it ",
     " is ", " for ", " on ", " with ", " as ", " was ", " are ", " be ",
-    "Dhamaka ", "browser ", "WASM ", "Rust ", "model ", "tensor ", "token ",
+    "Locus ", "browser ", "WASM ", "Rust ", "model ", "tensor ", "token ",
     "weights ", "inference ", "cache ", "matrix ", "softmax ", "attention ",
     "transformer ", "fast ", "small ", "local ", "private ", "yours ",
     "run ", "ship ", "tab ", "site ", "share ", "download ", "once ",
