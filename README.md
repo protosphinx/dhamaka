@@ -289,6 +289,122 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 
 ---
 
+## ✦ tests
+
+```
+  ╭─────────────────────────────────────────────────────────────╮
+  │                                                             │
+  │        ██████   ██████       ██████   █████   ██████        │
+  │        ╚════██ ██╔═══██╗     ╚════██╗██╔══██╗██╔════╝       │
+  │         █████╔╝ ╚██████║      █████╔╝███████║██║            │
+  │        ██╔═══╝ ██╗═══██║     ██╔═══╝ ██╔══██║██║            │
+  │        ███████╗╚██████╔╝     ███████╗██║  ██║╚██████╗       │
+  │        ╚══════╝ ╚═════╝      ╚══════╝╚═╝  ╚═╝ ╚═════╝       │
+  │                                                             │
+  │           27 rust tests  ·  45 js tests  ·  all green       │
+  │                                                             │
+  ╰─────────────────────────────────────────────────────────────╯
+```
+
+### run them
+
+```bash
+# everything (Rust native + JS + end-to-end wasm)
+cargo test --manifest-path crates/dhamaka-runtime/Cargo.toml
+npm test
+
+# just the Rust crate
+cd crates/dhamaka-runtime && cargo test
+
+# just the JS side
+npm test
+
+# one specific file
+node --test packages/runtime/test/wasm-engine.test.js
+```
+
+Zero test-runner dependencies. Rust uses `cargo test`, JS uses the Node 20+ built-in `node --test`. No jest, no mocha, no vitest, no install step past `rustup` and the Node toolchain.
+
+### Rust · `cargo test` · 27 tests
+
+The hot path. Every tensor primitive, the sampler, the forward pass, and the model init are covered by native unit tests that run in milliseconds.
+
+| file                         | tests | what it covers                                                                 |
+|------------------------------|:-----:|---------------------------------------------------------------------------------|
+| `src/rng.rs`                 |   4   | xorshift64* determinism, `next_f32()` range, FNV-1a seed-hash distinctness      |
+| `src/tensor.rs`              |  10   | matmul (identity + 2×2 reference), RMSNorm, softmax sums to 1 + translation invariance, SiLU at 0 and large positive, in-place add/mul, RoPE identity at pos 0 + norm preservation |
+| `src/sampler.rs`             |   5   | greedy picks max, temperature=0 is greedy, deterministic for same seed, `top_k=1` always hits argmax, `top_p=0.01` collapses to the mode |
+| `src/transformer.rs`         |   3   | forward pass produces finite logits, is deterministic for same seed, **different positions produce different logits** (caught a real KV-cache bug) |
+| `src/model.rs`               |   5   | random-weights init is reproducible, different seeds differ, vocab table size, detokenize round-trip, empty prompt still yields a token |
+
+### JavaScript · `npm test` · 45 tests
+
+Drives the SDK, the hub, and the real compiled `.wasm` end-to-end from Node using the built-in test runner. Zero dependencies.
+
+| file                                      | tests | what it covers                                                                    |
+|-------------------------------------------|:-----:|------------------------------------------------------------------------------------|
+| `packages/runtime/test/factory.test.js`   |   7   | backend selection (auto / mock / wasm), abstract `Engine` refuses instantiation, `WasmEngine` info + unreachable-url error |
+| `packages/runtime/test/mock-engine.test.js` |  7   | load gating, streaming, `complete()`, determinism, `AbortSignal`, unload          |
+| `packages/runtime/test/tokenizer.test.js` |   8   | `split()` on words / punctuation / whitespace / empty, JSON `loadFromBytes`, encode/decode stubs |
+| `packages/runtime/test/wasm-engine.test.js` |  4   | **loads the real compiled `.wasm`**, streams real Rust forward-pass tokens, deterministic across identical prompts, honors `AbortSignal` |
+| `packages/sdk/test/chat.test.js`          |   6   | history accumulation, system prompt, streaming transcript, reset w/ and w/o system |
+| `packages/sdk/test/hub-client.test.js`    |   5   | Node fallback mode, ping, get with mocked fetch (cache miss then hit), list + delete, unknown-model error |
+| `packages/sdk/test/openai-shim.test.js`   |   3   | non-streaming ChatCompletion shape, streaming SSE with `[DONE]`, passthrough for non-matching URLs |
+| `packages/hub/test/manifest.test.js`      |   5   | canonical manifest parses, model ids + required fields, sha256 format, default model exists, served hub manifest mirrors shape |
+
+### end-to-end
+
+The four `wasm-engine.test.js` tests are the moat. They stub `globalThis.fetch` to read the compiled `dhamaka-runtime.wasm` off disk, then drive the real ABI:
+
+```
+┌─ Node ────────────────────────────────────────────────────────────┐
+│  WasmEngine                                                       │
+│      │                                                            │
+│      │  WebAssembly.instantiate(fs.readFile(.wasm))                │
+│      ▼                                                            │
+│  [ dhamaka_version   ==> 1                               ]        │
+│  [ dhamaka_alloc     ==> ptr                             ]        │
+│  [ write prompt bytes into WASM linear memory            ]        │
+│  [ dhamaka_init      ==> ctx                             ]        │
+│  [ dhamaka_feed_prompt(ctx, ptr, len)                    ]        │
+│  [ loop { dhamaka_next_token(ctx, out, 64) ==> n bytes } ]        │
+│  [ decode UTF-8, yield token                             ]        │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+These four pass in Node, so every token in the README's "real today" list is real. The same `WasmEngine` runs in the browser via `instantiateStreaming` — no fork.
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+```
+  ┌─────────────────────────┐
+  │ job 1 · rust            │
+  │   rustup target add     │
+  │     wasm32-unknown-     │
+  │     unknown             │
+  │   cargo test            │─── 27 tests
+  │   cargo build --release │
+  │     --target wasm32-…   │─── stage .wasm artifact
+  └───────────┬─────────────┘
+              │
+              ▼
+  ┌─────────────────────────┐
+  │ job 2 · js              │
+  │   download wasm artifact│
+  │   node --check **/*.js  │
+  │   npm test              │─── 45 tests
+  │   smoke-test dev server │─── curl every endpoint
+  └─────────────────────────┘
+
+          matrix: node 20, node 22
+```
+
+No green CI, no merge.
+
+---
+
 ## ✦ philosophy
 
 ```
