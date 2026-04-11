@@ -18,3 +18,8 @@ models/*.gguf
 # without a Rust toolchain can run the dev stack. The target/ dir is not.
 crates/*/target/
 Cargo.lock
+
+# npm publish staging directory, rebuilt from scratch by
+# scripts/prepare-publish.mjs on every release.
+packages/sdk/_staging/
+packages/sdk/*.tgz

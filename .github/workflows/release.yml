@@ -1,0 +1,109 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # needed to create the GitHub release + upload assets
+
+jobs:
+  release:
+    name: build, test, stage, and release ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    env:
+      # Hoisting NPM_TOKEN to job level so the conditional `if` checks in
+      # the publish steps below can actually read it.
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ─── Rust toolchain + wasm build ────────────────────────────────────
+      - name: install rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: cargo test (native)
+        run: cargo test --manifest-path crates/dhamaka-runtime/Cargo.toml
+
+      - name: build wasm
+        run: crates/dhamaka-runtime/build.sh
+
+      # ─── Node toolchain + JS tests ──────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: run js tests
+        run: npm test
+
+      # ─── Stage the publishable package ──────────────────────────────────
+      - name: stage publish
+        run: node scripts/prepare-publish.mjs
+
+      - name: inspect staged package
+        run: |
+          cd packages/sdk/_staging
+          npm pack --dry-run
+          npm pack
+          ls -lh *.tgz
+
+      # ─── Verify the tag matches the package version ─────────────────────
+      - name: verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG=$(node -p "require('./packages/sdk/_staging/package.json').version")
+          if [ "$TAG" != "$PKG" ]; then
+            echo "FAIL: tag $TAG does not match package version $PKG"
+            exit 1
+          fi
+          echo "OK: tag $TAG matches package version $PKG"
+
+      # ─── Publish to npm (only if NPM_TOKEN is set) ──────────────────────
+      - name: publish to npm
+        if: env.NPM_TOKEN != ''
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd packages/sdk/_staging
+          npm publish --access public --provenance
+
+      - name: skip npm publish (no NPM_TOKEN)
+        if: env.NPM_TOKEN == ''
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "NPM_TOKEN not set — skipping npm publish."
+          echo "To enable automated publishing: Settings → Secrets → Actions → new secret 'NPM_TOKEN'."
+
+      # ─── Create the GitHub release with the wasm + tarball attached ─────
+      - name: extract release notes from changelog
+        id: notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Everything between "## [VERSION]" and the next "## [" header.
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found = 1; next }
+            found && $0 ~ "^## \\[" { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "no changelog entry for $VERSION, using tag message" > release_notes.md
+          fi
+          echo "notes_file=release_notes.md" >> $GITHUB_OUTPUT
+
+      - name: create github release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Dhamaka ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.notes_file }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            packages/sdk/_staging/dhamaka-*.tgz
+            packages/hub/public/runtime/dhamaka-runtime.wasm
