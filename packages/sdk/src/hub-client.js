@@ -19,6 +19,7 @@ export class HubClient {
     this._pending = new Map();
     this._listener = null;
     this._fallback = null;
+    this._tier = null;
   }
 
   _install() {
@@ -28,6 +29,20 @@ export class HubClient {
     if (typeof window === "undefined" || typeof document === "undefined") {
       this._fallback = new FallbackStore();
       this._ready = Promise.resolve({ fallback: true });
+      return this._ready;
+    }
+
+    // If the Dhamaka browser extension is installed, prefer it. It
+    // sidesteps storage partitioning entirely by storing models in its own
+    // origin which is the same across every tab on the machine.
+    if (typeof window.__dhamaka_extension__ === "object") {
+      this._extension = true;
+      this._tier = "extension";
+      this._ready = Promise.resolve({
+        fallback: false,
+        extension: true,
+        tier: "extension",
+      });
       return this._ready;
     }
 
@@ -45,7 +60,8 @@ export class HubClient {
         if (typeof msg.type !== "string" || !msg.type.startsWith("dhamaka:")) return;
 
         if (msg.type === "dhamaka:ready") {
-          finish({ fallback: false, origin: msg.origin });
+          this._tier = msg.tier ?? "unknown";
+          finish({ fallback: false, origin: msg.origin, tier: this._tier });
           return;
         }
 
@@ -91,8 +107,13 @@ export class HubClient {
 
   async _call(type, payload, onProgress) {
     const ready = await this._install();
+
     if (ready.fallback) {
       return this._fallback.handle({ type, ...payload }, onProgress);
+    }
+
+    if (ready.extension) {
+      return this._callExtension(type, payload, onProgress);
     }
 
     const requestId = this._nextId++;
@@ -102,6 +123,28 @@ export class HubClient {
         { type, requestId, ...payload },
         new URL(this.hubUrl).origin,
       );
+    });
+  }
+
+  _callExtension(type, payload, onProgress) {
+    // The extension content script forwards window.postMessage to the
+    // background service worker over chrome.runtime.sendMessage, then posts
+    // the response back with the same requestId.
+    const requestId = this._nextId++;
+    return new Promise((resolve, reject) => {
+      const listener = (event) => {
+        if (event.source !== window) return;
+        const data = event.data;
+        if (!data || typeof data !== "object") return;
+        if (!data.__dhamakaFromExtension) return;
+        if (data.requestId !== requestId) return;
+        window.removeEventListener("message", listener);
+        if (data.type === "dhamaka:error") reject(new Error(data.error));
+        else resolve(data);
+      };
+      window.addEventListener("message", listener);
+      window.postMessage({ type, requestId, ...payload }, "*");
+      void onProgress;
     });
   }
 
@@ -121,61 +164,203 @@ export class HubClient {
     return this._call("dhamaka:delete", { id });
   }
 
-  /** Whether we ended up in fallback mode (site-local cache only). */
+  /**
+   * Which storage tier this client is actually running on. One of:
+   *
+   *   "shared"          cross-site unpartitioned hub iframe (the dream)
+   *   "storage-access"  unpartitioned via the Storage Access API
+   *   "partitioned"     per-top-site hub iframe (still persistent, not shared)
+   *   "site-local"      hub unreachable → per-origin fallback
+   */
   async mode() {
     const r = await this._install();
-    return r.fallback ? "site-local" : "shared";
+    if (r.fallback) return "site-local";
+    return r.tier ?? this._tier ?? "partitioned";
+  }
+
+  /**
+   * Ask the hub to request unpartitioned storage via the Storage Access API.
+   * Must be called from a user gesture (click, keypress, etc).
+   */
+  async requestStorageAccess() {
+    const ready = await this._install();
+    if (ready.fallback) {
+      return { granted: false, tier: "site-local", reason: "hub unreachable" };
+    }
+    return this._call("dhamaka:request-storage-access", {});
   }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
 // FallbackStore
 //
-// Used when the hub iframe can't be loaded. Stores models in a per-origin
+// Used when the hub iframe can't be loaded. In a browser it uses a per-origin
 // IndexedDB so the site still works offline — just without cross-site sharing.
-// In Node it uses an in-memory Map (no persistence).
+// In Node (or any DOM-less environment) it falls back to an in-memory Map.
 // ───────────────────────────────────────────────────────────────────────────
+
+const FALLBACK_DB = "dhamaka-fallback";
+const FALLBACK_STORE = "models";
+
+function hasIndexedDB() {
+  return typeof indexedDB !== "undefined";
+}
+
+function openFallbackDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(FALLBACK_DB, 1);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(FALLBACK_STORE)) {
+        db.createObjectStore(FALLBACK_STORE, { keyPath: "id" });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbFallbackGet(id) {
+  const db = await openFallbackDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FALLBACK_STORE, "readonly");
+    const req = tx.objectStore(FALLBACK_STORE).get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbFallbackPut(record) {
+  const db = await openFallbackDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FALLBACK_STORE, "readwrite");
+    const req = tx.objectStore(FALLBACK_STORE).put(record);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbFallbackDelete(id) {
+  const db = await openFallbackDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FALLBACK_STORE, "readwrite");
+    const req = tx.objectStore(FALLBACK_STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbFallbackList() {
+  const db = await openFallbackDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FALLBACK_STORE, "readonly");
+    const req = tx.objectStore(FALLBACK_STORE).getAll();
+    req.onsuccess = () => resolve(req.result ?? []);
+    req.onerror = () => reject(req.error);
+  });
+}
 
 class FallbackStore {
   constructor() {
     this._mem = new Map();
+    this._useIdb = hasIndexedDB();
   }
 
   async handle(msg) {
     switch (msg.type) {
       case "dhamaka:ping":
-        return { pong: true, fallback: true };
+        return { pong: true, fallback: true, persistent: this._useIdb };
       case "dhamaka:get":
         return this._get(msg);
       case "dhamaka:list":
-        return { list: [...this._mem.values()].map((r) => ({ id: r.id, entry: r.entry })) };
+        return this._list();
       case "dhamaka:delete":
-        this._mem.delete(msg.id);
-        return { deleted: msg.id };
+        return this._delete(msg.id);
       default:
         throw new Error(`fallback: unknown ${msg.type}`);
     }
   }
 
+  async _lookup(id) {
+    if (this._useIdb) return idbFallbackGet(id);
+    return this._mem.get(id);
+  }
+
+  async _store(record) {
+    if (this._useIdb) return idbFallbackPut(record);
+    this._mem.set(record.id, record);
+  }
+
   async _get(msg) {
-    const cached = this._mem.get(msg.id);
+    const cached = await this._lookup(msg.id);
     if (cached) return { cached: true, ...cached };
 
-    const manifestUrl = msg.manifestUrl ?? "./manifest.json";
+    // Resolve manifest URL. If the caller gave us one, use it; otherwise fall
+    // back to one relative to the current page (browser) or refuse (Node).
+    let manifestUrl = msg.manifestUrl;
+    if (!manifestUrl) {
+      if (typeof location !== "undefined" && location.href) {
+        manifestUrl = new URL("./manifest.json", location.href).href;
+      } else {
+        throw new Error(
+          "fallback: no manifestUrl provided and no page URL to resolve against",
+        );
+      }
+    }
     const manifestRes = await fetch(manifestUrl);
+    if (!manifestRes.ok) {
+      throw new Error(`fallback manifest fetch failed: ${manifestRes.status}`);
+    }
     const manifest = await manifestRes.json();
-    const entry = manifest.models.find((m) => m.id === msg.id);
+    const entry = (manifest.models ?? []).find((m) => m.id === msg.id);
     if (!entry) throw new Error(`unknown model: ${msg.id}`);
 
     const artifacts = {};
     for (const [name, artifact] of Object.entries(entry.artifacts ?? {})) {
-      const res = await fetch(artifact.url);
-      if (!res.ok) throw new Error(`fallback fetch failed: ${res.status}`);
+      const absUrl = new URL(artifact.url, manifestUrl).href;
+      const res = await fetch(absUrl);
+      if (!res.ok) {
+        throw new Error(`fallback fetch failed: ${res.status} ${absUrl}`);
+      }
       artifacts[name] = new Uint8Array(await res.arrayBuffer());
     }
 
-    const record = { id: msg.id, entry, artifacts };
-    this._mem.set(msg.id, record);
+    const record = { id: msg.id, entry, artifacts, fetchedAt: Date.now() };
+    await this._store(record);
     return { cached: false, ...record };
+  }
+
+  async _list() {
+    if (this._useIdb) {
+      const rows = await idbFallbackList();
+      return {
+        list: rows.map((r) => ({
+          id: r.id,
+          entry: r.entry,
+          fetchedAt: r.fetchedAt,
+          size: Object.values(r.artifacts ?? {}).reduce(
+            (s, b) => s + (b?.byteLength ?? 0),
+            0,
+          ),
+        })),
+      };
+    }
+    return {
+      list: [...this._mem.values()].map((r) => ({
+        id: r.id,
+        entry: r.entry,
+        fetchedAt: r.fetchedAt,
+        size: Object.values(r.artifacts ?? {}).reduce(
+          (s, b) => s + (b?.byteLength ?? 0),
+          0,
+        ),
+      })),
+    };
+  }
+
+  async _delete(id) {
+    if (this._useIdb) await idbFallbackDelete(id);
+    else this._mem.delete(id);
+    return { deleted: id };
   }
 }

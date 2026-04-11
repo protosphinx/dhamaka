@@ -232,6 +232,8 @@ a { color: var(--accent-2); }
 }
 @keyframes blink { 50% { opacity: 0; } }
 
+.content.aborted { opacity: .7; font-style: italic; }
+
 /* ─── Progress bar ─────────────────────────────────────────────────────── */
 
 .progress {

@@ -29,10 +29,14 @@ const els = {
   composer: document.getElementById("composer"),
   prompt: document.getElementById("prompt"),
   sendBtn: document.getElementById("send-btn"),
+  stopBtn: document.getElementById("stop-btn"),
+  resetBtn: document.getElementById("reset-btn"),
 };
 
 /** @type {import("/sdk/index.js").Dhamaka | null} */
 let llm = null;
+let chat = null;
+let abortController = null;
 
 function setStatus(state, text) {
   els.status.classList.remove("ok", "err");
@@ -156,9 +160,17 @@ async function evictCache() {
   }
 }
 
+function setStreaming(on) {
+  els.sendBtn.hidden = on;
+  els.sendBtn.disabled = on;
+  els.stopBtn.hidden = !on;
+  els.stopBtn.disabled = !on;
+  els.prompt.disabled = on;
+}
+
 async function sendPrompt(e) {
   e.preventDefault();
-  if (!llm) return;
+  if (!llm || !chat) return;
   const text = els.prompt.value.trim();
   if (!text) return;
   els.prompt.value = "";
@@ -166,12 +178,18 @@ async function sendPrompt(e) {
   const body = appendMessage("assistant", "");
   body.classList.add("cursor");
 
-  const chat = llm.chat();
-  // one-shot streaming (not stateful across messages in the playground)
+  abortController = new AbortController();
+  setStreaming(true);
+
   const started = performance.now();
   let tokens = 0;
+  let aborted = false;
   try {
-    for await (const token of chat.stream(text, { temperature: 0.7, maxTokens: 256 })) {
+    for await (const token of chat.stream(text, {
+      temperature: 0.7,
+      maxTokens: 256,
+      signal: abortController.signal,
+    })) {
       body.textContent += token;
       tokens++;
       els.messages.scrollTop = els.messages.scrollHeight;
@@ -180,14 +198,46 @@ async function sendPrompt(e) {
     const tps = tokens / Math.max(0.01, elapsed);
     els.tTps.textContent = tps.toFixed(1);
   } catch (err) {
-    body.textContent += `\n\n[error: ${err.message}]`;
+    if (err?.name === "AbortError" || abortController?.signal.aborted) {
+      aborted = true;
+      body.textContent += " [stopped]";
+    } else {
+      body.textContent += `\n\n[error: ${err.message}]`;
+    }
   } finally {
     body.classList.remove("cursor");
+    if (aborted) body.classList.add("aborted");
+    setStreaming(false);
+    abortController = null;
+    els.prompt.focus();
   }
 }
 
-els.loadBtn.addEventListener("click", loadModel);
+function stopStreaming() {
+  abortController?.abort();
+}
+
+function resetChat() {
+  if (!llm) return;
+  chat = llm.chat();
+  els.messages
+    .querySelectorAll(".msg:not(.system:first-child)")
+    .forEach((el) => el.remove());
+  appendMessage("system", "chat history cleared.");
+  els.prompt.focus();
+}
+
+els.loadBtn.addEventListener("click", async () => {
+  await loadModel();
+  // After a successful load, set up a fresh stateful chat session.
+  if (llm) {
+    chat = llm.chat();
+    els.resetBtn.disabled = false;
+  }
+});
 els.evictBtn.addEventListener("click", evictCache);
+els.stopBtn.addEventListener("click", stopStreaming);
+els.resetBtn.addEventListener("click", resetChat);
 els.composer.addEventListener("submit", sendPrompt);
 els.prompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {

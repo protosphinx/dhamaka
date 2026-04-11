@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://hub.dhamaka.dev/manifest.schema.json",
+  "title": "Dhamaka Manifest",
+  "description": "A manifest of models hosted by a Dhamaka hub.",
+  "type": "object",
+  "required": ["version", "models"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri" },
+    "version": { "type": "integer", "const": 1 },
+    "updated": { "type": "string", "format": "date" },
+    "default": { "type": "string", "description": "ID of the model to load when none is specified." },
+    "models": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Model" },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "Model": {
+      "type": "object",
+      "required": ["id", "name", "artifacts"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "base": { "type": "string", "description": "Upstream model on HF Hub." },
+        "family": { "type": "string", "description": "Architecture family (e.g. smollm2, minilm)." },
+        "params": { "type": "string", "description": "Human-readable parameter count (e.g. 360M)." },
+        "contextLength": { "type": "integer", "minimum": 1 },
+        "quantization": { "type": "string", "description": "Quantization scheme (e.g. Q4_K_M, Q8_0)." },
+        "size": { "type": "integer", "minimum": 0, "description": "Total artifact size in bytes." },
+        "license": { "type": "string" },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "status": {
+          "type": "string",
+          "enum": ["shipping", "planned", "deprecated"]
+        },
+        "default": { "type": "boolean" },
+        "artifacts": {
+          "type": "object",
+          "required": ["weights"],
+          "additionalProperties": { "$ref": "#/definitions/Artifact" },
+          "properties": {
+            "weights": { "$ref": "#/definitions/Artifact" },
+            "tokenizer": { "$ref": "#/definitions/Artifact" },
+            "config": { "$ref": "#/definitions/Artifact" }
+          }
+        }
+      }
+    },
+    "Artifact": {
+      "type": "object",
+      "required": ["url", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri-reference" },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-fA-F]{64}$",
+          "description": "Content-addressed hash. All zeroes means unverified (development only)."
+        },
+        "size": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

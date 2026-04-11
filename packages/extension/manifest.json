@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Dhamaka",
+  "short_name": "Dhamaka",
+  "version": "0.1.0",
+  "description": "A browser-native LLM cache. Downloads Dhamaka models once per machine and serves them to every site that uses the Dhamaka SDK.",
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+
+  "host_permissions": [
+    "https://hub.dhamaka.dev/*",
+    "https://*.dhamaka.dev/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": false,
+      "world": "ISOLATED"
+    }
+  ],
+
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+
+  "action": {
+    "default_title": "Dhamaka",
+    "default_popup": "options.html"
+  }
+}
