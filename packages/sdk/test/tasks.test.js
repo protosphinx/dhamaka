@@ -60,32 +60,81 @@ test("city-to-state: nonsense input returns null from the fast path", () => {
   assert.equal(r, null);
 });
 
-// ─── task: spellcheck ────────────────────────────────────────────────
+// ─── task: spellcheck (model-only — no rules layer to test) ──────────
+//
+// The spellcheck task was deliberately stripped of its rules layer in the
+// Option-B pivot: all semantics are now delegated to the on-device LLM
+// (Transformers.js in browsers, window.ai on Chrome). These tests verify
+// the *contract* of that task — fast() always returns null, slow() builds
+// a prompt, calls the engine, parses JSON — without asserting any specific
+// semantic behaviour that only a real model can deliver.
 
-test("spellcheck: catches common misspelling (recieve → receive)", () => {
-  const r = spellcheckTask.fast("I recieve the package.");
-  assert.ok(r.suggestions.length >= 1);
-  const s = r.suggestions.find((x) => x.from.toLowerCase() === "recieve");
-  assert.ok(s);
-  assert.equal(s.to, "receive");
+test("spellcheck: fast() always returns null (model-only task)", () => {
+  assert.equal(spellcheckTask.fast("anything"), null);
+  assert.equal(spellcheckTask.fast(""), null);
+  assert.equal(spellcheckTask.fast("I recieve the package."), null);
 });
 
-test("spellcheck: catches homophone in context ('see you their')", () => {
-  const r = spellcheckTask.fast("I'll see you their tomorrow.");
-  assert.ok(r.suggestions.length >= 1);
-  const s = r.suggestions.find((x) => x.from.toLowerCase() === "their");
-  assert.ok(s);
-  assert.equal(s.to, "there");
-});
-
-test("spellcheck: clean input has zero suggestions", () => {
-  const r = spellcheckTask.fast("The quick brown fox jumps over the lazy dog.");
+test("spellcheck: slow() short-circuits empty input without calling the engine", async () => {
+  let called = false;
+  const fakeEngine = {
+    async complete() {
+      called = true;
+      return "[]";
+    },
+  };
+  const r = await spellcheckTask.slow("", {}, fakeEngine);
+  assert.equal(called, false);
   assert.equal(r.suggestions.length, 0);
+  assert.equal(r.source, "model");
 });
 
-test("spellcheck: catches the 'teh → the' classic", () => {
-  const r = spellcheckTask.fast("teh cat sat on the mat");
-  assert.ok(r.suggestions.find((s) => s.from === "teh" && s.to === "the"));
+test("spellcheck: slow() calls the engine and parses a JSON array", async () => {
+  const fakeEngine = {
+    async complete(_prompt, _opts) {
+      return '[{"from":"recieve","to":"receive","reason":"ie/ei"}]';
+    },
+  };
+  const r = await spellcheckTask.slow("I recieve it", {}, fakeEngine);
+  assert.equal(r.source, "model");
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "recieve");
+  assert.equal(r.suggestions[0].to, "receive");
+  assert.equal(r.suggestions[0].reason, "ie/ei");
+});
+
+test("spellcheck: slow() extracts JSON embedded in a model preamble", async () => {
+  const fakeEngine = {
+    async complete() {
+      return 'Here are the corrections: [{"from":"teh","to":"the","reason":"typo"}] Hope that helps!';
+    },
+  };
+  const r = await spellcheckTask.slow("teh cat", {}, fakeEngine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "teh");
+});
+
+test("spellcheck: slow() returns empty suggestions on malformed JSON", async () => {
+  const fakeEngine = {
+    async complete() {
+      return "This is not JSON at all";
+    },
+  };
+  const r = await spellcheckTask.slow("hello world", {}, fakeEngine);
+  assert.equal(r.suggestions.length, 0);
+  assert.equal(r.source, "model");
+});
+
+test("spellcheck: slow() drops malformed entries without from/to strings", async () => {
+  const fakeEngine = {
+    async complete() {
+      return '[{"from":"ok","to":"OK","reason":"case"},{"wrong":"shape"},{"from":"x"}]';
+    },
+  };
+  const r = await spellcheckTask.slow("ok", {}, fakeEngine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "ok");
+  assert.equal(r.suggestions[0].to, "OK");
 });
 
 // ─── task: paste-extract ─────────────────────────────────────────────

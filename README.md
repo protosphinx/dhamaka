@@ -216,25 +216,34 @@ Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try th
   │         └──────────────────┬─────────────────────────┘                │
   │                            │                                         │
   │                            ▼                                         │
-  │         ┌────────────────────────────────────────────┐                │
-  │         │  engine backends (auto-selected)           │                │
-  │         │  ┌───────────┐ ┌──────────┐ ┌────────────┐ │                │
-  │         │  │ window.ai │ │WasmEngine│ │ MockEngine │ │                │
-  │         │  │ (Chrome)  │ │ (56 KB   │ │  (Node /   │ │                │
-  │         │  │  Gemini   │ │  Rust    │ │  tests)    │ │                │
-  │         │  │  Nano)    │ │  .wasm)  │ │            │ │                │
-  │         │  └───────────┘ └──────────┘ └────────────┘ │                │
-  │         └────────────────────────────────────────────┘                │
+  │         ┌────────────────────────────────────────────────────┐        │
+  │         │  engine backends (auto-selected by factory)        │        │
+  │         │  ┌─────────────┐ ┌───────────────┐ ┌────────────┐  │        │
+  │         │  │  window.ai  │ │ Transformers  │ │ MockEngine │  │        │
+  │         │  │  (Chrome)   │ │     .js       │ │  (Node /   │  │        │
+  │         │  │  Gemini     │ │  (every other │ │  tests)    │  │        │
+  │         │  │  Nano       │ │   browser)    │ │            │  │        │
+  │         │  │  resident   │ │  real LLMs    │ │ canned     │  │        │
+  │         │  │  free fast  │ │  ~90–250 MB   │ │ responses  │  │        │
+  │         │  │             │ │  1st-visit DL │ │            │  │        │
+  │         │  └─────────────┘ └───────────────┘ └────────────┘  │        │
+  │         │           ↑               ↑              ↑         │        │
+  │         │           └── auto pick in priority order ──┘      │        │
+  │         │                                                    │        │
+  │         │  crates/dhamaka-runtime (Rust → 55 KB .wasm) is a  │        │
+  │         │  v2 swap target, wired in but not yet primary —    │        │
+  │         │  needs Q4 quant + SIMD128 + real SmolLM2 weights   │        │
+  │         └────────────────────────────────────────────────────┘        │
   └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**The shape that matters:** the SDK is the product, split into capability families (Reflex, Transform, and soon Search / Agent) that share everything below them — task registry, reflex service, engine backends. Adding a new family is a matter of adding tasks, not forking the SDK. The runtime underneath is a swappable dependency (Chrome's `window.ai` when present, the Rust `.wasm` otherwise, `MockEngine` for tests) — the surface developers touch never moves.
+**The shape that matters:** Dhamaka is the **product layer above the runtime**. The SDK is split into capability families (Reflex, Transform, and soon Search / Agent) that share everything below them — task registry, reflex service, engine backends. Adding a new family is a matter of adding tasks, not forking the SDK. The runtime underneath is a swappable dependency — Chrome's `window.ai` when present, otherwise `@huggingface/transformers` loaded lazily from `esm.sh`. The Rust crate in `crates/dhamaka-runtime` is a v2 swap target, not the primary runtime: Transformers.js has years of quantization, BPE tokenization, and ONNX/WebAssembly runtime work we're not going to reinvent, and trying to be *both* the product layer and the runtime would mean fighting HuggingFace on a layer they'll always win. We pick the product layer and let them pick the runtime.
 
 | package | what it does |
 |---|---|
 | [`dhamaka`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, `Transform`, task registry, reflex service. The thing you actually install. |
-| [`@dhamaka/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
-| [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled fallback runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 56 KB `.wasm`, used when `window.ai` isn't available |
+| [`@dhamaka/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `TransformersBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
+| [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled v2 runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 55 KB `.wasm`. Architecture is done; real weights, Q4 quantization, and SIMD128 are the missing pieces before this replaces Transformers.js as the primary backend |
 | [`@dhamaka/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
 | [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
 | [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + live demos for every capability family |
@@ -279,20 +288,38 @@ Developers think in **tasks**, not in models. Each task is a small, typed functi
 
 ## ✦ the engine backends
 
-One interface, three implementations, auto-selected at runtime:
+One `Engine` interface, four implementations, auto-selected by the factory in priority order. The SDK surface never moves when the runtime swaps.
 
 ```
-  ┌────────────────────┬───────────────────────────────────────────────────┐
-  │ WindowAiBackend    │  Chrome 138+ Prompt API / Gemini Nano.            │
-  │                    │  Shared, resident, GPU-accelerated. Fastest path. │
-  ├────────────────────┼───────────────────────────────────────────────────┤
-  │ WasmEngine         │  Our Rust runtime compiled to a 56 KB .wasm.      │
-  │                    │  Cross-browser fallback. ~50 ms cold, ~10 ms warm.│
-  ├────────────────────┼───────────────────────────────────────────────────┤
-  │ MockEngine         │  Canned-response stand-in for Node + tests.       │
-  │                    │  Zero dependencies, deterministic.                │
-  └────────────────────┴───────────────────────────────────────────────────┘
+  ┌───────────────────────┬────────────────────────────────────────────────┐
+  │ WindowAiBackend       │ Chrome 138+ Prompt API / Gemini Nano.          │
+  │ (priority 1)          │ Resident, free, GPU-accelerated. Wins on       │
+  │                       │ Chrome when available. Shared with the browser │
+  │                       │ so the user pays nothing for the download.     │
+  ├───────────────────────┼────────────────────────────────────────────────┤
+  │ TransformersBackend   │ @huggingface/transformers v3, lazily imported  │
+  │ (priority 2)          │ from esm.sh the first time an engine is        │
+  │                       │ instantiated. Real LLMs (SmolLM2-135M,         │
+  │ ← primary today       │ LaMini-Flan-T5-248M, distilBERT, MiniLM        │
+  │                       │ embeddings). ~90–250 MB first-visit download,  │
+  │                       │ cached in IndexedDB forever after. Works on    │
+  │                       │ every browser with WebAssembly + fetch.        │
+  ├───────────────────────┼────────────────────────────────────────────────┤
+  │ WasmEngine            │ Our Rust runtime compiled to a 55 KB .wasm.    │
+  │ (priority 3)          │ Architecture complete (matmul, RMSNorm,        │
+  │                       │ softmax, RoPE, KV-cache, sampling) with 27     │
+  │ ← v2 swap target      │ cargo tests. Not primary yet: needs Q4         │
+  │                       │ quantization + SIMD128 + real SmolLM2 weights  │
+  │                       │ before it can compete with Transformers.js on  │
+  │                       │ model coverage or inference speed.             │
+  ├───────────────────────┼────────────────────────────────────────────────┤
+  │ MockEngine            │ Canned-response stand-in for Node + tests.     │
+  │ (priority 4)          │ Zero dependencies, fully deterministic. Never  │
+  │                       │ used in a browser.                             │
+  └───────────────────────┴────────────────────────────────────────────────┘
 ```
+
+On a typical modern Chrome: `window.ai` wins, nothing downloads, spellcheck responds in ~100 ms. On Firefox / Safari / older Chromes: Transformers.js wins, first visit waits 30–90 seconds for the model download, every visit after that is instant and offline. On Node (tests, SSR): `MockEngine` wins so CI never tries to download a language model.
 
 In browsers, the factory prefers `window.ai` when available and falls back to the WASM runtime otherwise. Same SDK surface either way. In Node (tests, SSR), the factory picks `MockEngine` so unit tests don't need a real model.
 
@@ -553,13 +580,24 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   [x]  SmartText        — contextual spellcheck on a <textarea>
   [x]  attachSmartPaste — regex + heuristic extraction, onpaste
 
-  Built-in Reflex tasks  (rules → fuzzy → model)
-  [x]  city-to-state : 100+ city gazetteer, alias + diacritic normalisation,
-                       Levenshtein fuzzy fallback, LLM long-tail handler
-  [x]  spellcheck    : common misspellings + homophone-in-context rules,
-                       LLM fallback for the unrecognised long tail
-  [x]  paste-extract : email / phone / URL / Twitter regex + name heuristic
-                       + non-freemail-domain company inference, LLM fallback
+  Built-in Reflex tasks  (rules-first for deterministic tasks,
+                          model-only for probabilistic ones)
+  [x]  city-to-state : 100+ city gazetteer with alias + diacritic
+                       normalisation, Levenshtein fuzzy fallback, LLM
+                       long-tail handler. Rules-first because a city's
+                       state is an objectively-correct lookup.
+  [x]  spellcheck    : model-only. Every call hits the on-device LLM
+                       (via Transformers.js or window.ai), prompts for
+                       a JSON array of {from, to, reason}, parses the
+                       response. NO hardcoded dictionary, NO homophone
+                       rules, NO confusables map. The whole thesis of
+                       Dhamaka is "let the LLM do the work" and a
+                       spellchecker is a paradigmatic model task.
+  [x]  paste-extract : email / phone / URL / Twitter regex + name
+                       heuristic + non-freemail-domain company inference,
+                       LLM fallback for gaps. Rules-first because contact
+                       field extraction is mostly regex-shaped; the
+                       model handles the long tail.
 
   🔧 Transform family  (the product surface for imperative one-shot calls)
   [x]  Transform           — generic run({ task, input, instruction, context })
@@ -584,11 +622,15 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
   Shared infrastructure  (every family rides on top of this)
   [x]  reflex service       — resident engine, lazy-loaded, one per page
   [x]  task registry        — registerTask / getTask / runTask + built-ins
-  [x]  Engine abstract interface with three backends
+  [x]  Engine abstract interface with four backends
   [x]  WindowAiBackend      — Chrome 138+ Prompt API / Gemini Nano
-  [x]  WasmEngine           — 56 KB Rust runtime compiled to wasm32
+  [x]  TransformersBackend  — @huggingface/transformers v3 via esm.sh,
+                              real cross-browser LLM runtime, lazy import
+  [x]  WasmEngine           — 55 KB Rust runtime (architecture complete,
+                              waiting on Q4 + SIMD + real weights)
   [x]  MockEngine           — deterministic stand-in for Node / tests
-  [x]  createEngine() auto-detection: window.ai → wasm → mock
+  [x]  createEngine() auto-detection:
+                              window.ai → transformers → wasm → mock
 
   Rust runtime  (the compiled fallback inference engine)
   [x]  matmul, RMSNorm, softmax, rotary, KV-cached self-attention,
