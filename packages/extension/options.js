@@ -20,7 +20,7 @@ function fmtDate(ms) {
 async function refresh() {
   const list = document.getElementById("list");
   list.innerHTML = '<li class="empty">loading…</li>';
-  chrome.runtime.sendMessage({ type: "dhamaka:list" }, (response) => {
+  chrome.runtime.sendMessage({ type: "locus:list" }, (response) => {
     if (chrome.runtime.lastError) {
       list.innerHTML = `<li class="empty">error: ${chrome.runtime.lastError.message}</li>`;
       return;
@@ -45,7 +45,7 @@ async function refresh() {
       const btn = document.createElement("button");
       btn.textContent = "evict";
       btn.addEventListener("click", () => {
-        chrome.runtime.sendMessage({ type: "dhamaka:delete", id: row.id }, refresh);
+        chrome.runtime.sendMessage({ type: "locus:delete", id: row.id }, refresh);
       });
       li.append(left, btn);
       list.appendChild(li);

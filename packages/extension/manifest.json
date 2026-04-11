@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Dhamaka",
-  "short_name": "Dhamaka",
+  "name": "Locus",
+  "short_name": "Locus",
   "version": "0.1.0",
-  "description": "A browser-native LLM cache. Downloads Dhamaka models once per machine and serves them to every site that uses the Dhamaka SDK.",
+  "description": "A browser-native LLM cache. Downloads Locus models once per machine and serves them to every site that uses the Locus SDK.",
 
   "background": {
     "service_worker": "background.js",
@@ -16,8 +16,8 @@
   ],
 
   "host_permissions": [
-    "https://hub.dhamaka.dev/*",
-    "https://*.dhamaka.dev/*"
+    "https://hub.locus.dev/*",
+    "https://*.locus.dev/*"
   ],
 
   "content_scripts": [
@@ -36,7 +36,7 @@
   },
 
   "action": {
-    "default_title": "Dhamaka",
+    "default_title": "Locus",
     "default_popup": "options.html"
   }
 }

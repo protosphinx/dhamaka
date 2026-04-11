@@ -1,7 +1,7 @@
 // ╭──────────────────────────────────────────────────────────────────────╮
-// │  Dhamaka extension — background service worker                       │
+// │  Locus extension — background service worker                       │
 // │                                                                      │
-// │  Stores Dhamaka models once per machine in the extension's own       │
+// │  Stores Locus models once per machine in the extension's own       │
 // │  origin (chrome-extension://…). Because this origin is the same      │
 // │  everywhere the extension is installed, the cache is genuinely       │
 // │  shared across every site the user visits — sidestepping the        │
@@ -13,7 +13,7 @@
 // │  available.                                                          │
 // ╰──────────────────────────────────────────────────────────────────────╯
 
-const DB_NAME = "dhamaka-extension";
+const DB_NAME = "locus-extension";
 const DB_VERSION = 1;
 const STORE_MODELS = "models";
 
@@ -113,21 +113,21 @@ async function downloadAndStore(id, manifestUrl) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || typeof msg !== "object") return;
-  if (typeof msg.type !== "string" || !msg.type.startsWith("dhamaka:")) return;
+  if (typeof msg.type !== "string" || !msg.type.startsWith("locus:")) return;
 
   (async () => {
     try {
       switch (msg.type) {
-        case "dhamaka:ping": {
+        case "locus:ping": {
           sendResponse({
-            type: "dhamaka:response",
+            type: "locus:response",
             pong: true,
             version: chrome.runtime.getManifest().version,
             tier: "extension",
           });
           break;
         }
-        case "dhamaka:get": {
+        case "locus:get": {
           let record = await idbGet(msg.id);
           const cached = !!record;
           if (!record) {
@@ -137,7 +137,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           // Instead we pass the record as a plain object — Chrome structured-
           // clones it, which is still zero-alloc from JS's perspective.
           sendResponse({
-            type: "dhamaka:response",
+            type: "locus:response",
             cached,
             id: msg.id,
             entry: record.entry,
@@ -146,10 +146,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           });
           break;
         }
-        case "dhamaka:list": {
+        case "locus:list": {
           const rows = await idbList();
           sendResponse({
-            type: "dhamaka:response",
+            type: "locus:response",
             list: rows.map((r) => ({
               id: r.id,
               entry: r.entry,
@@ -162,20 +162,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           });
           break;
         }
-        case "dhamaka:delete": {
+        case "locus:delete": {
           await idbDelete(msg.id);
-          sendResponse({ type: "dhamaka:response", deleted: msg.id });
+          sendResponse({ type: "locus:response", deleted: msg.id });
           break;
         }
         default:
           sendResponse({
-            type: "dhamaka:error",
+            type: "locus:error",
             error: `unknown message type: ${msg.type}`,
           });
       }
     } catch (err) {
       sendResponse({
-        type: "dhamaka:error",
+        type: "locus:error",
         error: String(err?.message || err),
       });
     }
