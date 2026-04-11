@@ -27,10 +27,10 @@ jobs:
           rustup target add wasm32-unknown-unknown
 
       - name: cargo test (native)
-        run: cargo test --manifest-path crates/locus-runtime/Cargo.toml
+        run: cargo test --manifest-path crates/dhamaka-runtime/Cargo.toml
 
       - name: build wasm
-        run: crates/locus-runtime/build.sh
+        run: crates/dhamaka-runtime/build.sh
 
       # ─── Node toolchain + JS tests ──────────────────────────────────────
       - uses: actions/setup-node@v4
@@ -100,10 +100,10 @@ jobs:
       - name: create github release
         uses: softprops/action-gh-release@v2
         with:
-          name: Locus ${{ github.ref_name }}
+          name: Dhamaka ${{ github.ref_name }}
           body_path: ${{ steps.notes.outputs.notes_file }}
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            packages/sdk/_staging/locus-*.tgz
-            packages/hub/public/runtime/locus-runtime.wasm
+            packages/sdk/_staging/dhamaka-*.tgz
+            packages/hub/public/runtime/dhamaka-runtime.wasm

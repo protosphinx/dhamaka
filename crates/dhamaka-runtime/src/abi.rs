@@ -1,17 +1,17 @@
-//! The C ABI Locus exports to WebAssembly.
+//! The C ABI Dhamaka exports to WebAssembly.
 //!
 //! JavaScript calls these functions directly by name via
-//! `instance.exports.locus_*`. All data crosses the JS/WASM boundary as
+//! `instance.exports.dhamaka_*`. All data crosses the JS/WASM boundary as
 //! raw pointers into WASM linear memory, which JS writes and reads through
 //! `Uint8Array(instance.exports.memory.buffer)`.
 //!
 //! Ownership rules:
 //!
-//! - `locus_alloc(len)` gives JS a pointer it owns until it passes the
-//!   buffer back to a consumer function or calls `locus_free(ptr, len)`.
-//! - `locus_init` returns a `*mut Context`. That pointer is opaque to JS
+//! - `dhamaka_alloc(len)` gives JS a pointer it owns until it passes the
+//!   buffer back to a consumer function or calls `dhamaka_free(ptr, len)`.
+//! - `dhamaka_init` returns a `*mut Context`. That pointer is opaque to JS
 //!   and is passed back into every subsequent call. JS must call
-//!   `locus_destroy` when done.
+//!   `dhamaka_destroy` when done.
 //! - Strings are UTF-8 byte slices with an explicit length. No NUL sentinels.
 
 use crate::model::{detokenize, random_model, tokenize_prompt};
@@ -54,17 +54,17 @@ impl Context {
 /// Allocate `len` bytes of WASM linear memory. The returned pointer is
 /// aligned the same way `Vec<u8>` allocates.
 #[no_mangle]
-pub extern "C" fn locus_alloc(len: usize) -> *mut u8 {
+pub extern "C" fn dhamaka_alloc(len: usize) -> *mut u8 {
     let mut buf = Vec::<u8>::with_capacity(len);
     let ptr = buf.as_mut_ptr();
     std::mem::forget(buf);
     ptr
 }
 
-/// Free a buffer previously returned by `locus_alloc`. `len` must match
+/// Free a buffer previously returned by `dhamaka_alloc`. `len` must match
 /// the original allocation length.
 #[no_mangle]
-pub extern "C" fn locus_free(ptr: *mut u8, len: usize) {
+pub extern "C" fn dhamaka_free(ptr: *mut u8, len: usize) {
     if ptr.is_null() || len == 0 {
         return;
     }
@@ -78,7 +78,7 @@ pub extern "C" fn locus_free(ptr: *mut u8, len: usize) {
 /// Return the ABI version this runtime speaks. JS uses this to refuse to
 /// load mismatched builds.
 #[no_mangle]
-pub extern "C" fn locus_version() -> u32 {
+pub extern "C" fn dhamaka_version() -> u32 {
     ABI_VERSION
 }
 
@@ -89,7 +89,7 @@ pub extern "C" fn locus_version() -> u32 {
 /// if no config is provided). Real weight loading lands alongside the
 /// quantized SmolLM2 artifacts.
 #[no_mangle]
-pub extern "C" fn locus_init(
+pub extern "C" fn dhamaka_init(
     _weights_ptr: *const u8,
     _weights_len: usize,
     config_ptr: *const u8,
@@ -105,9 +105,9 @@ pub extern "C" fn locus_init(
     Box::into_raw(ctx)
 }
 
-/// Destroy an inference context previously returned by `locus_init`.
+/// Destroy an inference context previously returned by `dhamaka_init`.
 #[no_mangle]
-pub extern "C" fn locus_destroy(ctx: *mut Context) {
+pub extern "C" fn dhamaka_destroy(ctx: *mut Context) {
     if ctx.is_null() {
         return;
     }
@@ -119,7 +119,7 @@ pub extern "C" fn locus_destroy(ctx: *mut Context) {
 /// Reset an inference context's token history and KV cache without
 /// destroying its model weights.
 #[no_mangle]
-pub extern "C" fn locus_reset(ctx: *mut Context) {
+pub extern "C" fn dhamaka_reset(ctx: *mut Context) {
     if ctx.is_null() {
         return;
     }
@@ -135,7 +135,7 @@ pub extern "C" fn locus_reset(ctx: *mut Context) {
 
 /// Configure sampling parameters. `temperature` ≤ 0 means greedy.
 #[no_mangle]
-pub extern "C" fn locus_set_sampling(
+pub extern "C" fn dhamaka_set_sampling(
     ctx: *mut Context,
     temperature: f32,
     top_k: u32,
@@ -159,7 +159,7 @@ pub extern "C" fn locus_set_sampling(
 /// Feed a prompt (UTF-8 bytes) into the context. Runs one forward pass per
 /// prompt token to prime the model state.
 #[no_mangle]
-pub extern "C" fn locus_feed_prompt(
+pub extern "C" fn dhamaka_feed_prompt(
     ctx: *mut Context,
     prompt_ptr: *const u8,
     prompt_len: usize,
@@ -194,7 +194,7 @@ pub extern "C" fn locus_feed_prompt(
 /// the number of bytes written, or `-1` when the stream is done (either EOS
 /// or `max_tokens` has been hit).
 #[no_mangle]
-pub extern "C" fn locus_next_token(
+pub extern "C" fn dhamaka_next_token(
     ctx: *mut Context,
     out_ptr: *mut u8,
     out_cap: usize,
@@ -208,7 +208,7 @@ pub extern "C" fn locus_next_token(
     }
 
     // Use the most-recent forward pass's logits (written by either
-    // `locus_feed_prompt` or the previous `locus_next_token`) to sample
+    // `dhamaka_feed_prompt` or the previous `dhamaka_next_token`) to sample
     // the next token.
     let mut logits = ctx.scratch.logits.clone();
     let next_id = sample(&mut logits, ctx.opts, &mut ctx.rng);
@@ -228,5 +228,5 @@ pub extern "C" fn locus_next_token(
     n as i32
 }
 
-/// Default RNG seed used when `locus_init` is called with no config bytes.
+/// Default RNG seed used when `dhamaka_init` is called with no config bytes.
 const DEFAULT_SEED: u64 = 0x0D4A_D4AD_4AD4_AD4A;

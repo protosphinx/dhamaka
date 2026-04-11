@@ -1,29 +1,11 @@
 # Changelog
 
-All notable changes to Locus are documented in this file.
+All notable changes to Dhamaka are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
-### Renamed
-
-- **Project renamed from Dhamaka to Locus.** The old name meant "explosion"
-  in Hindi — exactly backwards for a product that's small, quiet, and local.
-  Locus (Latin for "the place") captures the thesis: the locus of
-  intelligence in a web app is the app itself, not a remote server. Every
-  file, directory, package name, Rust ABI export, `postMessage` type
-  prefix, environment variable, and URL has been renamed:
-  - `crates/dhamaka-runtime/` → `crates/locus-runtime/`
-  - Rust ABI: `dhamaka_*` → `locus_*` (`locus_init`, `locus_alloc`, etc.)
-  - npm package: `dhamaka` → `locus`
-  - workspace packages: `@dhamaka/*` → `@locus/*`
-  - legacy SDK class: `Dhamaka` → `Locus`
-  - `postMessage` protocol: `dhamaka:*` → `locus:*`
-  - `dhamaka-runtime.wasm` → `locus-runtime.wasm`
-  - `hub.dhamaka.dev` → `hub.locus.dev` (hypothetical hosting URL)
-  - Environment variables: `DHAMAKA_HUB_PORT` → `LOCUS_HUB_PORT`
 
 ### Added
 
@@ -53,17 +35,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a company owns (pricing, margins, payroll, commission tiers) so shipping
   them to a remote AI provider is a non-starter, which makes local
   inference uniquely viable for this category.
-- **Updated banner.** `docs/banner.svg` redrawn with LOCUS block letters
-  and the new tagline: "the local AI capability layer for web apps".
 
 ### Positioning
 
-The previous pivot framed Locus as a reflex layer for input fields. That
-framing was too narrow. Locus is a local AI capability layer for web apps
+The previous pivot framed Dhamaka as a reflex layer for input fields. That
+framing was too narrow. Dhamaka is a local AI capability layer for web apps
 — SmartField is one family of capabilities (Reflex), Transform is a
 second (shipping now), Search and Agent are the other two (planned). The
 README, GOALS.md, and CHANGELOG all lead with the four-family framing
 now.
+
+### Notes
+
+- An intermediate rename to "Locus" was considered and applied in one
+  commit (`c04ca5a`), then reverted in the next once the `dhamaka.dev`
+  domain purchase confirmed Dhamaka stays. No consumer-facing code
+  shipped under the Locus name.
 
 ## [0.1.0] — 2026-04-11
 
@@ -73,7 +60,7 @@ drives it all.
 
 ### Runtime (Rust → WebAssembly)
 
-- New crate `crates/locus-runtime` written in pure Rust, zero dependencies.
+- New crate `crates/dhamaka-runtime` written in pure Rust, zero dependencies.
 - Tensor primitives: `matmul`, `rmsnorm`, numerically stable `softmax`,
   `silu`, in-place `add` / `mul`, and rotary position embeddings (`rope`).
 - Sampler: one-pass temperature + top-k + top-p + greedy with a deterministic
@@ -84,18 +71,18 @@ drives it all.
 - Tiny random-weights v0.1 model (32-dim hidden, 2 layers, 1 head, 64-entry
   vocab) so the whole pipeline exercises real f32 math end-to-end.
 - `#[no_mangle] extern "C"` ABI exposed to WebAssembly:
-  `locus_version`, `locus_alloc`, `locus_free`, `locus_init`,
-  `locus_destroy`, `locus_reset`, `locus_set_sampling`,
-  `locus_feed_prompt`, `locus_next_token`.
+  `dhamaka_version`, `dhamaka_alloc`, `dhamaka_free`, `dhamaka_init`,
+  `dhamaka_destroy`, `dhamaka_reset`, `dhamaka_set_sampling`,
+  `dhamaka_feed_prompt`, `dhamaka_next_token`.
 - `build.sh` helper that installs the `wasm32-unknown-unknown` target on
   demand, compiles `release` with fat LTO, and stages the resulting 56 KB
   `.wasm` into `packages/hub/public/runtime/`.
 - 27 native `cargo test` cases covering every primitive, the sampler laws,
   forward-pass determinism, and position sensitivity via RoPE + KV cache.
 
-### SDK (`locus`)
+### SDK (`dhamaka`)
 
-- `Locus.load(modelId, options)` fetches a model through the hub, loads
+- `Dhamaka.load(modelId, options)` fetches a model through the hub, loads
   the compiled WASM runtime, and returns an instance with `complete`,
   `stream`, `chat`, `info`, `evict`, `localModels`, and `unload`.
 - `Chat` class with system prompts, streaming, reset, and per-turn history.
@@ -105,45 +92,45 @@ drives it all.
 - Tiered storage mode reporting — `shared`, `storage-access`, `partitioned`,
   `site-local`, `extension` — with `requestStorageAccess()` for a one-click
   user-gated opt-in to unpartitioned storage.
-- Auto-detection of the Locus browser extension; when present the SDK
+- Auto-detection of the Dhamaka browser extension; when present the SDK
   routes all hub messages through it to sidestep storage partitioning.
 - OpenAI-compatible `/v1/chat/completions` shim with streaming + non-streaming
   that robustly parses `string` / `Blob` / `ArrayBuffer` / `TypedArray` bodies.
 
-### Runtime adapter (`@locus/runtime`)
+### Runtime adapter (`@dhamaka/runtime`)
 
 - `Engine` abstract interface.
 - `WasmEngine` — loads the compiled Rust `.wasm`, verifies the ABI version,
-  writes prompt bytes into WASM linear memory via `locus_alloc`, drives
-  `locus_feed_prompt` + `locus_next_token` in a loop, decodes UTF-8, and
+  writes prompt bytes into WASM linear memory via `dhamaka_alloc`, drives
+  `dhamaka_feed_prompt` + `dhamaka_next_token` in a loop, decodes UTF-8, and
   yields tokens. Honors `AbortSignal`.
 - `MockEngine` — dependency-free stand-in for development when the real
   runtime isn't available. Streams canned responses at ~45 tok/s.
 - `createEngine({ backend })` that prefers `WasmEngine` in browsers and
   `MockEngine` in Node.
 
-### Hub (`@locus/hub`)
+### Hub (`@dhamaka/hub`)
 
-- Static site that runs in a hidden iframe embedded by every Locus-powered
+- Static site that runs in a hidden iframe embedded by every Dhamaka-powered
   consumer. Stores models in IndexedDB and streams `ArrayBuffer`s back over
   `postMessage` using transferables (zero-copy).
 - SHA-256 content-addressed integrity checks on every artifact.
 - Storage Access API integration so strict browsers can still get
   unpartitioned storage on a user gesture.
-- Serves the compiled `locus-runtime.wasm` alongside model artifacts.
+- Serves the compiled `dhamaka-runtime.wasm` alongside model artifacts.
 - JSON Schema draft-07 for the manifest format.
 
-### Browser extension (`@locus/extension`)
+### Browser extension (`@dhamaka/extension`)
 
 - Manifest V3 skeleton with a background service worker that stores models in
   the extension's own origin — shared across every site on the machine,
   sidestepping storage partitioning entirely.
 - Content script bridge (`postMessage` ↔ `chrome.runtime.sendMessage`).
-- SDK detects the extension via an injected `window.__locus_extension__`
+- SDK detects the extension via an injected `window.__dhamaka_extension__`
   marker and prefers it over the iframe hub.
 - Options page listing cached models with one-click eviction.
 
-### Playground (`@locus/playground`)
+### Playground (`@dhamaka/playground`)
 
 - Zero-dependency Node dev server that runs the hub on `:5174` and the
   playground on `:5173`, serving the compiled WASM with the right MIME and
@@ -171,13 +158,13 @@ drives it all.
 
 - The v0.1 model is a 32-dim / 2-layer random-weights transformer, so output
   is stream-of-tokens, not coherent English. When the SmolLM2-360M Q4
-  artifacts arrive they'll plug into the same `locus_init` entry point
+  artifacts arrive they'll plug into the same `dhamaka_init` entry point
   without SDK changes.
 - No SIMD128 build of the runtime yet (`-C target-feature=+simd128` is a
   one-line change; it's gated on having a baseline benchmark).
 - No WebGPU fast path.
-- The other models in the registry (`locus-code`, `locus-sql`,
-  `locus-json`, `locus-summarize`, `locus-embed`) are listed as
+- The other models in the registry (`dhamaka-code`, `dhamaka-sql`,
+  `dhamaka-json`, `dhamaka-summarize`, `dhamaka-embed`) are listed as
   `status: planned`.
 
-[0.1.0]: https://github.com/protosphinx/locus/releases/tag/v0.1.0
+[0.1.0]: https://github.com/protosphinx/dhamaka/releases/tag/v0.1.0

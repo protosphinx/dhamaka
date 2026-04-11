@@ -10,7 +10,7 @@
 // The public API is deliberately the same either way, so the upgrade is
 // drop-in for consumers.
 
-import { createEngine } from "@locus/runtime";
+import { createEngine } from "@dhamaka/runtime";
 import { runTask } from "./tasks.js";
 
 let _state = {
