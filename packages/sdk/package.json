@@ -1,0 +1,29 @@
+{
+  "name": "dhamaka",
+  "version": "0.1.0",
+  "description": "Browser-native LLM. Download the model once, use it on every Dhamaka-powered site forever.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./hub-client": "./src/hub-client.js",
+    "./chat": "./src/chat.js",
+    "./openai": "./src/openai-shim.js"
+  },
+  "files": [
+    "src"
+  ],
+  "dependencies": {
+    "@dhamaka/runtime": "0.1.0"
+  },
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "wasm",
+    "browser",
+    "ai",
+    "on-device",
+    "local-first",
+    "privacy"
+  ]
+}

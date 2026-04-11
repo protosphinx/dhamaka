@@ -1,0 +1,17 @@
+{
+  "name": "@dhamaka/runtime",
+  "version": "0.1.0",
+  "description": "The Dhamaka WASM inference runtime. Ships a small transformer engine compiled to WebAssembly plus a mock engine for development.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./engine": "./src/engine.js",
+    "./mock": "./src/mock-engine.js",
+    "./tokenizer": "./src/tokenizer.js"
+  },
+  "files": [
+    "src"
+  ],
+  "license": "MIT"
+}

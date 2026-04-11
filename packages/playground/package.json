@@ -1,0 +1,11 @@
+{
+  "name": "@dhamaka/playground",
+  "version": "0.1.0",
+  "description": "A one-command demo that runs the Dhamaka hub and playground locally so you can try the whole stack end-to-end.",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "license": "MIT"
+}

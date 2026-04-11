@@ -1,0 +1,30 @@
+{
+  "$schema": "https://hub.dhamaka.dev/manifest.schema.json",
+  "version": 1,
+  "default": "dhamaka-micro",
+  "models": [
+    {
+      "id": "dhamaka-micro",
+      "name": "Dhamaka Micro",
+      "base": "HuggingFaceTB/SmolLM2-360M-Instruct",
+      "params": "360M",
+      "quantization": "Q4_K_M",
+      "size": 104857600,
+      "artifacts": {
+        "weights": {
+          "url": "./models/dhamaka-micro/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "./models/dhamaka-micro/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "./models/dhamaka-micro/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      },
+      "license": "Apache-2.0"
+    }
+  ]
+}

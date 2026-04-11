@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="description" content="The Dhamaka model hub. Downloads models once and shares them with every Dhamaka-powered site." />
+    <style>
+      :root { color-scheme: light dark; }
+      html, body {
+        margin: 0;
+        font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        background: #0b0b0f;
+        color: #e6e6ea;
+      }
+      main {
+        max-width: 640px;
+        margin: 10vh auto;
+        padding: 2rem;
+        border: 1px solid #2a2a33;
+        border-radius: 12px;
+        background: #111118;
+      }
+      h1 { margin: 0 0 .5rem; font-size: 1.25rem; }
+      code { background: #1b1b24; padding: .1rem .35rem; border-radius: 4px; }
+      .dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; background: #4ade80; margin-right: .4rem; vertical-align: middle; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1><span class="dot"></span>Dhamaka Hub</h1>
+      <p>
+        This is the Dhamaka model hub. Its only job is to store Dhamaka models
+        locally and hand them to any Dhamaka-powered site via <code>postMessage</code>.
+      </p>
+      <p>
+        You were probably not meant to land here directly. Head to
+        <a href="https://dhamaka.dev">dhamaka.dev</a> instead.
+      </p>
+    </main>
+    <script type="module" src="./hub.js"></script>
+  </body>
+</html>
