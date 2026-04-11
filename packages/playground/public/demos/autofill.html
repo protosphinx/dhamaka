@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka · address autofill demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./demos.css" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <main class="demo-page">
+      <a class="back-link" href="../">← all demos</a>
+      <h1>address autofill</h1>
+      <p class="lead">
+        Type a city below. Every keystroke fires the city-to-state task,
+        which hits a static gazetteer first (instant) and falls back to a
+        fuzzy match for typos. State, country, timezone, and currency
+        populate live. No network, no debouncing, no spinner.
+        <br/><br/>
+        Try: <code>San Francisco</code>, <code>sf</code>, <code>Tokyo</code>,
+        <code>Berlin</code>, <code>Bangalore</code>, <code>San Francsico</code>
+        (typo).
+      </p>
+
+      <form id="address-form" class="demo-panel" autocomplete="off">
+        <h2>shipping address</h2>
+        <label>city</label>
+        <input name="city" id="city" placeholder="type a city…" autofocus />
+        <div class="field-row">
+          <div>
+            <label>state / region</label>
+            <input name="state" id="state" readonly placeholder="—" />
+          </div>
+          <div>
+            <label>country</label>
+            <input name="country" id="country" readonly placeholder="—" />
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label>timezone</label>
+            <input name="timezone" id="timezone" readonly placeholder="—" />
+          </div>
+          <div>
+            <label>currency</label>
+            <input name="currency" id="currency" readonly placeholder="—" />
+          </div>
+        </div>
+        <div class="tele">
+          <span>
+            source:
+            <strong id="t-source">—</strong>
+            &nbsp;·&nbsp;
+            confidence: <strong id="t-conf">—</strong>
+          </span>
+          <span>resolved in <span class="pill" id="t-ms">— ms</span></span>
+        </div>
+      </form>
+
+      <section class="notes">
+        <h3>what's happening</h3>
+        <pre class="diagram">
+  oninput → SmartField → runTask("city-to-state")
+       │
+       ├─ rules: gazetteer exact match?  ← 0.01 ms
+       ├─ fuzzy: Levenshtein ≤ 2 match?  ← 0.5 ms
+       └─ model: LLM fallback            ← 50 ms (not needed here)
+
+  SmartForm reads the resolved result and propagates to
+  state / country / timezone / currency — synchronously.
+        </pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import { SmartField, SmartForm } from "dhamaka";
+
+      const form = document.getElementById("address-form");
+
+      new SmartForm(form, {
+        infer: {
+          "city → state":    "city-to-state:stateName",
+          "city → country":  "city-to-state:countryName",
+          "city → timezone": "city-to-state:tz",
+          "city → currency": "city-to-state:currency",
+        },
+      });
+
+      const cityInput = document.getElementById("city");
+      const tSource   = document.getElementById("t-source");
+      const tConf     = document.getElementById("t-conf");
+      const tMs       = document.getElementById("t-ms");
+
+      let startedAt = 0;
+      cityInput.addEventListener("input", () => {
+        startedAt = performance.now();
+      });
+
+      new SmartField(cityInput, {
+        task: "city-to-state",
+        onResult: (r) => {
+          const ms = Math.max(0, performance.now() - startedAt).toFixed(2);
+          tSource.textContent = r.source || "—";
+          tConf.textContent = (r.confidence ?? 0).toFixed(2);
+          tMs.textContent = `${ms} ms`;
+        },
+      });
+    </script>
+  </body>
+</html>

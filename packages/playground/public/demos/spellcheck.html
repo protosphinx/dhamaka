@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka · contextual spellcheck demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./demos.css" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+  </head>
+  <body>
+    <main class="demo-page">
+      <a class="back-link" href="../">← all demos</a>
+      <h1>contextual spellcheck</h1>
+      <p class="lead">
+        Type or paste some prose into the textarea below. The SmartText wrapper
+        watches every keystroke and flags not just misspellings but homophone
+        confusions that depend on context — the class of mistake that a plain
+        dictionary spellchecker can't catch.
+        <br/><br/>
+        Try: <code>I'll see you their tomorrow</code>,
+        <code>I recieve your message</code>,
+        <code>Its been a long day</code>,
+        <code>Your welcome</code>,
+        <code>Alot of the time</code>.
+      </p>
+
+      <div class="demo-panel">
+        <h2>draft</h2>
+        <textarea id="draft" placeholder="start typing…"></textarea>
+        <div class="out" id="suggestions-out">no issues yet</div>
+        <div class="tele">
+          <span>
+            suggestions:
+            <strong id="t-count">0</strong>
+            &nbsp;·&nbsp;
+            source: <strong id="t-source">—</strong>
+          </span>
+          <span>resolved in <span class="pill" id="t-ms">— ms</span></span>
+        </div>
+      </div>
+
+      <section class="notes">
+        <h3>what's happening</h3>
+        <pre class="diagram">
+  oninput → SmartText → runTask("spellcheck")
+       │
+       ├─ rules: known-misspelling map           ← 0.1 ms
+       ├─ rules: homophone-in-context regexes    ← 0.2 ms
+       └─ model: distilBERT masked LM fallback   ← (planned)
+
+  Every suggestion is clickable — apply it back into the textarea.
+        </pre>
+        <p>
+          Click any suggestion chip to apply the fix directly. The edit
+          dispatches a synthetic input event, so the next re-check runs
+          immediately.
+        </p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { SmartText } from "dhamaka";
+
+      const draft = document.getElementById("draft");
+      const out   = document.getElementById("suggestions-out");
+      const tCount = document.getElementById("t-count");
+      const tSource = document.getElementById("t-source");
+      const tMs = document.getElementById("t-ms");
+
+      let startedAt = 0;
+      draft.addEventListener("input", () => {
+        startedAt = performance.now();
+      });
+
+      const smart = new SmartText(draft, {
+        debounceMs: 80,
+        onSuggestions: (suggestions) => {
+          const ms = Math.max(0, performance.now() - startedAt).toFixed(2);
+          tMs.textContent = `${ms} ms`;
+          tCount.textContent = String(suggestions.length);
+          tSource.textContent = suggestions.length ? "rule" : "—";
+
+          if (!suggestions.length) {
+            out.textContent = "no issues";
+            return;
+          }
+          out.innerHTML = "";
+          suggestions.forEach((s, i) => {
+            const chip = document.createElement("span");
+            chip.className = "suggest";
+            chip.innerHTML =
+              `<span class="strike">${escape(s.from)}</span>` +
+              `<span class="arrow">→</span>` +
+              `<span class="to">${escape(s.to)}</span>`;
+            chip.title = s.reason || "suggestion";
+            chip.addEventListener("click", () => smart.applySuggestion(i));
+            out.appendChild(chip);
+          });
+        },
+      });
+
+      function escape(s) {
+        return String(s).replace(/[&<>"]/g, (c) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+        }[c]));
+      }
+    </script>
+  </body>
+</html>
