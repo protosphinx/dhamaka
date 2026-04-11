@@ -1,11 +1,11 @@
 // ╭──────────────────────────────────────────────────────────────────────╮
-// │  locus — the public SDK                                            │
+// │  dhamaka — the public SDK                                            │
 // │                                                                      │
 // │  A reflex layer for every input on the web. Drop in a SmartField or │
 // │  SmartForm, get on-device intelligence (autofill, spellcheck, smart  │
 // │  paste, cross-field inference) with zero network latency.            │
 // │                                                                      │
-// │    import { SmartField, SmartForm, SmartText } from "locus";       │
+// │    import { SmartField, SmartForm, SmartText } from "dhamaka";       │
 // │                                                                      │
 // │    new SmartField(document.querySelector("#city"), {                 │
 // │      task: "city-to-state",                                          │
@@ -13,12 +13,12 @@
 // │                                                                      │
 // ╰──────────────────────────────────────────────────────────────────────╯
 
-import { createEngine } from "@locus/runtime";
+import { createEngine } from "@dhamaka/runtime";
 import { HubClient } from "./hub-client.js";
 import { Chat } from "./chat.js";
 
 // Auto-register the Transform-family formula tasks. This is a
-// side-effect import — pulling in `locus` at all registers every
+// side-effect import — pulling in `dhamaka` at all registers every
 // built-in task so apps don't have to chase per-family imports.
 import "./tasks/formula.js";
 
@@ -55,11 +55,11 @@ export {
 // Kept for people who want direct model access (chat, completion,
 // streaming). Most users should use the SmartField API above.
 
-const DEFAULT_MODEL = "locus-micro";
-const DEFAULT_HUB_URL = "https://hub.locus.dev/";
+const DEFAULT_MODEL = "dhamaka-micro";
+const DEFAULT_HUB_URL = "https://hub.dhamaka.dev/";
 
 /**
- * @typedef {object} LocusLoadOptions
+ * @typedef {object} DhamakaLoadOptions
  * @property {string} [hubUrl]
  * @property {string} [manifestUrl]
  * @property {"auto"|"mock"|"wasm"|"window-ai"} [backend]
@@ -67,15 +67,15 @@ const DEFAULT_HUB_URL = "https://hub.locus.dev/";
  * @property {(p: object) => void} [onProgress]
  */
 
-export class Locus {
+export class Dhamaka {
   /**
-   * Load a Locus model directly. Lower-level than SmartField — use this
+   * Load a Dhamaka model directly. Lower-level than SmartField — use this
    * when you want raw completion / streaming / chat access.
    * @param {string} [modelId=DEFAULT_MODEL]
-   * @param {LocusLoadOptions} [options]
+   * @param {DhamakaLoadOptions} [options]
    */
   static async load(modelId = DEFAULT_MODEL, options = {}) {
-    const instance = new Locus(modelId, options);
+    const instance = new Dhamaka(modelId, options);
     await instance._init();
     return instance;
   }
@@ -89,7 +89,7 @@ export class Locus {
     let wasmUrl = options.wasmUrl;
     if (!wasmUrl && typeof URL !== "undefined") {
       try {
-        wasmUrl = new URL("runtime/locus-runtime.wasm", hubUrl).href;
+        wasmUrl = new URL("runtime/dhamaka-runtime.wasm", hubUrl).href;
       } catch {
         /* fall through */
       }

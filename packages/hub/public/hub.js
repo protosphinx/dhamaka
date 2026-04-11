@@ -1,8 +1,8 @@
 // ┌──────────────────────────────────────────────────────────────────────────┐
-// │  Locus Hub                                                             │
+// │  Dhamaka Hub                                                             │
 // │                                                                          │
-// │  A tiny script that runs inside a hidden <iframe> on hub.locus.dev.    │
-// │  Any Locus-powered site embeds this iframe and talks to it over        │
+// │  A tiny script that runs inside a hidden <iframe> on hub.dhamaka.dev.    │
+// │  Any Dhamaka-powered site embeds this iframe and talks to it over        │
 // │  postMessage. Because the iframe is always the same origin, its          │
 // │  IndexedDB and OPFS stores are (ideally) shared across every consumer    │
 // │  site — so the model downloads once in a user's lifetime.                │
@@ -11,7 +11,7 @@
 // │  and how we fall back when cross-site sharing is blocked.                │
 // └──────────────────────────────────────────────────────────────────────────┘
 
-const DB_NAME = "locus-hub";
+const DB_NAME = "dhamaka-hub";
 const DB_VERSION = 1;
 const STORE_MODELS = "models";
 const STORE_META = "meta";
@@ -207,7 +207,7 @@ async function handleGet({ id, manifestUrl, requestId }, reply, progress) {
 
   reply(
     {
-      type: "locus:response",
+      type: "dhamaka:response",
       requestId,
       cached,
       id,
@@ -222,7 +222,7 @@ async function handleGet({ id, manifestUrl, requestId }, reply, progress) {
 async function handleList({ requestId }, reply) {
   const records = await idbList(STORE_MODELS);
   reply({
-    type: "locus:response",
+    type: "dhamaka:response",
     requestId,
     list: records.map((r) => ({
       id: r.id,
@@ -235,12 +235,12 @@ async function handleList({ requestId }, reply) {
 
 async function handleDelete({ id, requestId }, reply) {
   await idbDelete(STORE_MODELS, id);
-  reply({ type: "locus:response", requestId, deleted: id });
+  reply({ type: "dhamaka:response", requestId, deleted: id });
 }
 
 async function handlePing({ requestId }, reply) {
   reply({
-    type: "locus:response",
+    type: "dhamaka:response",
     requestId,
     pong: true,
     version: "0.1.0",
@@ -285,7 +285,7 @@ async function currentStorageTier() {
 async function handleRequestStorageAccess({ requestId }, reply) {
   if (typeof document === "undefined" || typeof document.requestStorageAccess !== "function") {
     reply({
-      type: "locus:response",
+      type: "dhamaka:response",
       requestId,
       granted: false,
       tier: "partitioned",
@@ -296,14 +296,14 @@ async function handleRequestStorageAccess({ requestId }, reply) {
   try {
     await document.requestStorageAccess();
     reply({
-      type: "locus:response",
+      type: "dhamaka:response",
       requestId,
       granted: true,
       tier: await currentStorageTier(),
     });
   } catch (err) {
     reply({
-      type: "locus:response",
+      type: "dhamaka:response",
       requestId,
       granted: false,
       tier: "partitioned",
@@ -323,7 +323,7 @@ function makeReply(source, origin) {
 function makeProgress(source, origin) {
   return (payload) => {
     source.postMessage(
-      { type: "locus:progress", ...payload },
+      { type: "dhamaka:progress", ...payload },
       { targetOrigin: origin },
     );
   };
@@ -332,38 +332,38 @@ function makeProgress(source, origin) {
 window.addEventListener("message", async (event) => {
   const msg = event.data;
   if (!msg || typeof msg !== "object") return;
-  if (typeof msg.type !== "string" || !msg.type.startsWith("locus:")) return;
+  if (typeof msg.type !== "string" || !msg.type.startsWith("dhamaka:")) return;
 
   const reply = makeReply(event.source, event.origin);
   const progress = makeProgress(event.source, event.origin);
 
   try {
     switch (msg.type) {
-      case "locus:ping":
+      case "dhamaka:ping":
         await handlePing(msg, reply);
         break;
-      case "locus:get":
+      case "dhamaka:get":
         await handleGet(msg, reply, progress);
         break;
-      case "locus:list":
+      case "dhamaka:list":
         await handleList(msg, reply);
         break;
-      case "locus:delete":
+      case "dhamaka:delete":
         await handleDelete(msg, reply);
         break;
-      case "locus:request-storage-access":
+      case "dhamaka:request-storage-access":
         await handleRequestStorageAccess(msg, reply);
         break;
       default:
         reply({
-          type: "locus:error",
+          type: "dhamaka:error",
           requestId: msg.requestId,
           error: `unknown message type: ${msg.type}`,
         });
     }
   } catch (err) {
     reply({
-      type: "locus:error",
+      type: "dhamaka:error",
       requestId: msg.requestId,
       error: String(err?.message || err),
     });
@@ -375,7 +375,7 @@ window.addEventListener("message", async (event) => {
   const tier = await currentStorageTier();
   window.parent?.postMessage(
     {
-      type: "locus:ready",
+      type: "dhamaka:ready",
       version: "0.1.0",
       origin: location.origin,
       tier,
