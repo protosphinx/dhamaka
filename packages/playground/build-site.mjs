@@ -121,6 +121,14 @@ async function main() {
       `"${prefix}runtime/$1?v=${shortSha}"`,
     );
 
+    // Cache-bust the build-badge script tag too. The badge exists
+    // specifically so stale HTML is visible, so it would be ironic to
+    // let the badge itself get served from cache across deploys.
+    content = content.replace(
+      /src="(\.\.?\/)build-badge\.js"/g,
+      `src="$1build-badge.js?v=${shortSha}"`,
+    );
+
     if (content !== before) {
       await writeFile(file, content);
     }
