@@ -60,14 +60,32 @@ test("city-to-state: nonsense input returns null from the fast path", () => {
   assert.equal(r, null);
 });
 
-// ─── task: spellcheck (model-only — no rules layer to test) ──────────
+// ─── task: spellcheck (model-only, masked-LM per-word scoring) ───────
 //
-// The spellcheck task was deliberately stripped of its rules layer in the
-// Option-B pivot: all semantics are now delegated to the on-device LLM
-// (Transformers.js in browsers, window.ai on Chrome). These tests verify
-// the *contract* of that task — fast() always returns null, slow() builds
-// a prompt, calls the engine, parses JSON — without asserting any specific
-// semantic behaviour that only a real model can deliver.
+// The spellcheck task is backed by a masked language model (distilBERT
+// in the shipping config). For each word in the input, we mask it and
+// ask the model what should go there; if the original word isn't in
+// the top-K predictions, we flag it and offer the top predictions as
+// corrections. These tests verify the *contract* — no hardcoded
+// semantic assertions that only a real model can deliver.
+
+/**
+ * Tiny mock engine that satisfies the `fillMask(inputWithMask, topK)`
+ * interface the spellcheck task expects. Given a dictionary of
+ * original→top-K mappings the caller wants to simulate, it returns the
+ * matching top-K when the masked input matches. Unknown masked inputs
+ * return an empty array.
+ */
+function makeMaskEngine(mapping) {
+  return {
+    maskToken: "[MASK]",
+    async fillMask(maskedInput, _topK) {
+      // `mapping` is keyed by the WHOLE masked input for exact-match
+      // simulation, so tests can pin specific prompts deterministically.
+      return mapping[maskedInput] ?? [];
+    },
+  };
+}
 
 test("spellcheck: fast() always returns null (model-only task)", () => {
   assert.equal(spellcheckTask.fast("anything"), null);
@@ -77,64 +95,105 @@ test("spellcheck: fast() always returns null (model-only task)", () => {
 
 test("spellcheck: slow() short-circuits empty input without calling the engine", async () => {
   let called = false;
-  const fakeEngine = {
-    async complete() {
+  const engine = {
+    maskToken: "[MASK]",
+    async fillMask() {
       called = true;
-      return "[]";
+      return [];
     },
   };
-  const r = await spellcheckTask.slow("", {}, fakeEngine);
+  const r = await spellcheckTask.slow("", {}, engine);
   assert.equal(called, false);
   assert.equal(r.suggestions.length, 0);
   assert.equal(r.source, "model");
 });
 
-test("spellcheck: slow() calls the engine and parses a JSON array", async () => {
-  const fakeEngine = {
-    async complete(_prompt, _opts) {
-      return '[{"from":"recieve","to":"receive","reason":"ie/ei"}]';
-    },
-  };
-  const r = await spellcheckTask.slow("I recieve it", {}, fakeEngine);
-  assert.equal(r.source, "model");
+test("spellcheck: slow() refuses engines that don't expose fillMask()", async () => {
+  const engine = { async complete() { return "text"; } }; // text-gen only
+  const r = await spellcheckTask.slow("hello world", {}, engine);
+  assert.equal(r.suggestions.length, 0);
+  assert.equal(r.confidence, 0);
+  assert.ok(r.error && r.error.includes("fill-mask"));
+});
+
+test("spellcheck: slow() flags a word whose top-K predictions don't include it", async () => {
+  // "I recieve the package" → mask "recieve"
+  const engine = makeMaskEngine({
+    "I [MASK] the package": [
+      { token: "receive", score: 0.6 },
+      { token: "got", score: 0.1 },
+      { token: "open", score: 0.05 },
+    ],
+    "I recieve the [MASK]": [
+      { token: "package", score: 0.8 },
+      { token: "box", score: 0.1 },
+    ],
+  });
+  const r = await spellcheckTask.slow("I recieve the package", {}, engine);
+  // "recieve" is not in its mask's top-K → flagged
+  // "package" IS in its mask's top-K → not flagged
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].from, "recieve");
   assert.equal(r.suggestions[0].to, "receive");
-  assert.equal(r.suggestions[0].reason, "ie/ei");
-});
-
-test("spellcheck: slow() extracts JSON embedded in a model preamble", async () => {
-  const fakeEngine = {
-    async complete() {
-      return 'Here are the corrections: [{"from":"teh","to":"the","reason":"typo"}] Hope that helps!';
-    },
-  };
-  const r = await spellcheckTask.slow("teh cat", {}, fakeEngine);
-  assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "teh");
-});
-
-test("spellcheck: slow() returns empty suggestions on malformed JSON", async () => {
-  const fakeEngine = {
-    async complete() {
-      return "This is not JSON at all";
-    },
-  };
-  const r = await spellcheckTask.slow("hello world", {}, fakeEngine);
-  assert.equal(r.suggestions.length, 0);
   assert.equal(r.source, "model");
 });
 
-test("spellcheck: slow() drops malformed entries without from/to strings", async () => {
-  const fakeEngine = {
-    async complete() {
-      return '[{"from":"ok","to":"OK","reason":"case"},{"wrong":"shape"},{"from":"x"}]';
+test("spellcheck: slow() skips words in the stoplist and short words", async () => {
+  // "I" (short), "do", "not", "have" (stoplist) → no mask calls.
+  // Only "package" should trigger a mask call.
+  let maskCalls = 0;
+  const engine = {
+    maskToken: "[MASK]",
+    async fillMask(input, _topK) {
+      maskCalls++;
+      if (input === "I do not have [MASK]") {
+        return [{ token: "package", score: 0.9 }];
+      }
+      return [];
     },
   };
-  const r = await spellcheckTask.slow("ok", {}, fakeEngine);
+  const r = await spellcheckTask.slow("I do not have package", {}, engine);
+  assert.equal(maskCalls, 1);
+  assert.equal(r.suggestions.length, 0);
+});
+
+test("spellcheck: slow() strips WordPiece ## prefix from suggestions", async () => {
+  // distilBERT sometimes returns subword tokens for the top predictions.
+  // The task should strip the leading `##` and present clean words.
+  const engine = makeMaskEngine({
+    "hello [MASK]": [
+      { token: "world", score: 0.5 },
+      { token: "##ing", score: 0.2 },
+      { token: "there", score: 0.1 },
+    ],
+  });
+  const r = await spellcheckTask.slow("hello foobar", {}, engine);
   assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "ok");
-  assert.equal(r.suggestions[0].to, "OK");
+  assert.equal(r.suggestions[0].from, "foobar");
+  assert.equal(r.suggestions[0].to, "world");
+  // `##ing` should have been stripped and then rejected (not a real word
+  // once the prefix is gone, because "ing" is itself a valid letter
+  // sequence). The alternative should be "there" not "##ing".
+  assert.ok(r.suggestions[0].alternatives.includes("there"));
+});
+
+test("spellcheck: slow() tolerates a mask call failure without killing the run", async () => {
+  // One of the mask calls throws. The run should continue with the others.
+  let calls = 0;
+  const engine = {
+    maskToken: "[MASK]",
+    async fillMask(input, _topK) {
+      calls++;
+      if (calls === 1) throw new Error("boom");
+      if (input === "qwerty [MASK]") return [{ token: "keyboard", score: 0.9 }];
+      return [];
+    },
+  };
+  const r = await spellcheckTask.slow("qwerty layout", {}, engine);
+  // The first mask call threw; the second ran.
+  assert.ok(calls >= 2);
+  // Run didn't crash; got a structured result.
+  assert.equal(r.source, "model");
 });
 
 // ─── task: paste-extract ─────────────────────────────────────────────

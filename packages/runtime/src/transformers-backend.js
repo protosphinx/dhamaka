@@ -143,8 +143,25 @@ export class TransformersBackend extends Engine {
       ...this.pipelineOptions,
     });
 
+    // Cache the model's mask token string (e.g. [MASK] for BERT-family,
+    // <mask> for RoBERTa-family). fill-mask callers need to know what
+    // token to substitute into their input.
+    try {
+      this._maskToken =
+        this._pipeline.tokenizer?.mask_token ??
+        this._pipeline.model?.config?.mask_token ??
+        "[MASK]";
+    } catch {
+      this._maskToken = "[MASK]";
+    }
+
     this._entry = entry ?? { id: this.model, params: this.task };
     this.loaded = true;
+  }
+
+  /** The model's mask token string, or null if this isn't a fill-mask pipeline. */
+  get maskToken() {
+    return this.task === "fill-mask" ? this._maskToken : null;
   }
 
   async complete(prompt, options = {}) {
@@ -155,7 +172,11 @@ export class TransformersBackend extends Engine {
     // Dispatch by task. Different Transformers.js pipelines have different
     // input/output shapes, and we normalise to a string.
     if (this.task === "fill-mask") {
-      return this._fillMask(prompt);
+      // complete() on a fill-mask pipeline returns a JSON-stringified array
+      // of top-K predictions. Callers who want structured results should
+      // use fillMask() directly.
+      const results = await this.fillMask(prompt, options.topK ?? 10);
+      return JSON.stringify(results);
     }
     if (this.task === "feature-extraction") {
       // Embeddings aren't text; callers should use embed() instead. Return
@@ -200,11 +221,38 @@ export class TransformersBackend extends Engine {
     yield text;
   }
 
-  /** Masked LM: returns a JSON string of top-k suggestions for [MASK]. */
-  async _fillMask(prompt) {
-    const result = await this._pipeline(prompt);
-    // [{ score, token, token_str, sequence }, ...]
-    return JSON.stringify(result);
+  /**
+   * Masked-LM prediction. `input` must contain the model's mask token
+   * (accessible via `this.maskToken`, typically `[MASK]` for BERT-family).
+   *
+   * Returns an array of { token, score } objects, sorted by score desc.
+   * For multi-mask input, returns a flat array of the first mask's top-K
+   * (the typical spellcheck use case masks one word at a time).
+   *
+   * @param {string} input
+   * @param {number} [topK=10]
+   * @returns {Promise<Array<{ token: string, score: number }>>}
+   */
+  async fillMask(input, topK = 10) {
+    if (!this.loaded) {
+      throw new Error("TransformersBackend.fillMask: load() must be called first");
+    }
+    if (this.task !== "fill-mask") {
+      throw new Error(
+        `TransformersBackend.fillMask: this engine was loaded with task="${this.task}", ` +
+          `not "fill-mask". Create a separate TransformersBackend for masked-LM tasks.`,
+      );
+    }
+    const result = await this._pipeline(input, { top_k: topK });
+
+    // Transformers.js returns one of:
+    //   [{ score, token, token_str, sequence }, ...]           (single mask)
+    //   [[{ ... }, ...], [{ ... }, ...]]                       (multi-mask)
+    const list = Array.isArray(result) && Array.isArray(result[0]) ? result[0] : result;
+    return (list || []).map((r) => ({
+      token: String(r.token_str ?? "").trim(),
+      score: Number(r.score ?? 0),
+    }));
   }
 
   /** Sentence embeddings. Returns a plain JS array of floats. */
