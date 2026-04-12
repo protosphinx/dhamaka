@@ -127,6 +127,39 @@ async function main() {
   }
   log(`rewrote importmaps in ${htmlFiles.length} html files (cache-bust v=${shortSha})`);
 
+  // 8b. Cache-bust the relative imports INSIDE the SDK and runtime JS files
+  //     themselves. The importmap rewrite above only cache-busts the module
+  //     entry points the browser loads via importmap ("dhamaka" →
+  //     ./sdk/index.js?v=SHA). But once that module is fetched, its own
+  //     `import "./foo.js"` statements resolve to `./foo.js` WITHOUT a
+  //     query string — and the browser happily serves those from cache
+  //     across deploys, producing the "new index.js, old tasks.js"
+  //     failure mode that was still breaking the spellcheck demo.
+  //
+  //     Fix: walk every .js file under _site/sdk/ and _site/runtime/ and
+  //     rewrite every RELATIVE (./ or ../) .js import to append ?v=SHA.
+  //     Bare specifiers ("@dhamaka/runtime", "dhamaka") are not touched
+  //     because they resolve through the importmap, which we already
+  //     cache-busted above.
+  const jsFiles = [
+    ...(await collect(join(SITE, "sdk"), ".js")),
+    ...(await collect(join(SITE, "runtime"), ".js")),
+  ];
+  let rewroteImports = 0;
+  const importRe = /(["'])(\.\.?\/[^"'?\s]+?\.js)(["'])/g;
+  for (const file of jsFiles) {
+    const content = await readFile(file, "utf8");
+    const rewritten = content.replace(
+      importRe,
+      (_match, q1, path, q2) => `${q1}${path}?v=${shortSha}${q2}`,
+    );
+    if (rewritten !== content) {
+      await writeFile(file, rewritten);
+      rewroteImports++;
+    }
+  }
+  log(`cache-bust: rewrote relative imports in ${rewroteImports} / ${jsFiles.length} js files`);
+
   // 9. Write a tiny deploy-marker so we can verify what landed where
   const marker = {
     builtAt: new Date().toISOString(),
