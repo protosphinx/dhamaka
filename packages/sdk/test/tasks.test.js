@@ -171,10 +171,70 @@ test("spellcheck: slow() strips WordPiece ## prefix from suggestions", async () 
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].from, "foobar");
   assert.equal(r.suggestions[0].to, "world");
-  // `##ing` should have been stripped and then rejected (not a real word
-  // once the prefix is gone, because "ing" is itself a valid letter
-  // sequence). The alternative should be "there" not "##ing".
+  // `##ing` should have been stripped — "ing" is 3 chars with a vowel
+  // so it passes the plausible-word filter. The third alternative is "there".
   assert.ok(r.suggestions[0].alternatives.includes("there"));
+});
+
+test("spellcheck: slow() rejects 2-char suggestions (xx, cd, da, sd)", async () => {
+  // distilBERT often returns very short WordPiece tokens for masked
+  // positions in gibberish context. These are not plausible whole-word
+  // corrections and the filter should reject them.
+  const engine = makeMaskEngine({
+    "gibbberish [MASK]": [
+      { token: "xx", score: 0.5 },
+      { token: "cd", score: 0.3 },
+      { token: "da", score: 0.2 },
+      { token: "hello", score: 0.1 },
+      { token: "world", score: 0.05 },
+    ],
+  });
+  const r = await spellcheckTask.slow("gibbberish asdfgh", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "asdfgh");
+  // "xx" / "cd" / "da" should all be filtered out. First plausible
+  // suggestion is "hello".
+  assert.equal(r.suggestions[0].to, "hello");
+  assert.ok(r.suggestions[0].alternatives.includes("world"));
+  assert.ok(!r.suggestions[0].alternatives.includes("xx"));
+  assert.ok(!r.suggestions[0].alternatives.includes("cd"));
+});
+
+test("spellcheck: slow() rejects consonant-only tokens (xx, cd, sd, ght)", async () => {
+  // A valid English word almost always contains a vowel. Tokens like
+  // "xx", "cd", "sd" are in distilBERT's vocab but aren't plausible
+  // corrections. The filter requires at least one vowel.
+  const engine = makeMaskEngine({
+    "nonsense [MASK]": [
+      { token: "xxx", score: 0.5 },  // 3 chars but no vowel → rejected
+      { token: "ght", score: 0.3 },  // 3 chars but no vowel → rejected
+      { token: "apple", score: 0.2 }, // valid → accepted
+    ],
+  });
+  const r = await spellcheckTask.slow("nonsense zzzzz", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].to, "apple");
+});
+
+test("spellcheck: slow() still flags words with no plausible alternatives", async () => {
+  // When ALL top-K predictions are junk (e.g. all 2-char or
+  // consonant-only fragments), the word should still be flagged but
+  // with `to: null` and an empty alternatives array. The UI renders
+  // these chips as "word → ?" so users see the word was flagged but
+  // the model had nothing useful to suggest.
+  const engine = makeMaskEngine({
+    "totally [MASK]": [
+      { token: "xx", score: 0.3 },
+      { token: "cd", score: 0.2 },
+      { token: "##s", score: 0.1 },
+    ],
+  });
+  const r = await spellcheckTask.slow("totally qwertyuiop", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "qwertyuiop");
+  assert.equal(r.suggestions[0].to, null);
+  assert.deepEqual(r.suggestions[0].alternatives, []);
+  assert.ok(r.suggestions[0].reason.includes("plausible"));
 });
 
 test("spellcheck: slow() tolerates a mask call failure without killing the run", async () => {
