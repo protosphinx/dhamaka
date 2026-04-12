@@ -99,6 +99,7 @@ export const cityToStateTask = {
 // something. Silence beats fiction.
 
 const MIN_WORD_LEN = 3;           // ignore very short words
+const MIN_SUGGESTION_LEN = 3;     // reject 1-2 char "suggestions"
 const TOP_K = 20;                 // flag word if not in top-K predictions
 const MAX_WORDS_PER_CALL = 40;    // don't spam the model on huge inputs
 const STOPLIST = new Set([
@@ -197,22 +198,31 @@ export const spellcheckTask = {
       const isInTopK = topTokens.some((t) => t === lower || normalizeSubword(t) === lower);
       if (isInTopK) continue;
 
-      // Not in top-K → flag it. Take up to 3 distinct alternative corrections,
-      // preferring tokens that are full words (no WordPiece `##` prefix).
+      // Not in top-K → flag it. Take up to 3 distinct alternative corrections.
+      // A "real-word suggestion" must pass four gates:
+      //   1. letters + apostrophes only (no punctuation, no digits)
+      //   2. at least MIN_SUGGESTION_LEN chars (no 1-2 char junk like "xx" or "cd")
+      //   3. contains at least one vowel (filters WordPiece fragments that
+      //      happened to be valid letter sequences but are not real words)
+      //   4. not identical to the original word (case-insensitive)
       const alts = topK
         .map((p) => normalizeSubword(String(p.token)))
-        .filter((t) => t && /^[A-Za-z][A-Za-z']*$/.test(t))
+        .filter(isPlausibleWord)
         .filter((t) => t.toLowerCase() !== lower)
         .slice(0, 3);
 
-      if (!alts.length) continue; // no real-word suggestions → skip
-
+      // Even if there are NO plausible alternatives, still flag the word —
+      // distilBERT-in-a-gibberish-context can genuinely have nothing useful
+      // to suggest, and hiding the flag would pretend the word looked fine.
+      // The chip UI renders alternatives=[] as "word ?" with a tooltip.
       suggestions.push({
         from: w.word,
-        to: alts[0],
+        to: alts[0] ?? null,
         alternatives: alts.slice(1),
         index: w.index,
-        reason: "not in top masked-LM predictions",
+        reason: alts.length
+          ? "not in top masked-LM predictions"
+          : "not in top predictions, and none of the predictions are plausible words",
       });
     }
 
@@ -230,6 +240,22 @@ export const spellcheckTask = {
  */
 function normalizeSubword(token) {
   return token.startsWith("##") ? token.slice(2) : token;
+}
+
+/**
+ * A token is a plausible whole-word correction if it:
+ *   - is letters + apostrophes only (no digits, no punctuation)
+ *   - is at least MIN_SUGGESTION_LEN characters long
+ *   - contains at least one vowel (filters short WordPiece fragments like
+ *     "xx", "cd", "sd" that are in distilBERT's vocabulary but are not
+ *     real English words)
+ */
+function isPlausibleWord(token) {
+  if (!token || typeof token !== "string") return false;
+  if (token.length < MIN_SUGGESTION_LEN) return false;
+  if (!/^[A-Za-z][A-Za-z']*$/.test(token)) return false;
+  if (!/[aeiouy]/i.test(token)) return false;
+  return true;
 }
 
 // ─── task: smart paste extraction ─────────────────────────────────────
