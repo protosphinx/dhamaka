@@ -75,6 +75,27 @@
         color: var(--text-muted);
         margin-top: 0.15rem;
       }
+      .try-chip {
+        display: inline-block;
+        margin: 0.25rem 0.35rem 0 0;
+        padding: 0.3rem 0.6rem;
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border-strong);
+        border-radius: 999px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-dim);
+        cursor: pointer;
+        transition: all 120ms ease;
+      }
+      .try-chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .suggest.no-alts .to {
+        color: var(--text-muted);
+        font-style: italic;
+      }
     </style>
   </head>
   <body>
@@ -82,12 +103,27 @@
       <a class="back-link" href="../">← all demos</a>
       <h1>on-device spellcheck</h1>
       <p class="lead">
-        Type anything into the textarea below. Every time you stop typing for
-        a moment, Dhamaka hands the whole paragraph to a real language model
-        running <b>inside this browser tab</b> and asks for corrections. No
-        rules, no hardcoded dictionary, no server — an actual LLM reading your
-        prose and finding every misspelling, homophone confusion, and grammar
-        glitch it can spot.
+        Type prose into the textarea below. Every time you stop typing for
+        a moment, Dhamaka hands each word to an on-device masked language
+        model running <b>inside this browser tab</b> and asks "what should
+        go here?". Words the model considers unlikely in context are flagged.
+        No rules, no hardcoded dictionary, no server — a real LLM reading
+        your prose word by word.
+      </p>
+
+      <p class="lead" style="margin-top: -0.5rem;">
+        <strong>Try a real sentence with typos:</strong>
+        <button class="try-chip" data-try="I recieve the package tommorow and it will seperate our stuff">I recieve the package tommorow…</button>
+        <button class="try-chip" data-try="The goverment has definately been occuring alot this year">The goverment definately alot…</button>
+        <button class="try-chip" data-try="She went untill the store to meet her freind yestarday">untill freind yestarday…</button>
+        <br/>
+        <small style="color: var(--text-muted);">
+          Masked-LM spellcheck works best on <em>real prose</em> with
+          real misspellings. Pure gibberish like <code>asdsd qwdqd</code>
+          gets flagged correctly, but the suggestions for it will be
+          nonsense too — there's no meaningful context for the model to
+          predict from. That's a property of the algorithm, not a bug.
+        </small>
       </p>
 
       <div class="status-card" id="status-card">
@@ -240,13 +276,16 @@
               out.innerHTML = "";
               suggestions.forEach((s, i) => {
                 const chip = document.createElement("span");
-                chip.className = "suggest";
+                const hasAlt = typeof s.to === "string" && s.to.length > 0;
+                chip.className = "suggest" + (hasAlt ? "" : " no-alts");
                 chip.innerHTML =
                   `<span class="strike">${escapeHtml(s.from)}</span>` +
                   `<span class="arrow">→</span>` +
-                  `<span class="to">${escapeHtml(s.to)}</span>`;
+                  `<span class="to">${hasAlt ? escapeHtml(s.to) : "?"}</span>`;
                 chip.title = s.reason || "suggestion";
-                chip.addEventListener("click", () => smart.applySuggestion(i));
+                if (hasAlt) {
+                  chip.addEventListener("click", () => smart.applySuggestion(i));
+                }
                 out.appendChild(chip);
               });
             },
@@ -264,6 +303,20 @@
               const dt = Math.round(performance.now() - lastInputAt);
               tMs.textContent = `${dt} ms`;
             }
+          });
+
+          // Wire the "Try:" example chips so clicking one populates the
+          // textarea and kicks off a check. The synthetic input event
+          // the SmartText wrapper needs is dispatched by assigning .value
+          // then manually firing it.
+          document.querySelectorAll(".try-chip").forEach((chip) => {
+            chip.addEventListener("click", () => {
+              const text = chip.getAttribute("data-try") || "";
+              draft.value = text;
+              lastInputAt = performance.now();
+              draft.dispatchEvent(new Event("input", { bubbles: true }));
+              draft.focus();
+            });
           });
         } catch (err) {
           console.error("spellcheck demo failed to warm up:", err);
