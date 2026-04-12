@@ -517,6 +517,112 @@ test("spellcheck: filter rejects 1-2 char and consonant-only predictions", async
   capture.assertClean();
 });
 
+test("spellcheck: 2-char gibberish like 'hi ho wh ar u wr hd' gets flagged (not silently skipped)", async ({ page, base }) => {
+  // Regression guard for the screenshot the user sent: typing
+  // "hi ho wh ar u wr hd" used to show "looks clean" because
+  // MIN_WORD_LEN=3 silently dropped every token before the model ran.
+  // After the fix MIN_WORD_LEN=2 and `hi` is on the stoplist, so the
+  // task checks `ho`, `wh`, `ar`, `wr`, `hd` (5 words) and flags all
+  // of them because the junk context makes distilBERT pick function
+  // words that get filtered out.
+  const capture = withErrorCapture(page);
+  await routeTransformers(page, {
+    // Every mask gets the same junk reply → filter rejects → flagged with to:null.
+    "hi [MASK] wh ar u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+    "hi ho [MASK] ar u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+    "hi ho wh [MASK] u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+    "hi ho wh ar u [MASK] hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+    "hi ho wh ar u wr [MASK]": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+  });
+
+  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
+    { timeout: 10000 },
+  );
+
+  await page.fill("#draft", "hi ho wh ar u wr hd");
+  await page.waitForFunction(
+    () => {
+      const count = document.getElementById("t-count")?.textContent;
+      return count && count !== "0";
+    },
+    { timeout: 5000 },
+  );
+
+  const count = parseInt((await page.locator("#t-count").textContent()) || "0", 10);
+  assert(count >= 5, `expected >=5 flagged words for 'hi ho wh ar u wr hd', got ${count}`);
+  const chipsHtml = await page.locator("#suggestions-out").innerHTML();
+  for (const w of ["ho", "wh", "ar", "wr", "hd"]) {
+    assertContains(chipsHtml, w, `should flag 2-char gibberish ${JSON.stringify(w)}`);
+  }
+  // `hi` is in the stoplist → should NOT be in the flagged chips.
+  assert(!chipsHtml.includes(">hi<"), "must NOT flag 'hi' (stoplist)");
+
+  capture.assertClean();
+});
+
+test("spellcheck: pure-stoplist input shows 'nothing long enough to check' message", async ({ page, base }) => {
+  // The empty-state fix. Before: "i am ok" → "looks clean" (a lie).
+  // After: "i am ok" → "nothing long enough to check …" because every
+  // token is either 1-char or in the stoplist.
+  const capture = withErrorCapture(page);
+  await routeTransformers(page, {});
+
+  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
+    { timeout: 10000 },
+  );
+
+  await page.fill("#draft", "i am ok");
+  // Wait for the debounced run to finish. We can't wait on a suggestion
+  // count change because there are zero suggestions; poll the out div.
+  await page.waitForFunction(
+    () => {
+      const t = document.getElementById("suggestions-out")?.textContent ?? "";
+      return t.includes("nothing long enough");
+    },
+    { timeout: 5000 },
+  );
+  const outText = (await page.locator("#suggestions-out").textContent()) ?? "";
+  assertContains(outText, "nothing long enough to check");
+
+  capture.assertClean();
+});
+
+test("spellcheck: clean prose says 'looks clean (checked N words)'", async ({ page, base }) => {
+  // When the model runs and every word is in top-K, the empty-state
+  // should say "looks clean" WITH the count of words actually checked.
+  // We script replies for "hello world foobar" where every mask's
+  // top-K includes the original word (case-insensitively).
+  const capture = withErrorCapture(page);
+  await routeTransformers(page, {
+    "[MASK] world foobar":  [{ token: "hello",  score: 0.5 }, { token: "there",  score: 0.1 }],
+    "hello [MASK] foobar":  [{ token: "world",  score: 0.5 }, { token: "there",  score: 0.1 }],
+    "hello world [MASK]":   [{ token: "foobar", score: 0.5 }, { token: "there",  score: 0.1 }],
+  });
+
+  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
+    { timeout: 10000 },
+  );
+
+  await page.fill("#draft", "hello world foobar");
+  await page.waitForFunction(
+    () => {
+      const t = document.getElementById("suggestions-out")?.textContent ?? "";
+      return t.includes("looks clean");
+    },
+    { timeout: 5000 },
+  );
+  const outText = (await page.locator("#suggestions-out").textContent()) ?? "";
+  assertContains(outText, "checked 3 words", "should include checked count");
+
+  capture.assertClean();
+});
+
 test("spellcheck: gibberish with no plausible alternatives is still flagged with '?'", async ({ page, base }) => {
   const capture = withErrorCapture(page);
   // Script every plausible mask for "asdfgh qwerty zzzzz" with a reply

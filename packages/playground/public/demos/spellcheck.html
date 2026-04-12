@@ -266,11 +266,23 @@
           // circuit anything).
           const smart = new SmartText(draft, {
             debounceMs: 400,
-            onSuggestions: (suggestions) => {
+            onSuggestions: (suggestions, result) => {
               tCount.textContent = String(suggestions.length);
               tSource.textContent = suggestions.length ? "model" : "—";
               if (!suggestions.length) {
-                out.textContent = draft.value.trim() ? "looks clean" : "no issues yet";
+                // Distinguish "we ran the model and everything came back
+                // clean" from "every word was too short or in the
+                // stoplist, so we couldn't check anything at all".
+                // Before this fix, typing "hi ho wh ar u" showed "looks
+                // clean" which was a lie.
+                if (!draft.value.trim()) {
+                  out.textContent = "no issues yet";
+                } else if ((result?.checked ?? 0) === 0) {
+                  out.textContent =
+                    "nothing long enough to check — type words of 2+ letters that aren't articles/pronouns";
+                } else {
+                  out.textContent = `looks clean (checked ${result.checked} word${result.checked === 1 ? "" : "s"})`;
+                }
                 return;
               }
               out.innerHTML = "";

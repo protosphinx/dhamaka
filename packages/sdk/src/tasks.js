@@ -98,7 +98,13 @@ export const cityToStateTask = {
 // the task returns an empty suggestion list rather than inventing
 // something. Silence beats fiction.
 
-const MIN_WORD_LEN = 3;           // ignore very short words
+// Why MIN_WORD_LEN = 2: Users type SMS-abbreviation prose like
+// "hi ho wh ar u wr hd". If we filter out every token shorter than 3 the
+// spellchecker silently skips EVERYTHING in that input and the UI lies by
+// saying "looks clean". 2-char words need checking too; the STOPLIST
+// below covers the genuine 2-char function words so we don't flag
+// "to / of / in / it / is / be / we / …".
+const MIN_WORD_LEN = 2;
 const MIN_SUGGESTION_LEN = 3;     // reject 1-2 char "suggestions"
 const TOP_K = 20;                 // flag word if not in top-K predictions
 const MAX_WORDS_PER_CALL = 40;    // don't spam the model on huge inputs
@@ -112,6 +118,9 @@ const STOPLIST = new Set([
   "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she",
   "her", "hers", "it", "its", "we", "us", "our", "ours", "they", "them",
   "their", "theirs",
+  // Short function / filler words added for MIN_WORD_LEN=2. Without these
+  // a legit "am" / "up" / "ok" would get sent to the model.
+  "am", "up", "ok", "oh", "ah", "eh", "hi", "ha",
 ]);
 
 export const spellcheckTask = {
@@ -126,7 +135,7 @@ export const spellcheckTask = {
 
   async slow(input, _context, engine) {
     if (!input || typeof input !== "string" || !input.trim()) {
-      return { confidence: 1, source: "model", suggestions: [] };
+      return { confidence: 1, source: "model", suggestions: [], checked: 0, skipped: 0 };
     }
 
     // Contract: the engine must expose fillMask(inputWithMask, topK).
@@ -136,6 +145,8 @@ export const spellcheckTask = {
         confidence: 0,
         source: "model",
         suggestions: [],
+        checked: 0,
+        skipped: 0,
         error:
           "spellcheck requires a fill-mask engine (e.g. TransformersBackend " +
           "loaded with task: 'fill-mask', model: 'Xenova/distilbert-base-uncased')",
@@ -159,7 +170,7 @@ export const spellcheckTask = {
     }
 
     if (!words.length) {
-      return { confidence: 1, source: "model", suggestions: [] };
+      return { confidence: 1, source: "model", suggestions: [], checked: 0, skipped: 0 };
     }
 
     // Only actually run the model on words that are plausibly misspellable:
@@ -173,6 +184,7 @@ export const spellcheckTask = {
 
     // Cap work on huge inputs so we never spam the model with 200 calls.
     const toCheck = candidates.slice(0, MAX_WORDS_PER_CALL);
+    const skipped = words.length - toCheck.length;
 
     const suggestions = [];
     for (const w of toCheck) {
@@ -230,6 +242,8 @@ export const spellcheckTask = {
       confidence: suggestions.length ? 0.75 : 0.9,
       source: "model",
       suggestions,
+      checked: toCheck.length,
+      skipped,
     };
   },
 };

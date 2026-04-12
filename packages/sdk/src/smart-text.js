@@ -15,7 +15,11 @@ export class SmartText {
    * @param {object} [options]
    * @param {boolean} [options.spellcheck=true]
    * @param {number}  [options.debounceMs]
-   * @param {(s: Array<object>) => void} [options.onSuggestions]
+   * @param {(s: Array<object>, result: object) => void} [options.onSuggestions]
+   *   Called after each run. First arg is the suggestion list (same as
+   *   `this.suggestions`); second arg is the full TaskResult including
+   *   `checked` / `skipped` counts so the UI can tell "ran and clean"
+   *   apart from "nothing was long enough to check".
    */
   constructor(el, options = {}) {
     if (!el || typeof el.addEventListener !== "function") {
@@ -26,6 +30,7 @@ export class SmartText {
     this.debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
     this.onSuggestions = options.onSuggestions ?? null;
     this.suggestions = [];
+    this.lastResult = null;
     this._timer = null;
     this._disposed = false;
 
@@ -43,10 +48,11 @@ export class SmartText {
     const result = await reflex.run("spellcheck", text, { threshold: 0.8 });
     if (this._disposed) return;
     this.suggestions = result.suggestions ?? [];
-    this.onSuggestions?.(this.suggestions);
+    this.lastResult = result;
+    this.onSuggestions?.(this.suggestions, result);
     this.el.dispatchEvent(
       new CustomEvent("smart-text:suggestions", {
-        detail: { text, suggestions: this.suggestions },
+        detail: { text, suggestions: this.suggestions, result },
         bubbles: true,
       }),
     );

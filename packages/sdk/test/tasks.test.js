@@ -106,6 +106,40 @@ test("spellcheck: slow() short-circuits empty input without calling the engine",
   assert.equal(called, false);
   assert.equal(r.suggestions.length, 0);
   assert.equal(r.source, "model");
+  assert.equal(r.checked, 0);
+});
+
+test("spellcheck: slow() reports checked=0 when every word is too short or in the stoplist", async () => {
+  // Regression: "hi ho wh ar u wr hd" → `hi` stoplist, `u` too short,
+  // and the rest are 2-char non-words. Before the MIN_WORD_LEN=2 fix
+  // this text was silently skipped entirely and the UI lied by saying
+  // "looks clean". After the fix, the 2-char non-words get checked.
+  const engine = {
+    maskToken: "[MASK]",
+    async fillMask() { return []; },
+  };
+  // Pure stoplist: `i am ok` → all three skipped, checked should be 0.
+  const r = await spellcheckTask.slow("i am ok", {}, engine);
+  assert.equal(r.checked, 0);
+  assert.ok(r.skipped > 0);
+});
+
+test("spellcheck: slow() checks 2-char non-words now that MIN_WORD_LEN=2", async () => {
+  // Before MIN_WORD_LEN was 3 and `wh` / `ar` / `wr` / `hd` were all
+  // silently dropped. After the fix each of them is a candidate and the
+  // mask call actually fires.
+  const masksCalled = [];
+  const engine = {
+    maskToken: "[MASK]",
+    async fillMask(input) {
+      masksCalled.push(input);
+      return [{ token: "where", score: 0.5 }];
+    },
+  };
+  const r = await spellcheckTask.slow("wh ar wr hd", {}, engine);
+  // Every 2-char token should have triggered a mask call.
+  assert.equal(masksCalled.length, 4);
+  assert.equal(r.checked, 4);
 });
 
 test("spellcheck: slow() refuses engines that don't expose fillMask()", async () => {
