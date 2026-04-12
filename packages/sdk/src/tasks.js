@@ -76,71 +76,84 @@ export const cityToStateTask = {
   },
 };
 
-// ─── task: contextual spellcheck ──────────────────────────────────────
+// ─── task: contextual spellcheck + grammar ────────────────────────────
 //
-// Model-only. No rules, no hardcoded confusables, no context regexes.
-// The whole thesis of Dhamaka is "let the on-device LLM do the work",
-// and a spellchecker is a paradigmatic model task.
+// Model-only. The whole thesis of Dhamaka is "let the on-device LLM do
+// the work" — so this task asks a real seq2seq language model to
+// REWRITE the input into a correct version, then word-aligns the two
+// so the UI can surface chip-level suggestions.
 //
-// Architecture: per-word masked-LM scoring. For each word in the input,
-// we mask it with the model's mask token and ask the model to predict
-// the most likely token at that position. If the original word is not
-// in the top-K predictions, it's flagged as a likely misspelling and
-// the top predictions become the suggested corrections.
+// Why seq2seq (text2text-generation) instead of masked-LM fill-mask:
 //
-// This is the correct algorithm for a masked-LM spellchecker. It's
-// what distilBERT, BERT, RoBERTa, and every production masked-LM
-// spellchecker do. It's fast (one forward pass per word, ~50-200ms
-// on distilBERT in WASM), small (~65 MB for distilbert-base-uncased),
-// and accurate for misspellings and obvious non-words.
+//  - A masked-LM checks each word in isolation against its own top-K.
+//    That catches obvious misspellings in normal prose ("recieve" isn't
+//    in the top-20 predictions at its mask position), but fails at
+//    EVERY other failure mode the user cares about:
+//       * grammar errors that span multiple words
+//           "I has a apple"  → the mask for "has" probably predicts
+//                               "have" just fine, but the mask for "a"
+//                               gets confused by the broken verb upstream
+//       * real-word errors — "I went their" where "their" is perfectly
+//                               likely at its mask position even though
+//                               it's the wrong word
+//       * short / gibberish / SMS-abbreviation inputs where the mask
+//           context itself is garbage so the top-K is garbage
 //
-// If no engine is available, or the engine doesn't support fill-mask,
-// the task returns an empty suggestion list rather than inventing
-// something. Silence beats fiction.
+//  - A proper grammar-correction model (Flan-T5-style seq2seq,
+//    instruction-tuned) handles all three in one forward pass: feed it
+//    the full sentence, read back the corrected sentence, done.
+//    That's how Grammarly-style correction actually works in industry.
+//
+// Algorithm:
+//
+//  1. Ask the engine to rewrite the input into corrected text via a
+//     plain text-generation prompt. The default model is
+//     Xenova/LaMini-Flan-T5-248M which is tiny, instruction-tuned,
+//     loads reliably through Transformers.js, and handles grammar
+//     correction out of the box.
+//  2. Tokenize original + corrected into word arrays (with index
+//     positions for the original).
+//  3. Run word-level LCS alignment. Every (delete, insert) pair
+//     becomes a substitution chip {from, to, index}. Leftover deletes
+//     become {from, to: null}. Insertions are dropped in v1 (no
+//     natural "from" position to attach a chip to).
+//  4. Filter out substitutions that only differ in case/punctuation,
+//     so "hello" → "Hello." doesn't produce a noise chip.
+//
+// The model is called ONCE per debounced input, not once per word.
+// Latency is dominated by one seq2seq forward pass: ~250–700 ms for a
+// short sentence on flan-T5-small-class models in WASM, depending on
+// the device. SmartText's default debounce is 400 ms so there's
+// breathing room before the next call stacks up.
 
-// Why MIN_WORD_LEN = 2: Users type SMS-abbreviation prose like
-// "hi ho wh ar u wr hd". If we filter out every token shorter than 3 the
-// spellchecker silently skips EVERYTHING in that input and the UI lies by
-// saying "looks clean". 2-char words need checking too; the STOPLIST
-// below covers the genuine 2-char function words so we don't flag
-// "to / of / in / it / is / be / we / …".
-const MIN_WORD_LEN = 2;
-const MIN_SUGGESTION_LEN = 3;     // reject 1-2 char "suggestions"
-const TOP_K = 20;                 // flag word if not in top-K predictions
-const MAX_WORDS_PER_CALL = 40;    // don't spam the model on huge inputs
-const STOPLIST = new Set([
-  // Trivially correct function words we never want to flag
-  "the", "a", "an", "and", "or", "but", "if", "of", "to", "in", "on", "at",
-  "for", "by", "with", "from", "as", "is", "are", "was", "were", "be",
-  "been", "being", "have", "has", "had", "do", "does", "did", "will",
-  "would", "can", "could", "should", "may", "might", "must", "not", "no",
-  "yes", "so", "than", "then", "this", "that", "these", "those", "i",
-  "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she",
-  "her", "hers", "it", "its", "we", "us", "our", "ours", "they", "them",
-  "their", "theirs",
-  // Short function / filler words added for MIN_WORD_LEN=2. Without these
-  // a legit "am" / "up" / "ok" would get sent to the model.
-  "am", "up", "ok", "oh", "ah", "eh", "hi", "ha",
-]);
+const MAX_INPUT_LEN = 800;   // truncate enormous pastes before the model
+const PROMPT_TEMPLATE =
+  // Instruction-style prompt, with the instruction kept very short so
+  // LaMini-Flan doesn't waste decode budget echoing it back.
+  "Fix the grammar and spelling errors in the text below. Output only " +
+  "the corrected text, without explanation.\n\nText: {INPUT}\n\nCorrected:";
 
 export const spellcheckTask = {
   id: "spellcheck",
   description:
-    "Per-word masked-LM spellcheck using an on-device language model.",
+    "LLM-driven spelling and grammar correction. Rewrites the input with an " +
+    "on-device seq2seq model and word-aligns the diff into chip suggestions.",
 
-  // No fast path. Spellcheck is always a model call.
+  // No fast path. Every correction is a model call.
   fast() {
     return null;
   },
 
   async slow(input, _context, engine) {
     if (!input || typeof input !== "string" || !input.trim()) {
-      return { confidence: 1, source: "model", suggestions: [], checked: 0, skipped: 0 };
+      return empty(0, 0);
     }
 
-    // Contract: the engine must expose fillMask(inputWithMask, topK).
-    // Our TransformersBackend does when loaded with task="fill-mask".
-    if (typeof engine.fillMask !== "function") {
+    // Contract: the engine must expose complete(prompt, options). Our
+    // TransformersBackend does this for task="text2text-generation" and
+    // task="text-generation". The fill-mask path is explicitly not
+    // supported here — grammar correction isn't a masked-LM task.
+    if (typeof engine.complete !== "function") {
       return {
         confidence: 0,
         source: "model",
@@ -148,128 +161,237 @@ export const spellcheckTask = {
         checked: 0,
         skipped: 0,
         error:
-          "spellcheck requires a fill-mask engine (e.g. TransformersBackend " +
-          "loaded with task: 'fill-mask', model: 'Xenova/distilbert-base-uncased')",
+          "spellcheck requires a text-generation engine. Configure reflex " +
+          "with { task: 'text2text-generation', model: 'Xenova/LaMini-Flan-T5-248M' } " +
+          "or another seq2seq instruction model.",
       };
     }
 
-    const maskToken = typeof engine.maskToken === "string" && engine.maskToken
-      ? engine.maskToken
-      : "[MASK]";
+    // Tokenize the ORIGINAL into word positions. We'll use these to
+    // resolve chip indices back to the textarea.
+    const origWords = tokenizeWithIndices(input);
+    if (!origWords.length) return empty(0, 0);
 
-    // Find every word (letters + internal apostrophes, e.g. "don't").
-    const WORD_RE = /\b[A-Za-z][A-Za-z']*\b/g;
-    const words = [];
-    let match;
-    while ((match = WORD_RE.exec(input)) !== null) {
-      words.push({
-        word: match[0],
-        index: match.index,
-        end: match.index + match[0].length,
+    // Truncate before sending to the model. Grammar correction quality
+    // also tanks past a certain input length for small models, so we
+    // cap at something generous (800 chars ≈ a short paragraph).
+    const prompt = PROMPT_TEMPLATE.replace(
+      "{INPUT}",
+      input.length > MAX_INPUT_LEN ? input.slice(0, MAX_INPUT_LEN) : input,
+    );
+
+    let corrected;
+    try {
+      const reply = await engine.complete(prompt, {
+        maxTokens: 256,
+        temperature: 0,
       });
+      corrected = cleanModelOutput(String(reply ?? ""));
+    } catch (err) {
+      return {
+        confidence: 0,
+        source: "model",
+        suggestions: [],
+        checked: origWords.length,
+        skipped: 0,
+        error: `grammar model call failed: ${err?.message ?? err}`,
+      };
     }
 
-    if (!words.length) {
-      return { confidence: 1, source: "model", suggestions: [], checked: 0, skipped: 0 };
+    // Empty reply → nothing useful; don't fabricate suggestions.
+    if (!corrected) return empty(origWords.length, 0);
+
+    // If the model echoed the input unchanged (case-insensitively), the
+    // text is clean — no suggestions.
+    if (normalize(corrected) === normalize(input)) {
+      return {
+        confidence: 0.9,
+        source: "model",
+        suggestions: [],
+        checked: origWords.length,
+        skipped: 0,
+        corrected,
+      };
     }
 
-    // Only actually run the model on words that are plausibly misspellable:
-    // drop short words, drop stoplist members, drop pure punctuation.
-    const candidates = words.filter((w) => {
-      const lower = w.word.toLowerCase();
-      if (lower.length < MIN_WORD_LEN) return false;
-      if (STOPLIST.has(lower)) return false;
-      return true;
-    });
-
-    // Cap work on huge inputs so we never spam the model with 200 calls.
-    const toCheck = candidates.slice(0, MAX_WORDS_PER_CALL);
-    const skipped = words.length - toCheck.length;
-
-    const suggestions = [];
-    for (const w of toCheck) {
-      // Build a masked sentence. We replace THIS word with the mask token,
-      // leaving every other word intact. distilBERT's WordPiece tokenizer
-      // handles the rest.
-      const masked =
-        input.slice(0, w.index) + maskToken + input.slice(w.end);
-
-      let topK;
-      try {
-        topK = await engine.fillMask(masked, TOP_K);
-      } catch (err) {
-        // A single failing call shouldn't kill the whole run.
-        continue;
-      }
-
-      if (!Array.isArray(topK) || !topK.length) continue;
-
-      // Is the original word (case-insensitively) in the top predictions?
-      const lower = w.word.toLowerCase();
-      const topTokens = topK.map((p) => String(p.token).toLowerCase());
-      const isInTopK = topTokens.some((t) => t === lower || normalizeSubword(t) === lower);
-      if (isInTopK) continue;
-
-      // Not in top-K → flag it. Take up to 3 distinct alternative corrections.
-      // A "real-word suggestion" must pass four gates:
-      //   1. letters + apostrophes only (no punctuation, no digits)
-      //   2. at least MIN_SUGGESTION_LEN chars (no 1-2 char junk like "xx" or "cd")
-      //   3. contains at least one vowel (filters WordPiece fragments that
-      //      happened to be valid letter sequences but are not real words)
-      //   4. not identical to the original word (case-insensitive)
-      const alts = topK
-        .map((p) => normalizeSubword(String(p.token)))
-        .filter(isPlausibleWord)
-        .filter((t) => t.toLowerCase() !== lower)
-        .slice(0, 3);
-
-      // Even if there are NO plausible alternatives, still flag the word —
-      // distilBERT-in-a-gibberish-context can genuinely have nothing useful
-      // to suggest, and hiding the flag would pretend the word looked fine.
-      // The chip UI renders alternatives=[] as "word ?" with a tooltip.
-      suggestions.push({
-        from: w.word,
-        to: alts[0] ?? null,
-        alternatives: alts.slice(1),
-        index: w.index,
-        reason: alts.length
-          ? "not in top masked-LM predictions"
-          : "not in top predictions, and none of the predictions are plausible words",
-      });
-    }
+    const corrWords = tokenizeWithIndices(corrected);
+    const suggestions = diffWordsToSuggestions(origWords, corrWords);
 
     return {
-      confidence: suggestions.length ? 0.75 : 0.9,
+      confidence: suggestions.length ? 0.8 : 0.9,
       source: "model",
       suggestions,
-      checked: toCheck.length,
-      skipped,
+      checked: origWords.length,
+      skipped: 0,
+      corrected,
     };
   },
 };
 
-/**
- * WordPiece subwords like `##ing` are not full words — strip the prefix
- * when matching. For stand-alone whole-word tokens this is a no-op.
- */
-function normalizeSubword(token) {
-  return token.startsWith("##") ? token.slice(2) : token;
+function empty(checked, skipped) {
+  return { confidence: 1, source: "model", suggestions: [], checked, skipped };
+}
+
+/** Letters + internal apostrophes; matches "don't", "it's", "whoa". */
+const WORD_RE = /\b[A-Za-z][A-Za-z']*\b/g;
+
+function tokenizeWithIndices(text) {
+  const out = [];
+  let m;
+  WORD_RE.lastIndex = 0;
+  while ((m = WORD_RE.exec(text)) !== null) {
+    out.push({ word: m[0], index: m.index, end: m.index + m[0].length });
+  }
+  return out;
 }
 
 /**
- * A token is a plausible whole-word correction if it:
- *   - is letters + apostrophes only (no digits, no punctuation)
- *   - is at least MIN_SUGGESTION_LEN characters long
- *   - contains at least one vowel (filters short WordPiece fragments like
- *     "xx", "cd", "sd" that are in distilBERT's vocabulary but are not
- *     real English words)
+ * Case-insensitive punctuation-insensitive word comparison key.
+ * Used both for LCS equality and for the "did anything actually
+ * change" fast-path check.
  */
-function isPlausibleWord(token) {
-  if (!token || typeof token !== "string") return false;
-  if (token.length < MIN_SUGGESTION_LEN) return false;
-  if (!/^[A-Za-z][A-Za-z']*$/.test(token)) return false;
-  if (!/[aeiouy]/i.test(token)) return false;
-  return true;
+function wordKey(w) {
+  return (typeof w === "string" ? w : w.word)
+    .toLowerCase()
+    .replace(/['"`.,!?;:—–-]/g, "");
+}
+
+function normalize(text) {
+  return tokenizeWithIndices(text).map(wordKey).join(" ");
+}
+
+/**
+ * Flan-T5 / LaMini family models sometimes:
+ *   - Wrap their output in quotes ("…")
+ *   - Emit a "Corrected:" / "Fixed:" prefix
+ *   - Trail an extra newline or period
+ *   - Echo "Text:" back
+ * Strip all that so the downstream diff gets clean words.
+ */
+function cleanModelOutput(raw) {
+  let out = raw.trim();
+  // Drop common leading prefixes
+  out = out.replace(
+    /^(?:corrected|fixed|answer|output|response|result)\s*[:\-]\s*/i,
+    "",
+  );
+  // Strip paired wrapping quotes
+  if (
+    (out.startsWith('"') && out.endsWith('"')) ||
+    (out.startsWith("'") && out.endsWith("'")) ||
+    (out.startsWith("“") && out.endsWith("”"))
+  ) {
+    out = out.slice(1, -1);
+  }
+  return out.trim();
+}
+
+/**
+ * Word-level LCS alignment. Returns a list of ops:
+ *   { type: 'match',  origIdx, corrIdx }
+ *   { type: 'delete', origIdx }           (word in original, missing in corrected)
+ *   { type: 'insert', corrIdx }           (word in corrected, missing in original)
+ *
+ * Matching is case/punctuation-insensitive via wordKey().
+ */
+function alignWords(origWords, corrWords) {
+  const a = origWords.map(wordKey);
+  const b = corrWords.map(wordKey);
+  const n = a.length;
+  const m = b.length;
+  // Dynamic programming table for LCS length.
+  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  // Backtrack to recover the alignment.
+  const ops = [];
+  let i = n;
+  let j = m;
+  while (i > 0 && j > 0) {
+    if (a[i - 1] === b[j - 1]) {
+      ops.push({ type: "match", origIdx: i - 1, corrIdx: j - 1 });
+      i--; j--;
+    } else if (dp[i - 1][j] >= dp[i][j - 1]) {
+      ops.push({ type: "delete", origIdx: i - 1 });
+      i--;
+    } else {
+      ops.push({ type: "insert", corrIdx: j - 1 });
+      j--;
+    }
+  }
+  while (i > 0) { ops.push({ type: "delete", origIdx: i - 1 }); i--; }
+  while (j > 0) { ops.push({ type: "insert", corrIdx: j - 1 }); j--; }
+  return ops.reverse();
+}
+
+/**
+ * Walk the aligned ops and collapse runs of (delete + insert) into
+ * substitution suggestions. The LCS backtrack can emit deletes and
+ * inserts in EITHER order within a run (that's an artefact of the
+ * tie-breaking rule), so we collect the whole contiguous non-match run
+ * and pair them up positionally instead of assuming "all deletes then
+ * all inserts".
+ *
+ * Pairing rule: sort deletes by origIdx and inserts by corrIdx, then
+ * zip. Leftover deletes become "remove this word" chips (to: null).
+ * Leftover inserts are dropped in v1 because a chip needs a position
+ * in the original text to anchor to.
+ */
+function diffWordsToSuggestions(origWords, corrWords) {
+  const ops = alignWords(origWords, corrWords);
+  const out = [];
+  let k = 0;
+  while (k < ops.length) {
+    if (ops[k].type === "match") { k++; continue; }
+
+    // Collect the whole adjacent non-match run.
+    const runStart = k;
+    while (k < ops.length && ops[k].type !== "match") k++;
+    const run = ops.slice(runStart, k);
+
+    const deletes = run
+      .filter((o) => o.type === "delete")
+      .sort((a, b) => a.origIdx - b.origIdx);
+    const inserts = run
+      .filter((o) => o.type === "insert")
+      .sort((a, b) => a.corrIdx - b.corrIdx);
+    const paired = Math.min(deletes.length, inserts.length);
+
+    // Paired delete+insert → substitution chip.
+    for (let p = 0; p < paired; p++) {
+      const ow = origWords[deletes[p].origIdx];
+      const cw = corrWords[inserts[p].corrIdx];
+      // Skip no-op subs where the only difference is capitalisation.
+      if (wordKey(ow) === wordKey(cw)) continue;
+      out.push({
+        from: ow.word,
+        to: cw.word,
+        alternatives: [],
+        index: ow.index,
+        reason: "grammar/spelling correction",
+      });
+    }
+    // Leftover deletes → delete-suggestion chip.
+    for (let p = paired; p < deletes.length; p++) {
+      const ow = origWords[deletes[p].origIdx];
+      out.push({
+        from: ow.word,
+        to: null,
+        alternatives: [],
+        index: ow.index,
+        reason: "unnecessary word",
+      });
+    }
+    // Leftover inserts are intentionally dropped.
+  }
+  // Suggestions should be in document order so chips render left→right.
+  out.sort((a, b) => a.index - b.index);
+  return out;
 }
 
 // ─── task: smart paste extraction ─────────────────────────────────────

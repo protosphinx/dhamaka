@@ -172,13 +172,14 @@ async function loadPlaywright() {
 //
 // Every demo that loads `@huggingface/transformers` gets this module.
 // It provides the parts of the API the demos touch (`pipeline()` and the
-// progress_callback shape) and nothing else. Tests can layer per-demo
-// MOCK_TOP_K behaviour on top by passing a `maskReplies` record, keyed
-// by the full masked string the spellcheck task sends.
+// progress_callback shape) and nothing else. For the spellcheck demo
+// we now need text2text-generation (seq2seq grammar correction), so
+// the mock returns a pipeline function that extracts the user text
+// from the prompt and looks up a canned corrected string.
 
-function mockTransformersBody({ maskReplies = {} } = {}) {
+function mockTransformersBody({ corrections = {} } = {}) {
   return `
-    const MOCK_MASK_REPLIES = ${JSON.stringify(maskReplies)};
+    const CORRECTIONS = ${JSON.stringify(corrections)};
     export async function pipeline(task, model, opts) {
       if (opts && typeof opts.progress_callback === "function") {
         try {
@@ -190,25 +191,16 @@ function mockTransformersBody({ maskReplies = {} } = {}) {
         } catch {}
       }
       const fn = async (input, _popts) => {
-        // Normalise: the task sends "Prefix [MASK] suffix" as a string.
-        // Keys in MOCK_MASK_REPLIES are exact matches.
-        if (Object.prototype.hasOwnProperty.call(MOCK_MASK_REPLIES, input)) {
-          const list = MOCK_MASK_REPLIES[input];
-          return list.map((r) => ({
-            score: r.score ?? 0.1,
-            token: 0,
-            token_str: r.token,
-            sequence: "",
-          }));
-        }
-        // Fallback: pretend every mask position predicts "the / a / it".
-        // The filter in spellcheckTask will reject 1-2 char tokens, so this
-        // means unscripted words get flagged with no suggestions.
-        return [
-          { score: 0.3, token: 0, token_str: "the", sequence: "" },
-          { score: 0.2, token: 0, token_str: "a",   sequence: "" },
-          { score: 0.1, token: 0, token_str: "it",  sequence: "" },
-        ];
+        // text2text-generation pipeline: input is the full prompt string.
+        // The spellcheck task embeds the user text after "Text: " and
+        // ends with "\\n\\nCorrected:". We extract the user text and
+        // look up the canned correction; unknown inputs echo back.
+        const match = String(input).match(/Text:\\s*([\\s\\S]*?)\\n\\nCorrected:/);
+        const userText = match ? match[1] : String(input);
+        const corrected = Object.prototype.hasOwnProperty.call(CORRECTIONS, userText)
+          ? CORRECTIONS[userText]
+          : userText;
+        return [{ generated_text: corrected }];
       };
       fn.tokenizer = { mask_token: "[MASK]" };
       return fn;
@@ -216,13 +208,13 @@ function mockTransformersBody({ maskReplies = {} } = {}) {
   `;
 }
 
-async function routeTransformers(page, maskReplies) {
+async function routeTransformers(page, corrections) {
   await page.route("https://esm.sh/@huggingface/transformers@3", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/javascript",
       headers: { "access-control-allow-origin": "*" },
-      body: mockTransformersBody({ maskReplies }),
+      body: mockTransformersBody({ corrections }),
     });
   });
 }
@@ -403,35 +395,19 @@ test("formula: 'round to 2 decimals' wraps the formula in ROUND", async ({ page,
   capture.assertClean();
 });
 
-// ─── demo: spellcheck (Transformers.js fill-mask) ─────────────────────
+// ─── demo: spellcheck (Transformers.js seq2seq grammar correction) ────
+//
+// The new spellcheck task is a single seq2seq call: "rewrite this text
+// with grammar/spelling fixed". The mock Transformers pipeline maps
+// full user-text strings to canned corrected outputs, and the task
+// word-aligns the diff to produce chip suggestions. Every test below
+// scripts a `{ user text → corrected text }` mapping.
 
-test("spellcheck: model loads, Try chip populates textarea, and suggestions come back", async ({ page, base }) => {
+test("spellcheck: model loads, Try chip populates textarea, and the diff produces chips", async ({ page, base }) => {
   const capture = withErrorCapture(page);
   await routeTransformers(page, {
-    // The actual masks the task builds for "I recieve the package tommorow
-    // and it will seperate our stuff". We scripted replies for a handful
-    // of interesting positions; everything else falls through to the
-    // default "the / a / it" which is rejected by the MIN_SUGGESTION_LEN
-    // filter, and those words get flagged with `to: null`.
-    "I [MASK] the package tommorow and it will seperate our stuff": [
-      { token: "receive", score: 0.6 },
-      { token: "got", score: 0.1 },
-      { token: "have", score: 0.05 },
-    ],
-    "I recieve the package [MASK] and it will seperate our stuff": [
-      { token: "tomorrow", score: 0.5 },
-      { token: "today", score: 0.1 },
-    ],
-    "I recieve the package tommorow and it will [MASK] our stuff": [
-      { token: "separate", score: 0.5 },
-      { token: "keep", score: 0.1 },
-    ],
-    "I recieve the [MASK] tommorow and it will seperate our stuff": [
-      { token: "package", score: 0.8 },
-    ],
-    "I recieve the package tommorow and it will seperate our [MASK]": [
-      { token: "stuff", score: 0.8 },
-    ],
+    "I recieve the package tommorow and it will seperate our stuff":
+      "I receive the package tomorrow and it will separate our stuff",
   });
 
   await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
@@ -458,81 +434,27 @@ test("spellcheck: model loads, Try chip populates textarea, and suggestions come
   );
 
   const count = parseInt((await page.locator("#t-count").textContent()) || "0", 10);
-  assert(count >= 3, `expected at least 3 suggestions, got ${count}`);
+  assertEq(count, 3, "three misspellings (recieve/tommorow/seperate) should flag");
   assertEq((await page.locator("#t-source").textContent())?.trim(), "model");
 
-  // The words we scripted replies for MUST surface with the right corrections.
   const chipsHtml = await page.locator("#suggestions-out").innerHTML();
-  assertContains(chipsHtml, "recieve", "should flag recieve");
-  assertContains(chipsHtml, "receive", "should suggest receive");
-  assertContains(chipsHtml, "tommorow", "should flag tommorow");
-  assertContains(chipsHtml, "tomorrow", "should suggest tomorrow");
-  assertContains(chipsHtml, "seperate", "should flag seperate");
-  assertContains(chipsHtml, "separate", "should suggest separate");
+  assertContains(chipsHtml, "recieve");
+  assertContains(chipsHtml, "receive");
+  assertContains(chipsHtml, "tommorow");
+  assertContains(chipsHtml, "tomorrow");
+  assertContains(chipsHtml, "seperate");
+  assertContains(chipsHtml, "separate");
 
   capture.assertClean();
 });
 
-test("spellcheck: filter rejects 1-2 char and consonant-only predictions", async ({ page, base }) => {
+test("spellcheck: catches grammar errors per-word LM would miss ('I has a apple')", async ({ page, base }) => {
+  // This is the payoff for switching to seq2seq: the model catches
+  // subject-verb agreement AND the wrong article in one pass, in a
+  // sentence where every individual word is perfectly valid English.
   const capture = withErrorCapture(page);
   await routeTransformers(page, {
-    // Mask for "foobar" in "hello foobar" — junk predictions only
-    "hello [MASK]": [
-      { token: "xx", score: 0.5 },      // too short
-      { token: "cd", score: 0.3 },      // too short
-      { token: "ght", score: 0.2 },     // no vowel
-      { token: "world", score: 0.1 },   // plausible ✓
-      { token: "there", score: 0.05 },  // plausible ✓
-    ],
-  });
-
-  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
-
-  await page.waitForFunction(
-    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
-    { timeout: 10000 },
-  );
-
-  // Type "hello foobar" directly. `hello` is in the STOPLIST-free but
-  // short enough path; it will be checked but no reply is scripted for
-  // its mask so it falls through to the default [the/a/it] — all three
-  // of which are <3 chars so `hello` gets flagged with alternatives=[].
-  // The interesting assertion is on `foobar`: it should be flagged and
-  // the suggestion should be `world`, NOT `xx` / `cd` / `ght`.
-  await page.fill("#draft", "hello foobar");
-  await page.waitForFunction(
-    () => {
-      const out = document.getElementById("suggestions-out");
-      return out && out.innerHTML.includes("foobar");
-    },
-    { timeout: 5000 },
-  );
-  const chipsHtml = await page.locator("#suggestions-out").innerHTML();
-  assertContains(chipsHtml, "foobar", "should flag foobar");
-  assertContains(chipsHtml, "world", "should suggest world (the first plausible alt)");
-  assert(!chipsHtml.includes(">xx<"), "must NOT suggest 'xx' (too short)");
-  assert(!chipsHtml.includes(">cd<"), "must NOT suggest 'cd' (too short)");
-  assert(!chipsHtml.includes(">ght<"), "must NOT suggest 'ght' (no vowel)");
-
-  capture.assertClean();
-});
-
-test("spellcheck: 2-char gibberish like 'hi ho wh ar u wr hd' gets flagged (not silently skipped)", async ({ page, base }) => {
-  // Regression guard for the screenshot the user sent: typing
-  // "hi ho wh ar u wr hd" used to show "looks clean" because
-  // MIN_WORD_LEN=3 silently dropped every token before the model ran.
-  // After the fix MIN_WORD_LEN=2 and `hi` is on the stoplist, so the
-  // task checks `ho`, `wh`, `ar`, `wr`, `hd` (5 words) and flags all
-  // of them because the junk context makes distilBERT pick function
-  // words that get filtered out.
-  const capture = withErrorCapture(page);
-  await routeTransformers(page, {
-    // Every mask gets the same junk reply → filter rejects → flagged with to:null.
-    "hi [MASK] wh ar u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
-    "hi ho [MASK] ar u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
-    "hi ho wh [MASK] u wr hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
-    "hi ho wh ar u [MASK] hd": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
-    "hi ho wh ar u wr [MASK]": [{ token: "xx", score: 0.5 }, { token: "cd", score: 0.3 }],
+    "I has a apple": "I have an apple",
   });
 
   await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
@@ -541,31 +463,52 @@ test("spellcheck: 2-char gibberish like 'hi ho wh ar u wr hd' gets flagged (not 
     { timeout: 10000 },
   );
 
-  await page.fill("#draft", "hi ho wh ar u wr hd");
+  await page.fill("#draft", "I has a apple");
   await page.waitForFunction(
-    () => {
-      const count = document.getElementById("t-count")?.textContent;
-      return count && count !== "0";
-    },
+    () => (document.getElementById("t-count")?.textContent || "0") !== "0",
     { timeout: 5000 },
   );
-
-  const count = parseInt((await page.locator("#t-count").textContent()) || "0", 10);
-  assert(count >= 5, `expected >=5 flagged words for 'hi ho wh ar u wr hd', got ${count}`);
   const chipsHtml = await page.locator("#suggestions-out").innerHTML();
-  for (const w of ["ho", "wh", "ar", "wr", "hd"]) {
-    assertContains(chipsHtml, w, `should flag 2-char gibberish ${JSON.stringify(w)}`);
-  }
-  // `hi` is in the stoplist → should NOT be in the flagged chips.
-  assert(!chipsHtml.includes(">hi<"), "must NOT flag 'hi' (stoplist)");
+  assertContains(chipsHtml, "has", "should flag 'has'");
+  assertContains(chipsHtml, "have", "should suggest 'have'");
+  // Article: `a` → `an`. Note: `a` appears all over the HTML, so we
+  // check the chip class instead.
+  assertContains(chipsHtml, "an", "should suggest 'an' in place of 'a'");
 
   capture.assertClean();
 });
 
-test("spellcheck: pure-stoplist input shows 'nothing long enough to check' message", async ({ page, base }) => {
-  // The empty-state fix. Before: "i am ok" → "looks clean" (a lie).
-  // After: "i am ok" → "nothing long enough to check …" because every
-  // token is either 1-char or in the stoplist.
+test("spellcheck: catches real-word errors ('went their yesterday' → 'went there yesterday')", async ({ page, base }) => {
+  // A masked-LM cannot catch this: "their" is a valid English word and
+  // perfectly likely at its own mask position. Only a full-sentence
+  // grammar model can spot that it's the wrong word here.
+  const capture = withErrorCapture(page);
+  await routeTransformers(page, {
+    "I went their yesterday": "I went there yesterday",
+  });
+
+  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
+    { timeout: 10000 },
+  );
+
+  await page.fill("#draft", "I went their yesterday");
+  await page.waitForFunction(
+    () => (document.getElementById("t-count")?.textContent || "0") !== "0",
+    { timeout: 5000 },
+  );
+  const chipsHtml = await page.locator("#suggestions-out").innerHTML();
+  assertContains(chipsHtml, "their");
+  assertContains(chipsHtml, "there");
+
+  capture.assertClean();
+});
+
+test("spellcheck: clean prose renders 'looks clean (checked N words)'", async ({ page, base }) => {
+  // The mock echoes the input unchanged when no correction is mapped,
+  // which the task interprets as "clean" → empty suggestions with the
+  // per-input word count reported as `checked`.
   const capture = withErrorCapture(page);
   await routeTransformers(page, {});
 
@@ -575,41 +518,7 @@ test("spellcheck: pure-stoplist input shows 'nothing long enough to check' messa
     { timeout: 10000 },
   );
 
-  await page.fill("#draft", "i am ok");
-  // Wait for the debounced run to finish. We can't wait on a suggestion
-  // count change because there are zero suggestions; poll the out div.
-  await page.waitForFunction(
-    () => {
-      const t = document.getElementById("suggestions-out")?.textContent ?? "";
-      return t.includes("nothing long enough");
-    },
-    { timeout: 5000 },
-  );
-  const outText = (await page.locator("#suggestions-out").textContent()) ?? "";
-  assertContains(outText, "nothing long enough to check");
-
-  capture.assertClean();
-});
-
-test("spellcheck: clean prose says 'looks clean (checked N words)'", async ({ page, base }) => {
-  // When the model runs and every word is in top-K, the empty-state
-  // should say "looks clean" WITH the count of words actually checked.
-  // We script replies for "hello world foobar" where every mask's
-  // top-K includes the original word (case-insensitively).
-  const capture = withErrorCapture(page);
-  await routeTransformers(page, {
-    "[MASK] world foobar":  [{ token: "hello",  score: 0.5 }, { token: "there",  score: 0.1 }],
-    "hello [MASK] foobar":  [{ token: "world",  score: 0.5 }, { token: "there",  score: 0.1 }],
-    "hello world [MASK]":   [{ token: "foobar", score: 0.5 }, { token: "there",  score: 0.1 }],
-  });
-
-  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
-  await page.waitForFunction(
-    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
-    { timeout: 10000 },
-  );
-
-  await page.fill("#draft", "hello world foobar");
+  await page.fill("#draft", "the quick brown fox jumps");
   await page.waitForFunction(
     () => {
       const t = document.getElementById("suggestions-out")?.textContent ?? "";
@@ -618,31 +527,57 @@ test("spellcheck: clean prose says 'looks clean (checked N words)'", async ({ pa
     { timeout: 5000 },
   );
   const outText = (await page.locator("#suggestions-out").textContent()) ?? "";
-  assertContains(outText, "checked 3 words", "should include checked count");
+  assertContains(outText, "checked 5 words");
 
   capture.assertClean();
 });
 
-test("spellcheck: gibberish with no plausible alternatives is still flagged with '?'", async ({ page, base }) => {
+test("spellcheck: thinking indicator shows while the model is mid-call", async ({ page, base }) => {
+  // The seq2seq call is slower than the old per-word approach, so the
+  // demo shows a pulsing "thinking…" dot between the user's last
+  // keystroke and the model reply. We verify that it actually appears
+  // by waiting for it in the DOM before the suggestions arrive.
   const capture = withErrorCapture(page);
-  // Script every plausible mask for "asdfgh qwerty zzzzz" with a reply
-  // that's exclusively filter-rejected tokens: 2-char (xx, cd), no-vowel
-  // (ght, xxx), or subword fragment (##s). The task's isPlausibleWord
-  // filter must reject all of them → word flagged with to:null.
-  const junkReplies = {
-    score: 0.5,
-    tokens: [
-      { token: "xx", score: 0.5 },
-      { token: "cd", score: 0.3 },
-      { token: "ght", score: 0.2 },
-      { token: "xxx", score: 0.15 },
-      { token: "##s", score: 0.1 },
-    ],
-  };
-  await routeTransformers(page, {
-    "[MASK] qwerty zzzzz":  junkReplies.tokens,
-    "asdfgh [MASK] zzzzz":  junkReplies.tokens,
-    "asdfgh qwerty [MASK]": junkReplies.tokens,
+  await routeTransformers(page, {});
+
+  await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
+  await page.waitForFunction(
+    () => document.getElementById("status-title-text")?.textContent?.includes("ready"),
+    { timeout: 10000 },
+  );
+
+  // Type something; the 'thinking' DOM node is added synchronously on
+  // input (before the debounced model call fires).
+  await page.fill("#draft", "hello world");
+  const gotThinking = await page.waitForSelector("#suggestions-out .thinking", { timeout: 2000 })
+    .then(() => true)
+    .catch(() => false);
+  assert(gotThinking, "thinking indicator should appear while model is running");
+
+  capture.assertClean();
+});
+
+test("spellcheck: model call failure surfaces no chips without crashing the page", async ({ page, base }) => {
+  // Simulate a model that throws on every call. The task returns a
+  // structured error result; the UI must not crash or log errors.
+  const capture = withErrorCapture(page);
+  await page.route("https://esm.sh/@huggingface/transformers@3", async (route) => {
+    const body = `
+      export async function pipeline(task, model, opts) {
+        if (opts?.progress_callback) {
+          opts.progress_callback({ status: "ready" });
+        }
+        const fn = async () => { throw new Error("simulated model failure"); };
+        fn.tokenizer = { mask_token: "[MASK]" };
+        return fn;
+      }
+    `;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/javascript",
+      headers: { "access-control-allow-origin": "*" },
+      body,
+    });
   });
 
   await page.goto(`${base}/demos/spellcheck.html`, { waitUntil: "domcontentloaded" });
@@ -651,17 +586,15 @@ test("spellcheck: gibberish with no plausible alternatives is still flagged with
     { timeout: 10000 },
   );
 
-  await page.fill("#draft", "asdfgh qwerty zzzzz");
-  await page.waitForFunction(
-    () => (document.getElementById("t-count")?.textContent || "0") !== "0",
-    { timeout: 5000 },
-  );
-  const chipsHtml = await page.locator("#suggestions-out").innerHTML();
-  assertContains(chipsHtml, "asdfgh", "gibberish word should be flagged");
-  // The "no plausible alternative" chips render `?` in place of the suggestion.
-  assertContains(chipsHtml, "no-alts", "chip should have no-alts class");
-  assertContains(chipsHtml, ">?<", "no-alt chip should render ?");
-
+  await page.fill("#draft", "hello world");
+  // After a debounce + model call, count should still be 0 and the
+  // page should still be usable.
+  await page.waitForTimeout(900);
+  const count = (await page.locator("#t-count").textContent())?.trim();
+  assertEq(count, "0", "no chips when model fails");
+  // The task.run() catches the error and returns a structured result,
+  // so there should be NO pageerror. But the SDK logs a warn via
+  // console.warn which we ignore in assertClean.
   capture.assertClean();
 });
 

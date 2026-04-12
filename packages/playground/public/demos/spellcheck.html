@@ -96,33 +96,57 @@
         color: var(--text-muted);
         font-style: italic;
       }
+      .thinking {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        color: var(--text-dim);
+        font-style: italic;
+      }
+      .thinking::before {
+        content: "";
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--accent-2);
+        box-shadow: 0 0 8px currentColor;
+        animation: thinking-pulse 1.1s ease-in-out infinite;
+      }
+      @keyframes thinking-pulse {
+        0%, 100% { opacity: 0.25; transform: scale(0.8); }
+        50%      { opacity: 1;    transform: scale(1.15); }
+      }
     </style>
   </head>
   <body>
     <main class="demo-page">
       <a class="back-link" href="../">← all demos</a>
-      <h1>on-device spellcheck</h1>
+      <h1>on-device spelling + grammar</h1>
       <p class="lead">
         Type prose into the textarea below. Every time you stop typing for
-        a moment, Dhamaka hands each word to an on-device masked language
-        model running <b>inside this browser tab</b> and asks "what should
-        go here?". Words the model considers unlikely in context are flagged.
-        No rules, no hardcoded dictionary, no server — a real LLM reading
-        your prose word by word.
+        a moment, Dhamaka hands the <b>whole sentence</b> to an on-device
+        instruction-tuned language model running <b>inside this browser
+        tab</b> and asks it to rewrite the text with grammar and spelling
+        mistakes fixed. The model's rewrite is then diffed against your
+        original text word-by-word, and each change becomes a clickable
+        chip. No rules, no hardcoded dictionary, no server — a real LLM
+        reading and rewriting your prose.
       </p>
 
       <p class="lead" style="margin-top: -0.5rem;">
-        <strong>Try a real sentence with typos:</strong>
+        <strong>Try some real sentences:</strong>
         <button class="try-chip" data-try="I recieve the package tommorow and it will seperate our stuff">I recieve the package tommorow…</button>
-        <button class="try-chip" data-try="The goverment has definately been occuring alot this year">The goverment definately alot…</button>
-        <button class="try-chip" data-try="She went untill the store to meet her freind yestarday">untill freind yestarday…</button>
+        <button class="try-chip" data-try="I has a apple and he go to school everyday">I has a apple · grammar</button>
+        <button class="try-chip" data-try="She went their yesterday to meet her freind at the libary">their · freind · libary</button>
+        <button class="try-chip" data-try="The goverment has definately been occuring alot this year">goverment definately alot…</button>
         <br/>
         <small style="color: var(--text-muted);">
-          Masked-LM spellcheck works best on <em>real prose</em> with
-          real misspellings. Pure gibberish like <code>asdsd qwdqd</code>
-          gets flagged correctly, but the suggestions for it will be
-          nonsense too — there's no meaningful context for the model to
-          predict from. That's a property of the algorithm, not a bug.
+          Because the model sees the <em>whole sentence</em> it can catch
+          things a per-word spellchecker never could — subject-verb
+          agreement ("I <em>has</em>" → "I have"), wrong articles ("a
+          apple" → "an apple"), and real-word errors ("went <em>their</em>"
+          → "went there") all get flagged in the same pass as plain
+          misspellings.
         </small>
       </p>
 
@@ -132,11 +156,11 @@
           <span id="status-title-text">warming up the model…</span>
         </div>
         <div id="status-msg">
-          First visit on this device downloads a ~65 MB masked language
-          model (<code>Xenova/distilbert-base-uncased</code>). It's cached
-          in your browser's IndexedDB forever after — every future visit
-          is instant and works offline. 10–30 seconds on typical broadband,
-          once.
+          First visit on this device downloads a ~95 MB instruction-tuned
+          language model (<code>Xenova/LaMini-Flan-T5-248M</code>). It's
+          cached in your browser's IndexedDB forever after — every future
+          visit is instant and works offline. 15–40 seconds on typical
+          broadband, once.
         </div>
         <div class="progress-bar" id="progress-bar" style="--pct: 0%"></div>
         <div class="file" id="progress-file">—</div>
@@ -166,38 +190,42 @@
       <section class="notes">
         <h3>what's happening under the hood</h3>
         <pre class="diagram">
-  oninput (debounced 600ms) → SmartText → runTask("spellcheck", { eager: true })
+  oninput (debounced 400ms) → SmartText → runTask("spellcheck")
        │
        ▼
   spellcheckTask.slow(text, context, engine)
        │
-       ├─ tokenize input into words
-       ├─ for each word:
-       │     ├─ build "…prefix [MASK] suffix…"
-       │     ├─ engine.fillMask(masked, top_k=20)  ← distilBERT via
-       │     │                                        Transformers.js,
-       │     │                                        runs in WASM
-       │     └─ if original word not in top-20 → flag as misspelling,
-       │        top predictions become corrections
+       ├─ build prompt: "Fix the grammar and spelling … Text: {INPUT}"
+       ├─ engine.complete(prompt, { maxTokens: 256, temperature: 0 })
+       │    ↑ LaMini-Flan-T5-248M via Transformers.js (seq2seq, WASM)
        │
-       └─ return structured { from, to, alternatives, index } list
+       ├─ clean the model reply (strip "Corrected:", drop quotes)
+       │
+       ├─ tokenize ORIGINAL + CORRECTED into word arrays
+       ├─ LCS-align them at the word level
+       └─ collapse each (delete+insert) pair into a { from, to, index }
+          suggestion chip, skipping pure case/punctuation no-ops
 
   Nothing leaves the tab. No server, no API key, no rate limit.
-  First visit downloads ~65 MB once, cached in IndexedDB forever.
-  Per-call latency: ~100–300 ms per masked word on a laptop.
+  First visit downloads ~95 MB once, cached in IndexedDB forever.
+  Per-call latency: ~250–800 ms for a short sentence on a laptop.
         </pre>
         <p>
-          The <b>formula demo</b> still keeps its pattern rewrites (discounts,
-          taxes, rounding, etc.) because those have objectively-correct
-          structural answers and rules are a legitimate performance path there.
-          Spellcheck is the opposite: probabilistic, context-dependent, long-
-          tail. Rules there would contradict the thesis, so they're gone.
+          This is different from a traditional spellchecker in the one
+          way that matters: the model sees the <b>whole sentence</b> in
+          a single forward pass. A per-word masked-LM can only ever ask
+          "is this specific word surprising at this specific position"
+          — which misses every grammar error and every real-word error.
+          A seq2seq model is trained to rewrite, so it catches both kinds
+          of mistake in the same call. No rules, no special cases.
         </p>
         <p>
-          If your browser supports Chrome's <code>window.ai</code> Prompt API
-          (Gemini Nano), Dhamaka will prefer that over Transformers.js — it's
-          free, pre-downloaded, and GPU-accelerated. On every other browser
-          you get Transformers.js. Same SDK, same task, same surface.
+          The model Dhamaka ships here is
+          <code>Xenova/LaMini-Flan-T5-248M</code>: 248 M parameters,
+          instruction-tuned on top of Flan-T5, under 100 MB quantised.
+          You can swap it for any <code>text2text-generation</code> model
+          Transformers.js supports — bigger models correct better but
+          download slower. Same SDK, same task, same surface.
         </p>
       </section>
     </main>
@@ -216,16 +244,17 @@
       const tSource = document.getElementById("t-source");
       const tMs = document.getElementById("t-ms");
 
-      // ─── Configure the reflex service to use Transformers.js + distilBERT
-      // fill-mask is the correct task for a masked-LM spellchecker: for each
-      // word in the input, we mask it out and ask distilBERT what the most
-      // likely token is at that position. If the original word isn't in the
-      // top-K predictions, it's flagged. This is fast (one forward pass per
-      // word, ~100-300 ms on distilBERT in WASM) and purpose-built.
+      // ─── Configure the reflex service to use Transformers.js + a
+      // seq2seq grammar-correction model. text2text-generation with
+      // LaMini-Flan-T5-248M is the right shape: the task feeds the
+      // whole sentence and the model rewrites it, catching both spelling
+      // and grammar in one forward pass. (A per-word masked-LM CANNOT
+      // catch grammar errors or real-word errors like "went their" →
+      // "went there", which is why we don't use one anymore.)
       reflex.configure({
         backend: "transformers",
-        task: "fill-mask",
-        model: "Xenova/distilbert-base-uncased",
+        task: "text2text-generation",
+        model: "Xenova/LaMini-Flan-T5-248M",
         onProgress: (ev) => {
           // Transformers.js progress events: status ∈ { initiate, download, progress, done, ready }
           if (!ev) return;
@@ -252,34 +281,39 @@
           statusCard.classList.add("ready");
           statusTitle.textContent = `ready · model loaded in ${(loadMs / 1000).toFixed(1)}s`;
           statusMsg.innerHTML =
-            `distilBERT is live in this tab and fully on-device. Type anything ` +
-            `in the textarea — corrections come back in ~100–300 ms per masked word. ` +
-            `The engine masks each word in turn and asks the model what should ` +
-            `go there; words not in the top-20 predictions are flagged.`;
+            `LaMini-Flan-T5-248M is live in this tab and fully on-device. ` +
+            `Type anything in the textarea — each debounced input sends the ` +
+            `whole sentence through the model for a rewrite, then Dhamaka ` +
+            `word-aligns the diff to show chip suggestions. Expect ~250–800 ms ` +
+            `per call on a laptop.`;
           progressFile.textContent = "cached in IndexedDB · offline-safe";
           draft.disabled = false;
           draft.placeholder = "start typing…";
           draft.focus();
 
-          // Hook SmartText up to the spellcheck task in eager mode so every
-          // debounced input event fires a model call (no rules to short-
-          // circuit anything).
+          // Hook SmartText up to the spellcheck task. Each debounced
+          // input event sends the whole sentence through the model for
+          // a rewrite. Since seq2seq calls can take several hundred ms,
+          // we show a "thinking…" indicator in the suggestions area as
+          // soon as the user types, and clear it when the result lands.
+          draft.addEventListener("input", () => {
+            if (draft.value.trim()) {
+              out.innerHTML = '<span class="thinking">thinking…</span>';
+            }
+          });
+
           const smart = new SmartText(draft, {
             debounceMs: 400,
             onSuggestions: (suggestions, result) => {
               tCount.textContent = String(suggestions.length);
               tSource.textContent = suggestions.length ? "model" : "—";
               if (!suggestions.length) {
-                // Distinguish "we ran the model and everything came back
-                // clean" from "every word was too short or in the
-                // stoplist, so we couldn't check anything at all".
-                // Before this fix, typing "hi ho wh ar u" showed "looks
-                // clean" which was a lie.
+                // Three distinct empty states so the user can tell
+                // "ran and clean" from "nothing to check" from "empty".
                 if (!draft.value.trim()) {
                   out.textContent = "no issues yet";
                 } else if ((result?.checked ?? 0) === 0) {
-                  out.textContent =
-                    "nothing long enough to check — type words of 2+ letters that aren't articles/pronouns";
+                  out.textContent = "nothing long enough to check";
                 } else {
                   out.textContent = `looks clean (checked ${result.checked} word${result.checked === 1 ? "" : "s"})`;
                 }

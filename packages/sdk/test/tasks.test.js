@@ -60,29 +60,36 @@ test("city-to-state: nonsense input returns null from the fast path", () => {
   assert.equal(r, null);
 });
 
-// ─── task: spellcheck (model-only, masked-LM per-word scoring) ───────
+// ─── task: spellcheck (seq2seq grammar correction) ───────────────────
 //
-// The spellcheck task is backed by a masked language model (distilBERT
-// in the shipping config). For each word in the input, we mask it and
-// ask the model what should go there; if the original word isn't in
-// the top-K predictions, we flag it and offer the top predictions as
-// corrections. These tests verify the *contract* — no hardcoded
-// semantic assertions that only a real model can deliver.
+// The spellcheck task is backed by a seq2seq grammar correction model
+// (Flan-T5-class in the shipping config). It feeds the whole input to
+// the model, reads back a corrected version, and word-aligns the two
+// to produce chip-level suggestions. These tests verify the contract —
+// they use a mock engine whose complete() method returns whatever
+// "corrected" text the test chose, so no real LLM is needed.
 
 /**
- * Tiny mock engine that satisfies the `fillMask(inputWithMask, topK)`
- * interface the spellcheck task expects. Given a dictionary of
- * original→top-K mappings the caller wants to simulate, it returns the
- * matching top-K when the masked input matches. Unknown masked inputs
- * return an empty array.
+ * Tiny mock engine that satisfies the `complete(prompt, options)`
+ * interface the grammar task expects. Given a map of
+ * originalInput → correctedOutput, it extracts the input from the
+ * prompt (the prompt template embeds the raw input verbatim after
+ * `Text:`) and returns the corresponding canned correction. Unknown
+ * inputs echo back the input unchanged, which the task interprets as
+ * "looks clean".
  */
-function makeMaskEngine(mapping) {
+function makeGrammarEngine(corrections) {
   return {
-    maskToken: "[MASK]",
-    async fillMask(maskedInput, _topK) {
-      // `mapping` is keyed by the WHOLE masked input for exact-match
-      // simulation, so tests can pin specific prompts deterministically.
-      return mapping[maskedInput] ?? [];
+    async complete(prompt, _options) {
+      // The task's PROMPT_TEMPLATE puts the user text after "Text: "
+      // and ends with "\n\nCorrected:".
+      const match = prompt.match(/Text:\s*([\s\S]*?)\n\nCorrected:/);
+      const input = match ? match[1] : "";
+      if (Object.prototype.hasOwnProperty.call(corrections, input)) {
+        return corrections[input];
+      }
+      // Default: echo the input unchanged (no corrections).
+      return input;
     },
   };
 }
@@ -96,10 +103,9 @@ test("spellcheck: fast() always returns null (model-only task)", () => {
 test("spellcheck: slow() short-circuits empty input without calling the engine", async () => {
   let called = false;
   const engine = {
-    maskToken: "[MASK]",
-    async fillMask() {
+    async complete() {
       called = true;
-      return [];
+      return "";
     },
   };
   const r = await spellcheckTask.slow("", {}, engine);
@@ -109,185 +115,115 @@ test("spellcheck: slow() short-circuits empty input without calling the engine",
   assert.equal(r.checked, 0);
 });
 
-test("spellcheck: slow() reports checked=0 when every word is too short or in the stoplist", async () => {
-  // Regression: "hi ho wh ar u wr hd" → `hi` stoplist, `u` too short,
-  // and the rest are 2-char non-words. Before the MIN_WORD_LEN=2 fix
-  // this text was silently skipped entirely and the UI lied by saying
-  // "looks clean". After the fix, the 2-char non-words get checked.
-  const engine = {
-    maskToken: "[MASK]",
-    async fillMask() { return []; },
-  };
-  // Pure stoplist: `i am ok` → all three skipped, checked should be 0.
-  const r = await spellcheckTask.slow("i am ok", {}, engine);
-  assert.equal(r.checked, 0);
-  assert.ok(r.skipped > 0);
-});
-
-test("spellcheck: slow() checks 2-char non-words now that MIN_WORD_LEN=2", async () => {
-  // Before MIN_WORD_LEN was 3 and `wh` / `ar` / `wr` / `hd` were all
-  // silently dropped. After the fix each of them is a candidate and the
-  // mask call actually fires.
-  const masksCalled = [];
-  const engine = {
-    maskToken: "[MASK]",
-    async fillMask(input) {
-      masksCalled.push(input);
-      return [{ token: "where", score: 0.5 }];
-    },
-  };
-  const r = await spellcheckTask.slow("wh ar wr hd", {}, engine);
-  // Every 2-char token should have triggered a mask call.
-  assert.equal(masksCalled.length, 4);
-  assert.equal(r.checked, 4);
-});
-
-test("spellcheck: slow() refuses engines that don't expose fillMask()", async () => {
-  const engine = { async complete() { return "text"; } }; // text-gen only
+test("spellcheck: slow() refuses engines that don't expose complete()", async () => {
+  const engine = { async fillMask() { return []; } }; // fill-mask only
   const r = await spellcheckTask.slow("hello world", {}, engine);
   assert.equal(r.suggestions.length, 0);
   assert.equal(r.confidence, 0);
-  assert.ok(r.error && r.error.includes("fill-mask"));
+  assert.ok(r.error && /text-generation/i.test(r.error));
 });
 
-test("spellcheck: slow() flags a word whose top-K predictions don't include it", async () => {
-  // "I recieve the package" → mask "recieve"
-  const engine = makeMaskEngine({
-    "I [MASK] the package": [
-      { token: "receive", score: 0.6 },
-      { token: "got", score: 0.1 },
-      { token: "open", score: 0.05 },
-    ],
-    "I recieve the [MASK]": [
-      { token: "package", score: 0.8 },
-      { token: "box", score: 0.1 },
-    ],
+test("spellcheck: slow() flags a misspelling detected by the grammar model", async () => {
+  // Model rewrites "I recieve the package" → "I receive the package".
+  const engine = makeGrammarEngine({
+    "I recieve the package": "I receive the package",
   });
   const r = await spellcheckTask.slow("I recieve the package", {}, engine);
-  // "recieve" is not in its mask's top-K → flagged
-  // "package" IS in its mask's top-K → not flagged
+  assert.equal(r.source, "model");
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].from, "recieve");
   assert.equal(r.suggestions[0].to, "receive");
-  assert.equal(r.source, "model");
+  // The chip index should point to where "recieve" lives in the input.
+  assert.equal(r.suggestions[0].index, "I ".length);
 });
 
-test("spellcheck: slow() skips words in the stoplist and short words", async () => {
-  // "I" (short), "do", "not", "have" (stoplist) → no mask calls.
-  // Only "package" should trigger a mask call.
-  let maskCalls = 0;
-  const engine = {
-    maskToken: "[MASK]",
-    async fillMask(input, _topK) {
-      maskCalls++;
-      if (input === "I do not have [MASK]") {
-        return [{ token: "package", score: 0.9 }];
-      }
-      return [];
-    },
-  };
-  const r = await spellcheckTask.slow("I do not have package", {}, engine);
-  assert.equal(maskCalls, 1);
+test("spellcheck: slow() catches grammar errors that per-word LM could not", async () => {
+  // Classic grammar error: wrong article + wrong verb agreement.
+  // A masked-LM spellchecker would miss both; a seq2seq grammar model
+  // handles the whole sentence and fixes both in one pass.
+  const engine = makeGrammarEngine({
+    "I has a apple": "I have an apple",
+  });
+  const r = await spellcheckTask.slow("I has a apple", {}, engine);
+  // Two substitutions: has → have, a → an.
+  const pairs = r.suggestions.map((s) => [s.from, s.to]);
+  assert.deepEqual(pairs, [["has", "have"], ["a", "an"]]);
+});
+
+test("spellcheck: slow() catches real-word errors (their vs there)", async () => {
+  // "their" is a perfectly valid word — a masked-LM would likely
+  // predict it in its own slot. Only a full-sentence grammar model
+  // can spot that "their" is wrong here.
+  const engine = makeGrammarEngine({
+    "I went their yesterday": "I went there yesterday",
+  });
+  const r = await spellcheckTask.slow("I went their yesterday", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "their");
+  assert.equal(r.suggestions[0].to, "there");
+});
+
+test("spellcheck: slow() reports 'looks clean' when the model echoes the input", async () => {
+  const engine = makeGrammarEngine({
+    "the quick brown fox jumps over the lazy dog": "the quick brown fox jumps over the lazy dog",
+  });
+  const r = await spellcheckTask.slow("the quick brown fox jumps over the lazy dog", {}, engine);
+  assert.equal(r.suggestions.length, 0);
+  assert.equal(r.source, "model");
+  assert.ok(r.confidence >= 0.9);
+  assert.equal(r.checked, 9);
+});
+
+test("spellcheck: slow() ignores case/punctuation-only differences", async () => {
+  // Model adds a final period and capitalises the first letter — these
+  // are stylistic, not errors, and shouldn't produce chips.
+  const engine = makeGrammarEngine({
+    "hello world": "Hello world.",
+  });
+  const r = await spellcheckTask.slow("hello world", {}, engine);
   assert.equal(r.suggestions.length, 0);
 });
 
-test("spellcheck: slow() strips WordPiece ## prefix from suggestions", async () => {
-  // distilBERT sometimes returns subword tokens for the top predictions.
-  // The task should strip the leading `##` and present clean words.
-  const engine = makeMaskEngine({
-    "hello [MASK]": [
-      { token: "world", score: 0.5 },
-      { token: "##ing", score: 0.2 },
-      { token: "there", score: 0.1 },
-    ],
-  });
-  const r = await spellcheckTask.slow("hello foobar", {}, engine);
-  assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "foobar");
-  assert.equal(r.suggestions[0].to, "world");
-  // `##ing` should have been stripped — "ing" is 3 chars with a vowel
-  // so it passes the plausible-word filter. The third alternative is "there".
-  assert.ok(r.suggestions[0].alternatives.includes("there"));
-});
-
-test("spellcheck: slow() rejects 2-char suggestions (xx, cd, da, sd)", async () => {
-  // distilBERT often returns very short WordPiece tokens for masked
-  // positions in gibberish context. These are not plausible whole-word
-  // corrections and the filter should reject them.
-  const engine = makeMaskEngine({
-    "gibbberish [MASK]": [
-      { token: "xx", score: 0.5 },
-      { token: "cd", score: 0.3 },
-      { token: "da", score: 0.2 },
-      { token: "hello", score: 0.1 },
-      { token: "world", score: 0.05 },
-    ],
-  });
-  const r = await spellcheckTask.slow("gibbberish asdfgh", {}, engine);
-  assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "asdfgh");
-  // "xx" / "cd" / "da" should all be filtered out. First plausible
-  // suggestion is "hello".
-  assert.equal(r.suggestions[0].to, "hello");
-  assert.ok(r.suggestions[0].alternatives.includes("world"));
-  assert.ok(!r.suggestions[0].alternatives.includes("xx"));
-  assert.ok(!r.suggestions[0].alternatives.includes("cd"));
-});
-
-test("spellcheck: slow() rejects consonant-only tokens (xx, cd, sd, ght)", async () => {
-  // A valid English word almost always contains a vowel. Tokens like
-  // "xx", "cd", "sd" are in distilBERT's vocab but aren't plausible
-  // corrections. The filter requires at least one vowel.
-  const engine = makeMaskEngine({
-    "nonsense [MASK]": [
-      { token: "xxx", score: 0.5 },  // 3 chars but no vowel → rejected
-      { token: "ght", score: 0.3 },  // 3 chars but no vowel → rejected
-      { token: "apple", score: 0.2 }, // valid → accepted
-    ],
-  });
-  const r = await spellcheckTask.slow("nonsense zzzzz", {}, engine);
-  assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].to, "apple");
-});
-
-test("spellcheck: slow() still flags words with no plausible alternatives", async () => {
-  // When ALL top-K predictions are junk (e.g. all 2-char or
-  // consonant-only fragments), the word should still be flagged but
-  // with `to: null` and an empty alternatives array. The UI renders
-  // these chips as "word → ?" so users see the word was flagged but
-  // the model had nothing useful to suggest.
-  const engine = makeMaskEngine({
-    "totally [MASK]": [
-      { token: "xx", score: 0.3 },
-      { token: "cd", score: 0.2 },
-      { token: "##s", score: 0.1 },
-    ],
-  });
-  const r = await spellcheckTask.slow("totally qwertyuiop", {}, engine);
-  assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "qwertyuiop");
-  assert.equal(r.suggestions[0].to, null);
-  assert.deepEqual(r.suggestions[0].alternatives, []);
-  assert.ok(r.suggestions[0].reason.includes("plausible"));
-});
-
-test("spellcheck: slow() tolerates a mask call failure without killing the run", async () => {
-  // One of the mask calls throws. The run should continue with the others.
-  let calls = 0;
+test("spellcheck: slow() strips model prefixes and wrapping quotes from the reply", async () => {
+  // Flan-T5 models sometimes emit "Corrected: …" or wrap in quotes.
+  // The cleanup step should strip those so the diff is clean.
   const engine = {
-    maskToken: "[MASK]",
-    async fillMask(input, _topK) {
-      calls++;
-      if (calls === 1) throw new Error("boom");
-      if (input === "qwerty [MASK]") return [{ token: "keyboard", score: 0.9 }];
-      return [];
+    async complete(_prompt) {
+      return 'Corrected: "I receive the package"';
     },
   };
-  const r = await spellcheckTask.slow("qwerty layout", {}, engine);
-  // The first mask call threw; the second ran.
-  assert.ok(calls >= 2);
-  // Run didn't crash; got a structured result.
-  assert.equal(r.source, "model");
+  const r = await spellcheckTask.slow("I recieve the package", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].to, "receive");
+});
+
+test("spellcheck: slow() surfaces a structured error when complete() throws", async () => {
+  const engine = {
+    async complete() { throw new Error("boom"); },
+  };
+  const r = await spellcheckTask.slow("hello world", {}, engine);
+  assert.equal(r.suggestions.length, 0);
+  assert.ok(r.error && r.error.includes("boom"));
+});
+
+test("spellcheck: slow() handles word deletions (from→null chips)", async () => {
+  // Model removes the redundant duplicate "very".
+  const engine = makeGrammarEngine({
+    "it is very very fast": "it is very fast",
+  });
+  const r = await spellcheckTask.slow("it is very very fast", {}, engine);
+  // Exactly one delete suggestion for the redundant "very".
+  const deletes = r.suggestions.filter((s) => s.to === null);
+  assert.equal(deletes.length, 1);
+  assert.equal(deletes[0].from, "very");
+});
+
+test("spellcheck: slow() reports checked = number of words in input", async () => {
+  const engine = makeGrammarEngine({
+    "one two three four five": "one two three four five",
+  });
+  const r = await spellcheckTask.slow("one two three four five", {}, engine);
+  assert.equal(r.checked, 5);
 });
 
 // ─── task: paste-extract ─────────────────────────────────────────────
