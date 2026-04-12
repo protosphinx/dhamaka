@@ -96,12 +96,11 @@
           <span id="status-title-text">warming up the model…</span>
         </div>
         <div id="status-msg">
-          First visit on this device downloads a ~250 MB language model
-          (<code>Xenova/LaMini-Flan-T5-248M</code> — a FLAN-tuned 248M-parameter
-          instruction-following model). It's cached in your browser's
-          IndexedDB forever after — every future visit is instant and works
-          offline. Grab a coffee; a model this size takes 30–90 seconds on
-          typical broadband and it only happens once.
+          First visit on this device downloads a ~65 MB masked language
+          model (<code>Xenova/distilbert-base-uncased</code>). It's cached
+          in your browser's IndexedDB forever after — every future visit
+          is instant and works offline. 10–30 seconds on typical broadband,
+          once.
         </div>
         <div class="progress-bar" id="progress-bar" style="--pct: 0%"></div>
         <div class="file" id="progress-file">—</div>
@@ -136,15 +135,20 @@
        ▼
   spellcheckTask.slow(text, context, engine)
        │
-       ├─ prompt: "You are a careful proofreader…"
-       ├─ engine.complete(prompt)    ← @huggingface/transformers
-       │                                (LaMini-Flan-T5-248M)
-       │                                runs in WASM, on this device
+       ├─ tokenize input into words
+       ├─ for each word:
+       │     ├─ build "…prefix [MASK] suffix…"
+       │     ├─ engine.fillMask(masked, top_k=20)  ← distilBERT via
+       │     │                                        Transformers.js,
+       │     │                                        runs in WASM
+       │     └─ if original word not in top-20 → flag as misspelling,
+       │        top predictions become corrections
        │
-       └─ parse JSON array of {from, to, reason}
+       └─ return structured { from, to, alternatives, index } list
 
   Nothing leaves the tab. No server, no API key, no rate limit.
-  First visit downloads ~250 MB once, cached in IndexedDB forever.
+  First visit downloads ~65 MB once, cached in IndexedDB forever.
+  Per-call latency: ~100–300 ms per masked word on a laptop.
         </pre>
         <p>
           The <b>formula demo</b> still keeps its pattern rewrites (discounts,
@@ -176,11 +180,16 @@
       const tSource = document.getElementById("t-source");
       const tMs = document.getElementById("t-ms");
 
-      // ─── Configure the reflex service to use Transformers.js + LaMini-Flan-T5
+      // ─── Configure the reflex service to use Transformers.js + distilBERT
+      // fill-mask is the correct task for a masked-LM spellchecker: for each
+      // word in the input, we mask it out and ask distilBERT what the most
+      // likely token is at that position. If the original word isn't in the
+      // top-K predictions, it's flagged. This is fast (one forward pass per
+      // word, ~100-300 ms on distilBERT in WASM) and purpose-built.
       reflex.configure({
         backend: "transformers",
-        task: "text2text-generation",
-        model: "Xenova/LaMini-Flan-T5-248M",
+        task: "fill-mask",
+        model: "Xenova/distilbert-base-uncased",
         onProgress: (ev) => {
           // Transformers.js progress events: status ∈ { initiate, download, progress, done, ready }
           if (!ev) return;
@@ -207,8 +216,10 @@
           statusCard.classList.add("ready");
           statusTitle.textContent = `ready · model loaded in ${(loadMs / 1000).toFixed(1)}s`;
           statusMsg.innerHTML =
-            `The LaMini-Flan-T5-248M model is live in this tab and fully on-device. ` +
-            `Type anything in the textarea — corrections come back in under a second per call.`;
+            `distilBERT is live in this tab and fully on-device. Type anything ` +
+            `in the textarea — corrections come back in ~100–300 ms per masked word. ` +
+            `The engine masks each word in turn and asks the model what should ` +
+            `go there; words not in the top-20 predictions are flagged.`;
           progressFile.textContent = "cached in IndexedDB · offline-safe";
           draft.disabled = false;
           draft.placeholder = "start typing…";
@@ -218,7 +229,7 @@
           // debounced input event fires a model call (no rules to short-
           // circuit anything).
           const smart = new SmartText(draft, {
-            debounceMs: 600,
+            debounceMs: 400,
             onSuggestions: (suggestions) => {
               tCount.textContent = String(suggestions.length);
               tSource.textContent = suggestions.length ? "model" : "—";

@@ -88,6 +88,21 @@ async function main() {
   //    be correct — but we sanity-check and rewrite absolute `/sdk/…`
   //    and `/runtime/…` to relative paths that survive being served from
   //    a subdirectory like protosphinx.github.io/dhamaka/.
+  //
+  //    We also append a cache-busting ?v=<short commit SHA> query string
+  //    to every /sdk/ and /runtime/ URL. GitHub Pages serves static files
+  //    with Cache-Control: max-age=600, which means the browser will
+  //    happily pair brand-new HTML with 10-minute-stale JS after every
+  //    deploy — exactly the failure mode we hit on the previous commit.
+  //    A per-deploy query string forces the browser to treat each build
+  //    as a distinct resource, so cache can never serve last-commit's
+  //    factory.js against this-commit's spellcheck.html.
+  const fullSha =
+    process.env.GITHUB_SHA ||
+    (await readGitHeadSha()) ||
+    String(Date.now());
+  const shortSha = fullSha.slice(0, 7);
+
   const htmlFiles = await collect(SITE, ".html");
   for (const file of htmlFiles) {
     const depth = relDepth(file, SITE);
@@ -96,19 +111,27 @@ async function main() {
     const before = content;
 
     // Rewrite absolute-path imports in the importmap to subdir-safe relative
-    content = content.replace(/"\/sdk\/([^"]+)"/g, `"${prefix}sdk/$1"`);
-    content = content.replace(/"\/runtime\/([^"]+)"/g, `"${prefix}runtime/$1"`);
+    // paths + a cache-busting query string.
+    content = content.replace(
+      /"\/sdk\/([^"]+)"/g,
+      `"${prefix}sdk/$1?v=${shortSha}"`,
+    );
+    content = content.replace(
+      /"\/runtime\/([^"]+)"/g,
+      `"${prefix}runtime/$1?v=${shortSha}"`,
+    );
 
     if (content !== before) {
       await writeFile(file, content);
     }
   }
-  log(`rewrote importmaps in ${htmlFiles.length} html files`);
+  log(`rewrote importmaps in ${htmlFiles.length} html files (cache-bust v=${shortSha})`);
 
   // 9. Write a tiny deploy-marker so we can verify what landed where
   const marker = {
     builtAt: new Date().toISOString(),
-    commit: process.env.GITHUB_SHA || "local",
+    commit: fullSha,
+    shortCommit: shortSha,
     runId: process.env.GITHUB_RUN_ID || null,
   };
   await writeFile(join(SITE, "build.json"), JSON.stringify(marker, null, 2));
@@ -131,6 +154,37 @@ function relPath(p) {
 function relDepth(file, root) {
   const rel = file.slice(root.length + 1);
   return rel.split("/").length - 1;
+}
+
+/**
+ * Read the current HEAD commit SHA from the repo's .git dir without
+ * shelling out to `git`. Handles both packed and loose refs.
+ */
+async function readGitHeadSha() {
+  try {
+    const gitDir = join(ROOT, ".git");
+    const headPath = join(gitDir, "HEAD");
+    const head = (await readFile(headPath, "utf8")).trim();
+    if (head.startsWith("ref: ")) {
+      const ref = head.slice(5).trim();
+      // Try loose ref first (.git/refs/heads/main)
+      try {
+        return (await readFile(join(gitDir, ref), "utf8")).trim();
+      } catch {}
+      // Fall back to packed-refs
+      try {
+        const packed = await readFile(join(gitDir, "packed-refs"), "utf8");
+        for (const line of packed.split("\n")) {
+          if (line.endsWith(" " + ref)) return line.split(" ")[0].trim();
+        }
+      } catch {}
+      return null;
+    }
+    // Detached HEAD: the file itself is the SHA.
+    return /^[0-9a-f]{40}$/i.test(head) ? head : null;
+  } catch {
+    return null;
+  }
 }
 
 async function collect(dir, ext) {
