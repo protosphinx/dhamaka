@@ -227,15 +227,93 @@ const MIN_WORD_LEN = 3;           // ignore very short words
 const MIN_SUGGESTION_LEN = 3;     // reject 1-2 char "suggestions"
 const TOP_K = 20;                 // flag word if not in top-K predictions
 const MAX_WORDS_PER_CALL = 40;    // don't spam the model on huge inputs
+const MIN_CONTEXT_QUALITY = 0.4;  // ≥40% of words must be known English
+
+// Words the model should NEVER check — common function words, pronouns,
+// question words, prepositions, conjunctions, auxiliaries, adverbs.
 const STOPLIST = new Set([
-  "the", "a", "an", "and", "or", "but", "if", "of", "to", "in", "on", "at",
-  "for", "by", "with", "from", "as", "is", "are", "was", "were", "be",
-  "been", "being", "have", "has", "had", "do", "does", "did", "will",
-  "would", "can", "could", "should", "may", "might", "must", "not", "no",
-  "yes", "so", "than", "then", "this", "that", "these", "those", "i",
-  "me", "my", "mine", "you", "your", "yours", "he", "him", "his", "she",
-  "her", "hers", "it", "its", "we", "us", "our", "ours", "they", "them",
-  "their", "theirs",
+  // articles / determiners
+  "the", "a", "an", "this", "that", "these", "those", "every", "each",
+  "some", "any", "all", "both", "few", "many", "much", "most", "other",
+  "another", "such", "own",
+  // pronouns
+  "i", "me", "my", "mine", "myself", "you", "your", "yours", "yourself",
+  "he", "him", "his", "himself", "she", "her", "hers", "herself",
+  "it", "its", "itself", "we", "us", "our", "ours", "ourselves",
+  "they", "them", "their", "theirs", "themselves",
+  "who", "whom", "whose", "which", "what", "whoever", "whatever",
+  // conjunctions / prepositions
+  "and", "or", "but", "nor", "so", "yet", "for", "if", "when", "while",
+  "because", "since", "although", "though", "unless", "until", "after",
+  "before", "during", "between", "among", "through", "about", "above",
+  "below", "into", "onto", "upon", "within", "without", "against",
+  "along", "around", "behind", "beside", "beyond", "despite", "toward",
+  "towards", "across", "under", "over", "off", "out", "up", "down",
+  "of", "to", "in", "on", "at", "by", "with", "from", "as",
+  // auxiliaries / modals
+  "is", "are", "was", "were", "be", "been", "being", "am",
+  "have", "has", "had", "having",
+  "do", "does", "did", "doing", "done",
+  "will", "would", "shall", "should", "can", "could", "may", "might",
+  "must", "need", "dare", "ought",
+  // question words / relative
+  "how", "why", "where", "when", "what", "which", "who", "whom", "whose",
+  // common adverbs (never misspelled)
+  "not", "no", "yes", "very", "really", "quite", "rather", "just",
+  "also", "too", "still", "already", "always", "never", "often",
+  "sometimes", "usually", "probably", "perhaps", "maybe", "actually",
+  "here", "there", "now", "then", "than", "only", "even", "well",
+  "back", "away", "again", "once", "twice", "soon", "later", "today",
+  "tomorrow", "yesterday", "ago", "almost", "enough",
+  // common short verbs / adjectives
+  "get", "got", "go", "went", "gone", "come", "came", "say", "said",
+  "make", "made", "take", "took", "taken", "give", "gave", "given",
+  "know", "knew", "known", "think", "thought", "see", "saw", "seen",
+  "want", "use", "used", "find", "found", "tell", "told", "ask",
+  "asked", "work", "try", "tried", "call", "called", "keep", "kept",
+  "let", "put", "run", "ran", "set", "like", "liked", "look",
+  "looked", "help", "helped", "show", "showed", "hear", "heard",
+  "play", "move", "moved", "live", "lived", "pay", "paid",
+  "new", "old", "good", "bad", "big", "long", "great", "little",
+  "right", "wrong", "same", "different", "small", "large", "high",
+  "low", "first", "last", "next", "real", "sure", "true", "full",
+  "early", "late", "hard", "easy", "far", "near", "fast", "free",
+  "able", "own", "best", "better", "more", "less", "least",
+  // common nouns (high-frequency, never misspelled)
+  "time", "year", "people", "way", "day", "man", "woman", "child",
+  "world", "life", "hand", "part", "place", "case", "week", "end",
+  "home", "water", "room", "area", "money", "story", "fact", "month",
+  "lot", "book", "eye", "job", "word", "side", "kind", "head",
+  "house", "name", "line", "city", "state", "thing", "number",
+]);
+
+// ── Known English words: model should never flag these ───────────────
+// The masked-LM can't reliably predict common words in noisy/gibberish
+// context. Any word in this set is assumed correct regardless of what
+// the model says. This prevents "how → ckey" type garbage.
+const KNOWN_WORDS = new Set([
+  ...STOPLIST,
+  // Additional content words the model might wrongly flag
+  "company", "system", "program", "question", "government", "night",
+  "point", "group", "problem", "service", "friend", "father", "mother",
+  "power", "hour", "game", "member", "car", "family", "community",
+  "idea", "body", "information", "parent", "face", "reason", "result",
+  "change", "order", "price", "report", "school", "office", "music",
+  "person", "class", "market", "country", "history", "morning", "girl",
+  "boy", "door", "art", "war", "food", "table", "student", "teacher",
+  "letter", "window", "color", "sound", "paper", "land", "form",
+  "heart", "horse", "road", "street", "field", "picture", "tree",
+  "black", "white", "short", "able", "human", "local", "open",
+  "close", "young", "strong", "clear", "whole", "simple", "certain",
+  "important", "possible", "special", "second", "third", "whose",
+  "final", "general", "public", "private", "happy", "sorry", "ready",
+  "please", "thank", "thanks", "hello", "okay", "fine", "done",
+  "address", "email", "phone", "data", "computer", "internet", "page",
+  "file", "message", "button", "text", "image", "video", "click",
+  "type", "search", "post", "link", "list", "code", "test", "user",
+  "input", "output", "error", "value", "content", "server", "model",
+  "event", "issue", "check", "update", "version", "start", "stop",
+  "about", "before", "after", "between", "through", "during",
 ]);
 
 export const spellcheckTask = {
@@ -309,10 +387,6 @@ export const spellcheckTask = {
       return null;
     }
 
-    const maskToken = typeof engine.maskToken === "string" && engine.maskToken
-      ? engine.maskToken
-      : "[MASK]";
-
     const WORD_RE = /\b[A-Za-z][A-Za-z']*\b/g;
     const words = [];
     let match;
@@ -328,24 +402,49 @@ export const spellcheckTask = {
       return { confidence: 1, source: "model", suggestions: [] };
     }
 
-    // Skip words already caught by rules, plus stoplist / short words.
+    // ── Context quality gate ──────────────────────────────────────────
+    // The masked-LM only works when the surrounding context is real
+    // English. If most of the input is gibberish (short random strings,
+    // key-mashing), the model produces garbage predictions and flags
+    // valid words with nonsense corrections. Don't run it.
+    const knownCount = words.filter(
+      (w) => KNOWN_WORDS.has(w.word.toLowerCase()),
+    ).length;
+    const quality = words.length > 0 ? knownCount / words.length : 0;
+
+    // Start with rule-based suggestions.
     const rulesResult = this.fast(input);
-    const ruleIndices = new Set(
-      (rulesResult?.suggestions ?? []).map((s) => s.index),
-    );
+    const suggestions = [...(rulesResult?.suggestions ?? [])];
+
+    if (quality < MIN_CONTEXT_QUALITY) {
+      // Context too noisy — return rules only, skip model entirely.
+      suggestions.sort((a, b) => a.index - b.index);
+      return {
+        confidence: suggestions.length ? 0.85 : 0.5,
+        source: "rule",
+        suggestions,
+      };
+    }
+
+    const maskToken = typeof engine.maskToken === "string" && engine.maskToken
+      ? engine.maskToken
+      : "[MASK]";
+
+    const ruleIndices = new Set(suggestions.map((s) => s.index));
 
     const candidates = words.filter((w) => {
       if (ruleIndices.has(w.index)) return false;
       const lower = w.word.toLowerCase();
       if (lower.length < MIN_WORD_LEN) return false;
       if (STOPLIST.has(lower)) return false;
+      // Never flag known English words — the model can't reliably
+      // predict them in all contexts and flagging "how" as "ckey" is
+      // worse than missing a rare real-word error.
+      if (KNOWN_WORDS.has(lower)) return false;
       return true;
     });
 
     const toCheck = candidates.slice(0, MAX_WORDS_PER_CALL);
-
-    // Start with rule-based suggestions, then add model-based ones.
-    const suggestions = [...(rulesResult?.suggestions ?? [])];
 
     for (const w of toCheck) {
       const masked =
@@ -365,11 +464,23 @@ export const spellcheckTask = {
       const isInTopK = topTokens.some((t) => t === lower || normalizeSubword(t) === lower);
       if (isInTopK) continue;
 
+      // Only accept the suggestion if the model's top prediction looks
+      // like a genuine correction (edit distance ≤ 3 from the original,
+      // or the original contains no vowels suggesting a non-word).
       const alts = topK
         .map((p) => normalizeSubword(String(p.token)))
         .filter(isPlausibleWord)
         .filter((t) => t.toLowerCase() !== lower)
         .slice(0, 3);
+
+      // If the word contains at least one vowel and is ≥ 4 chars,
+      // require the top suggestion to be a close edit to prevent
+      // context-based false positives (e.g., "table" → "chair").
+      const hasVowel = /[aeiouy]/i.test(w.word);
+      if (hasVowel && w.word.length >= 4 && alts.length > 0) {
+        const dist = editDistance(lower, alts[0].toLowerCase());
+        if (dist > 3) continue; // too different — probably a context prediction, not a spelling fix
+      }
 
       suggestions.push({
         from: w.word,
@@ -413,6 +524,32 @@ function isPlausibleWord(token) {
   if (!/^[A-Za-z][A-Za-z']*$/.test(token)) return false;
   if (!/[aeiouy]/i.test(token)) return false;
   return true;
+}
+
+/**
+ * Levenshtein edit distance between two strings.
+ * Used to filter model suggestions — a genuine spelling correction
+ * should be close (edit distance ≤ 3) to the original word. A distant
+ * suggestion like "how → ckey" (distance 4) is a context prediction,
+ * not a spelling fix.
+ */
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const m = a.length, n = b.length;
+  let prev = Array.from({ length: n + 1 }, (_, i) => i);
+  let curr = new Array(n + 1);
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j - 1], prev[j], curr[j - 1]);
+    }
+    [prev, curr] = [curr, prev];
+  }
+  return prev[n];
 }
 
 // ─── task: smart paste extraction ─────────────────────────────────────
