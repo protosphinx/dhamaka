@@ -135,6 +135,7 @@
 
       const sf = new SmartField(cityInput, {
         task: "city-to-state",
+        debounceMs: 200,
         onResult: (r) => {
           const ms = Math.max(0, performance.now() - startedAt).toFixed(2);
           tSource.textContent = r.source || "—";
