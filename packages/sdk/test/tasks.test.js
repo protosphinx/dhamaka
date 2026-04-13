@@ -87,10 +87,18 @@ function makeMaskEngine(mapping) {
   };
 }
 
-test("spellcheck: fast() always returns null (model-only task)", () => {
+test("spellcheck: fast() returns null for clean text, suggestions for misspellings", () => {
+  // Clean text → null (defer to model)
   assert.equal(spellcheckTask.fast("anything"), null);
-  assert.equal(spellcheckTask.fast(""), null);
-  assert.equal(spellcheckTask.fast("I recieve the package."), null);
+  // Empty → empty suggestions
+  const empty = spellcheckTask.fast("");
+  assert.equal(empty.suggestions.length, 0);
+  // Known confusable → caught by rules
+  const r = spellcheckTask.fast("I recieve the package.");
+  assert.equal(r.source, "rule");
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "recieve");
+  assert.equal(r.suggestions[0].to, "receive");
 });
 
 test("spellcheck: slow() short-circuits empty input without calling the engine", async () => {
@@ -108,33 +116,43 @@ test("spellcheck: slow() short-circuits empty input without calling the engine",
   assert.equal(r.source, "model");
 });
 
-test("spellcheck: slow() refuses engines that don't expose fillMask()", async () => {
+test("spellcheck: slow() returns null when engine lacks fillMask (falls back to fast)", async () => {
   const engine = { async complete() { return "text"; } }; // text-gen only
   const r = await spellcheckTask.slow("hello world", {}, engine);
-  assert.equal(r.suggestions.length, 0);
-  assert.equal(r.confidence, 0);
-  assert.ok(r.error && r.error.includes("fill-mask"));
+  assert.equal(r, null);
 });
 
-test("spellcheck: slow() flags a word whose top-K predictions don't include it", async () => {
-  // "I recieve the package" → mask "recieve"
+test("spellcheck: slow() merges rule + model suggestions", async () => {
+  // "I recieve the package" → "recieve" caught by rules, "package" by model
   const engine = makeMaskEngine({
-    "I [MASK] the package": [
-      { token: "receive", score: 0.6 },
-      { token: "got", score: 0.1 },
-      { token: "open", score: 0.05 },
-    ],
+    // "recieve" is skipped by model (rules already caught it), so no mask for it
     "I recieve the [MASK]": [
       { token: "package", score: 0.8 },
       { token: "box", score: 0.1 },
     ],
   });
   const r = await spellcheckTask.slow("I recieve the package", {}, engine);
-  // "recieve" is not in its mask's top-K → flagged
-  // "package" IS in its mask's top-K → not flagged
+  // "recieve" caught by rules, "package" is in top-K so not flagged
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].from, "recieve");
   assert.equal(r.suggestions[0].to, "receive");
+  // Source is "rule" because the only suggestion came from rules
+  assert.equal(r.source, "rule");
+});
+
+test("spellcheck: slow() flags model-only misspellings not in confusables", async () => {
+  // "The xyzzy is broken" → "xyzzy" not in confusables, model flags it
+  const engine = makeMaskEngine({
+    "The [MASK] is broken": [
+      { token: "thing", score: 0.6 },
+      { token: "car", score: 0.3 },
+      { token: "pipe", score: 0.1 },
+    ],
+  });
+  const r = await spellcheckTask.slow("The xyzzy is broken", {}, engine);
+  assert.equal(r.suggestions.length, 1);
+  assert.equal(r.suggestions[0].from, "xyzzy");
+  assert.equal(r.suggestions[0].to, "thing");
   assert.equal(r.source, "model");
 });
 

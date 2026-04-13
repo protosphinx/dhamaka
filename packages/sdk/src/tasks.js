@@ -78,32 +78,156 @@ export const cityToStateTask = {
 
 // ─── task: contextual spellcheck ──────────────────────────────────────
 //
-// Model-only. No rules, no hardcoded confusables, no context regexes.
-// The whole thesis of Dhamaka is "let the on-device LLM do the work",
-// and a spellchecker is a paradigmatic model task.
+// Hybrid rules-first + model-fallback spellchecker.
 //
-// Architecture: per-word masked-LM scoring. For each word in the input,
-// we mask it with the model's mask token and ask the model to predict
-// the most likely token at that position. If the original word is not
-// in the top-K predictions, it's flagged as a likely misspelling and
-// the top predictions become the suggested corrections.
+// The fast() path catches common misspellings and homophones instantly
+// using a lookup table — no model, no latency, no download. This covers
+// the most frequent real-world typos and makes the demo work immediately.
 //
-// This is the correct algorithm for a masked-LM spellchecker. It's
-// what distilBERT, BERT, RoBERTa, and every production masked-LM
-// spellchecker do. It's fast (one forward pass per word, ~50-200ms
-// on distilBERT in WASM), small (~65 MB for distilbert-base-uncased),
-// and accurate for misspellings and obvious non-words.
+// The slow() path uses per-word masked-LM scoring (distilBERT) for the
+// long tail: unusual words, context-dependent errors, and anything the
+// rules table doesn't cover. It only runs when an engine with fillMask
+// is available.
 //
-// If no engine is available, or the engine doesn't support fill-mask,
-// the task returns an empty suggestion list rather than inventing
-// something. Silence beats fiction.
+// This layered approach matches the rest of Dhamaka: rules for the
+// deterministic head, model for the probabilistic tail.
+
+// ── Confusables table: misspelling → correction ──────────────────────
+// Covers the ~120 most common English misspellings (Oxford, Wikipedia,
+// and autocorrect corpuses). Lowercase keys only.
+const CONFUSABLES = new Map([
+  // Double-letter errors
+  ["accomodate", "accommodate"], ["occurence", "occurrence"], ["occured", "occurred"],
+  ["occuring", "occurring"], ["refered", "referred"], ["refering", "referring"],
+  ["commited", "committed"], ["commiting", "committing"], ["begining", "beginning"],
+  ["writting", "writing"], ["untill", "until"], ["fullfill", "fulfill"],
+  ["skillful", "skilful"],
+  // ie / ei confusion
+  ["recieve", "receive"], ["beleive", "believe"], ["acheive", "achieve"],
+  ["percieve", "perceive"], ["decieve", "deceive"], ["concieve", "conceive"],
+  ["wierd", "weird"], ["seize", "seize"], ["freind", "friend"],
+  // Silent letters / phonetic traps
+  ["definately", "definitely"], ["definitly", "definitely"], ["definatly", "definitely"],
+  ["seperate", "separate"], ["seperately", "separately"],
+  ["goverment", "government"], ["enviroment", "environment"],
+  ["parliment", "parliament"],
+  ["tommorow", "tomorrow"], ["tommorrow", "tomorrow"], ["tomorow", "tomorrow"],
+  ["calender", "calendar"], ["calandar", "calendar"],
+  ["neccessary", "necessary"], ["necesary", "necessary"], ["neccesary", "necessary"],
+  ["privelege", "privilege"], ["priviledge", "privilege"],
+  ["occassion", "occasion"], ["occassionally", "occasionally"],
+  ["independant", "independent"], ["independance", "independence"],
+  ["existance", "existence"], ["maintainance", "maintenance"],
+  ["resistence", "resistance"], ["persistance", "persistence"],
+  ["occurrance", "occurrence"],
+  // Vowel drops / swaps
+  ["apparantly", "apparently"], ["apparant", "apparent"],
+  ["arguement", "argument"], ["judgement", "judgment"],
+  ["acknowledgement", "acknowledgment"],
+  ["embarass", "embarrass"], ["embarassment", "embarrassment"],
+  ["harrass", "harass"], ["harrassment", "harassment"],
+  ["millenium", "millennium"], ["millenia", "millennia"],
+  ["grammer", "grammar"],
+  // Common swaps
+  ["teh", "the"], ["hte", "the"], ["taht", "that"], ["adn", "and"],
+  ["waht", "what"], ["becuase", "because"], ["becasue", "because"],
+  ["beacuse", "because"],
+  ["alot", "a lot"], ["noone", "no one"], ["eachother", "each other"],
+  // -ance / -ence
+  ["occurance", "occurrence"], ["aquaintance", "acquaintance"],
+  ["rememberance", "remembrance"],
+  // -able / -ible
+  ["responsable", "responsible"], ["sensable", "sensible"],
+  ["compatabile", "compatible"], ["accesible", "accessible"],
+  // -tion / -sion
+  ["posession", "possession"], ["proffession", "profession"],
+  ["supression", "suppression"], ["agression", "aggression"],
+  // -ous / -us / -ious
+  ["concious", "conscious"], ["consious", "conscious"],
+  ["rediculous", "ridiculous"], ["mischievious", "mischievous"],
+  // Misc high-frequency
+  ["acidentally", "accidentally"], ["accidently", "accidentally"],
+  ["adress", "address"], ["absense", "absence"],
+  ["aquire", "acquire"], ["aquisition", "acquisition"],
+  ["athiest", "atheist"], ["awfull", "awful"],
+  ["buisness", "business"], ["carribean", "Caribbean"],
+  ["cemetary", "cemetery"], ["changable", "changeable"],
+  ["collegue", "colleague"], ["comittee", "committee"],
+  ["consensis", "consensus"], ["copywrite", "copyright"],
+  ["correspondance", "correspondence"],
+  ["curiousity", "curiosity"],
+  ["dilemna", "dilemma"], ["dissapear", "disappear"], ["dissapoint", "disappoint"],
+  ["ecstacy", "ecstasy"], ["excede", "exceed"],
+  ["facinate", "fascinate"],
+  ["flourescent", "fluorescent"], ["foriegn", "foreign"],
+  ["fourty", "forty"],
+  ["guage", "gauge"], ["gaurd", "guard"], ["garantee", "guarantee"],
+  ["heirarchy", "hierarchy"],
+  ["immediatly", "immediately"], ["imediately", "immediately"],
+  ["incidently", "incidentally"],
+  ["innoculate", "inoculate"],
+  ["knowlege", "knowledge"], ["knowledgable", "knowledgeable"],
+  ["liason", "liaison"], ["libary", "library"],
+  ["liscense", "license"], ["lisence", "licence"],
+  ["manuever", "maneuver"],
+  ["medeval", "medieval"], ["momento", "memento"],
+  ["miniscule", "minuscule"],
+  ["mispell", "misspell"], ["mispelling", "misspelling"],
+  ["noticable", "noticeable"],
+  ["pasttime", "pastime"], ["perseverence", "perseverance"],
+  ["playwrite", "playwright"],
+  ["preceed", "precede"], ["procede", "proceed"],
+  ["pronounciation", "pronunciation"],
+  ["publically", "publicly"],
+  ["questionaire", "questionnaire"],
+  ["recomend", "recommend"], ["reccomend", "recommend"],
+  ["relevent", "relevant"], ["rythm", "rhythm"],
+  ["shedule", "schedule"],
+  ["sieze", "seize"],
+  ["succesful", "successful"], ["successfull", "successful"],
+  ["supercede", "supersede"],
+  ["surprize", "surprise"],
+  ["tendancy", "tendency"],
+  ["threshhold", "threshold"],
+  ["truely", "truly"],
+  ["tyrany", "tyranny"],
+  ["unecessary", "unnecessary"],
+  ["useable", "usable"],
+  ["vaccuum", "vacuum"],
+  ["vegatable", "vegetable"],
+  ["visious", "vicious"],
+  ["wether", "whether"],
+  ["yestarday", "yesterday"],
+]);
+
+// ── Homophone context rules ──────────────────────────────────────────
+// Each rule: [trigger word, correction, regex that must match the full input].
+// Only fires when the trigger word appears AND the surrounding context
+// matches, so we don't over-correct legitimate uses.
+const CONTEXT_RULES = [
+  // their / there / they're
+  ["their", "there", /\btheir\s+(is|are|was|were|will|would|could|should|has|have|had|might|may|must)\b/i],
+  ["their", "there", /\b(?:see|saw|meet|visit|go|went|get|got|arrive|arrived|be)\s+(?:\w+\s+)*their\b/i],
+  ["their", "they're", /\btheir\s+(going|coming|leaving|running|doing|trying|getting|making|saying|looking)\b/i],
+  ["there", "their", /\b(?:in|of|with|from|about)\s+there\s+(?:own|car|house|home|work|school|office|life|family|friend)/i],
+  // your / you're
+  ["your", "you're", /\byour\s+(going|coming|welcome|right|wrong|doing|being|getting|making|looking)\b/i],
+  // its / it's
+  ["its", "it's", /\bits\s+(a|the|not|been|going|very|really|always|never|about|just|also|only)\b/i],
+  // then / than
+  ["then", "than", /\b(?:more|less|better|worse|greater|larger|smaller|higher|lower|rather|other)\s+then\b/i],
+  // affect / effect
+  ["affect", "effect", /\b(?:the|an?|no|positive|negative|side|special)\s+affect\b/i],
+  ["effect", "affect", /\b(?:will|does|did|could|would|can|may|might|won't|doesn't|didn't)\s+effect\b/i],
+  // loose / lose
+  ["loose", "lose", /\b(?:will|might|could|would|don't|didn't|won't|going to|gonna|about to)\s+loose\b/i],
+];
 
 const MIN_WORD_LEN = 3;           // ignore very short words
 const MIN_SUGGESTION_LEN = 3;     // reject 1-2 char "suggestions"
 const TOP_K = 20;                 // flag word if not in top-K predictions
 const MAX_WORDS_PER_CALL = 40;    // don't spam the model on huge inputs
 const STOPLIST = new Set([
-  // Trivially correct function words we never want to flag
   "the", "a", "an", "and", "or", "but", "if", "of", "to", "in", "on", "at",
   "for", "by", "with", "from", "as", "is", "are", "was", "were", "be",
   "been", "being", "have", "has", "had", "do", "does", "did", "will",
@@ -117,11 +241,61 @@ const STOPLIST = new Set([
 export const spellcheckTask = {
   id: "spellcheck",
   description:
-    "Per-word masked-LM spellcheck using an on-device language model.",
+    "Contextual spellcheck: rules-first for common misspellings, model fallback for the long tail.",
 
-  // No fast path. Spellcheck is always a model call.
-  fast() {
-    return null;
+  fast(input) {
+    if (!input || typeof input !== "string" || !input.trim()) {
+      return { confidence: 1, source: "rule", suggestions: [] };
+    }
+
+    const suggestions = [];
+
+    // Pass 1: confusables table — catch common misspellings.
+    const WORD_RE = /\b[A-Za-z][A-Za-z']*\b/g;
+    let match;
+    while ((match = WORD_RE.exec(input)) !== null) {
+      const word = match[0];
+      const lower = word.toLowerCase();
+      const fix = CONFUSABLES.get(lower);
+      if (fix) {
+        suggestions.push({
+          from: word,
+          to: fix,
+          alternatives: [],
+          index: match.index,
+          reason: "common misspelling",
+        });
+      }
+    }
+
+    // Pass 2: homophone context rules.
+    for (const [trigger, correction, pattern] of CONTEXT_RULES) {
+      if (pattern.test(input)) {
+        // Find the trigger word's position in the input.
+        const triggerRe = new RegExp(`\\b${trigger}\\b`, "gi");
+        let m;
+        while ((m = triggerRe.exec(input)) !== null) {
+          // Don't double-flag if confusables already caught it.
+          const alreadyFlagged = suggestions.some(
+            (s) => s.index === m.index && s.from.toLowerCase() === trigger,
+          );
+          if (!alreadyFlagged) {
+            suggestions.push({
+              from: m[0],
+              to: correction,
+              alternatives: [],
+              index: m.index,
+              reason: "homophone — wrong word for this context",
+            });
+          }
+        }
+      }
+    }
+
+    if (!suggestions.length) return null; // let slow() handle it
+    // Sort by position so chips appear in reading order.
+    suggestions.sort((a, b) => a.index - b.index);
+    return { confidence: 0.9, source: "rule", suggestions };
   },
 
   async slow(input, _context, engine) {
@@ -129,24 +303,16 @@ export const spellcheckTask = {
       return { confidence: 1, source: "model", suggestions: [] };
     }
 
-    // Contract: the engine must expose fillMask(inputWithMask, topK).
-    // Our TransformersBackend does when loaded with task="fill-mask".
+    // If the engine doesn't support fill-mask, return null so the caller
+    // falls back to whatever fast() produced.
     if (typeof engine.fillMask !== "function") {
-      return {
-        confidence: 0,
-        source: "model",
-        suggestions: [],
-        error:
-          "spellcheck requires a fill-mask engine (e.g. TransformersBackend " +
-          "loaded with task: 'fill-mask', model: 'Xenova/distilbert-base-uncased')",
-      };
+      return null;
     }
 
     const maskToken = typeof engine.maskToken === "string" && engine.maskToken
       ? engine.maskToken
       : "[MASK]";
 
-    // Find every word (letters + internal apostrophes, e.g. "don't").
     const WORD_RE = /\b[A-Za-z][A-Za-z']*\b/g;
     const words = [];
     let match;
@@ -162,59 +328,49 @@ export const spellcheckTask = {
       return { confidence: 1, source: "model", suggestions: [] };
     }
 
-    // Only actually run the model on words that are plausibly misspellable:
-    // drop short words, drop stoplist members, drop pure punctuation.
+    // Skip words already caught by rules, plus stoplist / short words.
+    const rulesResult = this.fast(input);
+    const ruleIndices = new Set(
+      (rulesResult?.suggestions ?? []).map((s) => s.index),
+    );
+
     const candidates = words.filter((w) => {
+      if (ruleIndices.has(w.index)) return false;
       const lower = w.word.toLowerCase();
       if (lower.length < MIN_WORD_LEN) return false;
       if (STOPLIST.has(lower)) return false;
       return true;
     });
 
-    // Cap work on huge inputs so we never spam the model with 200 calls.
     const toCheck = candidates.slice(0, MAX_WORDS_PER_CALL);
 
-    const suggestions = [];
+    // Start with rule-based suggestions, then add model-based ones.
+    const suggestions = [...(rulesResult?.suggestions ?? [])];
+
     for (const w of toCheck) {
-      // Build a masked sentence. We replace THIS word with the mask token,
-      // leaving every other word intact. distilBERT's WordPiece tokenizer
-      // handles the rest.
       const masked =
         input.slice(0, w.index) + maskToken + input.slice(w.end);
 
       let topK;
       try {
         topK = await engine.fillMask(masked, TOP_K);
-      } catch (err) {
-        // A single failing call shouldn't kill the whole run.
+      } catch {
         continue;
       }
 
       if (!Array.isArray(topK) || !topK.length) continue;
 
-      // Is the original word (case-insensitively) in the top predictions?
       const lower = w.word.toLowerCase();
       const topTokens = topK.map((p) => String(p.token).toLowerCase());
       const isInTopK = topTokens.some((t) => t === lower || normalizeSubword(t) === lower);
       if (isInTopK) continue;
 
-      // Not in top-K → flag it. Take up to 3 distinct alternative corrections.
-      // A "real-word suggestion" must pass four gates:
-      //   1. letters + apostrophes only (no punctuation, no digits)
-      //   2. at least MIN_SUGGESTION_LEN chars (no 1-2 char junk like "xx" or "cd")
-      //   3. contains at least one vowel (filters WordPiece fragments that
-      //      happened to be valid letter sequences but are not real words)
-      //   4. not identical to the original word (case-insensitive)
       const alts = topK
         .map((p) => normalizeSubword(String(p.token)))
         .filter(isPlausibleWord)
         .filter((t) => t.toLowerCase() !== lower)
         .slice(0, 3);
 
-      // Even if there are NO plausible alternatives, still flag the word —
-      // distilBERT-in-a-gibberish-context can genuinely have nothing useful
-      // to suggest, and hiding the flag would pretend the word looked fine.
-      // The chip UI renders alternatives=[] as "word ?" with a tooltip.
       suggestions.push({
         from: w.word,
         to: alts[0] ?? null,
@@ -226,9 +382,10 @@ export const spellcheckTask = {
       });
     }
 
+    suggestions.sort((a, b) => a.index - b.index);
     return {
-      confidence: suggestions.length ? 0.75 : 0.9,
-      source: "model",
+      confidence: suggestions.length ? 0.8 : 0.9,
+      source: suggestions.some((s) => s.reason?.includes("masked-LM")) ? "model" : "rule",
       suggestions,
     };
   },

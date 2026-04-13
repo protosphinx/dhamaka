@@ -150,7 +150,7 @@
 
       <div class="demo-panel">
         <h2>draft</h2>
-        <textarea id="draft" placeholder="waiting for the model to finish loading…" disabled></textarea>
+        <textarea id="draft" placeholder="start typing…"></textarea>
         <div class="out" id="suggestions-out">no issues yet</div>
         <div class="tele">
           <span>
@@ -242,8 +242,86 @@
         },
       });
 
-      // Warm the engine eagerly so the first keystroke doesn't block on a
-      // cold load. Shows the progress bar while the model downloads.
+      // ─── Rules work immediately — enable the textarea right away ──────
+      // The rules-based fast path catches common misspellings and homophones
+      // instantly (<1ms). The model loads in the background and adds coverage
+      // for the long tail. Users get feedback from the first keystroke.
+
+      draft.disabled = false;
+      draft.placeholder = "start typing…";
+
+      let lastResult = null;
+      const smart = new SmartText(draft, {
+        debounceMs: 120,
+        onSuggestions: (suggestions) => {
+          tCount.textContent = String(suggestions.length);
+          tSource.textContent = suggestions.length
+            ? (lastResult?.source ?? "rule")
+            : "—";
+          if (!suggestions.length) {
+            out.textContent = draft.value.trim() ? "looks clean" : "no issues yet";
+            return;
+          }
+          out.innerHTML = "";
+          suggestions.forEach((s, i) => {
+            const chip = document.createElement("span");
+            const hasAlt = typeof s.to === "string" && s.to.length > 0;
+            chip.className = "suggest" + (hasAlt ? "" : " no-alts");
+            chip.innerHTML =
+              `<span class="strike">${escapeHtml(s.from)}</span>` +
+              `<span class="arrow">→</span>` +
+              `<span class="to">${hasAlt ? escapeHtml(s.to) : "?"}</span>`;
+            chip.title = s.reason || "suggestion";
+            if (hasAlt) {
+              chip.addEventListener("click", () => smart.applySuggestion(i));
+            }
+            out.appendChild(chip);
+          });
+        },
+      });
+
+      // Intercept the SmartText result to capture the source field.
+      const origRun = smart._run.bind(smart);
+      smart._run = async function () {
+        if (this._disposed || !this.doSpellcheck) return;
+        const text = this.el.value ?? "";
+        const result = await reflex.run("spellcheck", text, { threshold: 0.8 });
+        if (this._disposed) return;
+        lastResult = result;
+        this.suggestions = result.suggestions ?? [];
+        this.onSuggestions?.(this.suggestions);
+        this.el.dispatchEvent(
+          new CustomEvent("smart-text:suggestions", {
+            detail: { text, suggestions: this.suggestions },
+            bubbles: true,
+          }),
+        );
+      };
+
+      // Measure per-call latency.
+      let lastInputAt = 0;
+      draft.addEventListener("input", () => {
+        lastInputAt = performance.now();
+      });
+      draft.addEventListener("smart-text:suggestions", () => {
+        if (lastInputAt) {
+          const dt = Math.round(performance.now() - lastInputAt);
+          tMs.textContent = `${dt} ms`;
+        }
+      });
+
+      // Wire the "Try:" example chips.
+      document.querySelectorAll(".try-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          const text = chip.getAttribute("data-try") || "";
+          draft.value = text;
+          lastInputAt = performance.now();
+          draft.dispatchEvent(new Event("input", { bubbles: true }));
+          draft.focus();
+        });
+      });
+
+      // ─── Load the model in the background for long-tail coverage ──────
       (async () => {
         try {
           const t0 = performance.now();
@@ -252,83 +330,19 @@
           statusCard.classList.add("ready");
           statusTitle.textContent = `ready · model loaded in ${(loadMs / 1000).toFixed(1)}s`;
           statusMsg.innerHTML =
-            `distilBERT is live in this tab and fully on-device. Type anything ` +
-            `in the textarea — corrections come back in ~100–300 ms per masked word. ` +
-            `The engine masks each word in turn and asks the model what should ` +
-            `go there; words not in the top-20 predictions are flagged.`;
+            `distilBERT is live in this tab. Common misspellings are caught ` +
+            `instantly by rules (<1ms). The model adds coverage for unusual ` +
+            `words and context-dependent errors (~100–300 ms per word).`;
           progressFile.textContent = "cached in IndexedDB · offline-safe";
-          draft.disabled = false;
-          draft.placeholder = "start typing…";
-          draft.focus();
-
-          // Hook SmartText up to the spellcheck task in eager mode so every
-          // debounced input event fires a model call (no rules to short-
-          // circuit anything).
-          const smart = new SmartText(draft, {
-            debounceMs: 400,
-            onSuggestions: (suggestions) => {
-              tCount.textContent = String(suggestions.length);
-              tSource.textContent = suggestions.length ? "model" : "—";
-              if (!suggestions.length) {
-                out.textContent = draft.value.trim() ? "looks clean" : "no issues yet";
-                return;
-              }
-              out.innerHTML = "";
-              suggestions.forEach((s, i) => {
-                const chip = document.createElement("span");
-                const hasAlt = typeof s.to === "string" && s.to.length > 0;
-                chip.className = "suggest" + (hasAlt ? "" : " no-alts");
-                chip.innerHTML =
-                  `<span class="strike">${escapeHtml(s.from)}</span>` +
-                  `<span class="arrow">→</span>` +
-                  `<span class="to">${hasAlt ? escapeHtml(s.to) : "?"}</span>`;
-                chip.title = s.reason || "suggestion";
-                if (hasAlt) {
-                  chip.addEventListener("click", () => smart.applySuggestion(i));
-                }
-                out.appendChild(chip);
-              });
-            },
-          });
-
-          // Measure per-call latency. SmartText uses the debounce internally
-          // so we time each suggestions event against when the last input
-          // fired.
-          let lastInputAt = 0;
-          draft.addEventListener("input", () => {
-            lastInputAt = performance.now();
-          });
-          draft.addEventListener("smart-text:suggestions", () => {
-            if (lastInputAt) {
-              const dt = Math.round(performance.now() - lastInputAt);
-              tMs.textContent = `${dt} ms`;
-            }
-          });
-
-          // Wire the "Try:" example chips so clicking one populates the
-          // textarea and kicks off a check. The synthetic input event
-          // the SmartText wrapper needs is dispatched by assigning .value
-          // then manually firing it.
-          document.querySelectorAll(".try-chip").forEach((chip) => {
-            chip.addEventListener("click", () => {
-              const text = chip.getAttribute("data-try") || "";
-              draft.value = text;
-              lastInputAt = performance.now();
-              draft.dispatchEvent(new Event("input", { bubbles: true }));
-              draft.focus();
-            });
-          });
         } catch (err) {
-          console.error("spellcheck demo failed to warm up:", err);
+          console.error("spellcheck demo: model failed to load:", err);
           statusCard.classList.add("err");
-          statusTitle.textContent = "failed to load the model";
+          statusTitle.textContent = "model unavailable — rules still active";
           statusMsg.innerHTML =
-            `<b>Error:</b> ${escapeHtml(String(err?.message || err))}. ` +
-            `Check DevTools → Network for the failing request.<br/>` +
-            `If you're on a browser that blocks ES-module imports from ` +
-            `esm.sh, try Firefox or Chrome. If you're on a first-generation ` +
-            `Safari without WebAssembly streaming, the model loader may be ` +
-            `incompatible — open an issue and tell us what browser+version.`;
+            `Rules-based spellcheck is working (common misspellings, ` +
+            `homophones). The model failed to load: ` +
+            `${escapeHtml(String(err?.message || err))}.<br/>` +
+            `Common misspellings are still caught instantly.`;
         }
       })();
 
