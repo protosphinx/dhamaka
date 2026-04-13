@@ -76,6 +76,8 @@ export const CITIES = [
   { name: "Charlotte",     aliases: [],                                     state: "NC", stateName: "North Carolina", country: "US", countryName: "United States", tz: "America/New_York",   currency: "USD" },
   { name: "Raleigh",       aliases: [],                                     state: "NC", stateName: "North Carolina", country: "US", countryName: "United States", tz: "America/New_York",   currency: "USD" },
   { name: "Charleston",    aliases: [],                                     state: "SC", stateName: "South Carolina", country: "US", countryName: "United States", tz: "America/New_York",   currency: "USD" },
+  { name: "Newport",        aliases: [],                                     state: "RI", stateName: "Rhode Island",  country: "US", countryName: "United States", tz: "America/New_York",    currency: "USD" },
+  { name: "Providence",    aliases: [],                                     state: "RI", stateName: "Rhode Island",  country: "US", countryName: "United States", tz: "America/New_York",    currency: "USD" },
   { name: "Salt Lake City", aliases: ["slc"],                                state: "UT", stateName: "Utah",          country: "US", countryName: "United States", tz: "America/Denver",      currency: "USD" },
 
   // ── Canada ───────────────────────────────────────────────────────────
@@ -217,11 +219,16 @@ export function findCityFuzzy(query, { maxDistance = 2 } = {}) {
   if (!q) return null;
   if (lookup.has(q)) return lookup.get(q);
 
+  // Scale max distance by query length: short inputs (< 5 chars) only
+  // get distance-1 matches. This prevents spurious matches like
+  // "new" → "nyc" (distance 2, but a completely wrong city).
+  const effectiveMax = q.length < 5 ? Math.min(maxDistance, 1) : maxDistance;
+
   let best = null;
-  let bestDist = maxDistance + 1;
+  let bestDist = effectiveMax + 1;
   for (const [key, city] of lookup.entries()) {
     // Length guard: skip if the lengths are too far apart.
-    if (Math.abs(key.length - q.length) > maxDistance) continue;
+    if (Math.abs(key.length - q.length) > effectiveMax) continue;
     const d = levenshtein(q, key);
     if (d < bestDist) {
       bestDist = d;
