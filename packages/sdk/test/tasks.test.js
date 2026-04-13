@@ -141,18 +141,19 @@ test("spellcheck: slow() merges rule + model suggestions", async () => {
 });
 
 test("spellcheck: slow() flags model-only misspellings not in confusables", async () => {
-  // "The xyzzy is broken" → "xyzzy" not in confusables, model flags it
+  // "The tabel is broken" → "tabel" not in confusables, model flags it.
+  // Uses a real-ish misspelling so the edit distance filter passes (tabel→table = 2).
   const engine = makeMaskEngine({
     "The [MASK] is broken": [
-      { token: "thing", score: 0.6 },
+      { token: "table", score: 0.6 },
       { token: "car", score: 0.3 },
       { token: "pipe", score: 0.1 },
     ],
   });
-  const r = await spellcheckTask.slow("The xyzzy is broken", {}, engine);
+  const r = await spellcheckTask.slow("The tabel is broken", {}, engine);
   assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "xyzzy");
-  assert.equal(r.suggestions[0].to, "thing");
+  assert.equal(r.suggestions[0].from, "tabel");
+  assert.equal(r.suggestions[0].to, "table");
   assert.equal(r.source, "model");
 });
 
@@ -178,6 +179,7 @@ test("spellcheck: slow() skips words in the stoplist and short words", async () 
 test("spellcheck: slow() strips WordPiece ## prefix from suggestions", async () => {
   // distilBERT sometimes returns subword tokens for the top predictions.
   // The task should strip the leading `##` and present clean words.
+  // "worl" is close to "world" (edit distance 1) so it passes the filter.
   const engine = makeMaskEngine({
     "hello [MASK]": [
       { token: "world", score: 0.5 },
@@ -185,9 +187,9 @@ test("spellcheck: slow() strips WordPiece ## prefix from suggestions", async () 
       { token: "there", score: 0.1 },
     ],
   });
-  const r = await spellcheckTask.slow("hello foobar", {}, engine);
+  const r = await spellcheckTask.slow("hello worl", {}, engine);
   assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "foobar");
+  assert.equal(r.suggestions[0].from, "worl");
   assert.equal(r.suggestions[0].to, "world");
   // `##ing` should have been stripped — "ing" is 3 chars with a vowel
   // so it passes the plausible-word filter. The third alternative is "there".
@@ -198,8 +200,10 @@ test("spellcheck: slow() rejects 2-char suggestions (xx, cd, da, sd)", async () 
   // distilBERT often returns very short WordPiece tokens for masked
   // positions in gibberish context. These are not plausible whole-word
   // corrections and the filter should reject them.
+  // Input uses enough real English to pass the context quality gate.
+  // "bcdfgh" has no vowels, so edit distance filter is skipped.
   const engine = makeMaskEngine({
-    "gibbberish [MASK]": [
+    "The [MASK] is here": [
       { token: "xx", score: 0.5 },
       { token: "cd", score: 0.3 },
       { token: "da", score: 0.2 },
@@ -207,9 +211,9 @@ test("spellcheck: slow() rejects 2-char suggestions (xx, cd, da, sd)", async () 
       { token: "world", score: 0.05 },
     ],
   });
-  const r = await spellcheckTask.slow("gibbberish asdfgh", {}, engine);
+  const r = await spellcheckTask.slow("The bcdfgh is here", {}, engine);
   assert.equal(r.suggestions.length, 1);
-  assert.equal(r.suggestions[0].from, "asdfgh");
+  assert.equal(r.suggestions[0].from, "bcdfgh");
   // "xx" / "cd" / "da" should all be filtered out. First plausible
   // suggestion is "hello".
   assert.equal(r.suggestions[0].to, "hello");
@@ -222,14 +226,15 @@ test("spellcheck: slow() rejects consonant-only tokens (xx, cd, sd, ght)", async
   // A valid English word almost always contains a vowel. Tokens like
   // "xx", "cd", "sd" are in distilBERT's vocab but aren't plausible
   // corrections. The filter requires at least one vowel.
+  // "zzzzz" has no vowels so edit distance filter is skipped.
   const engine = makeMaskEngine({
-    "nonsense [MASK]": [
+    "Please check the [MASK] now": [
       { token: "xxx", score: 0.5 },  // 3 chars but no vowel → rejected
       { token: "ght", score: 0.3 },  // 3 chars but no vowel → rejected
       { token: "apple", score: 0.2 }, // valid → accepted
     ],
   });
-  const r = await spellcheckTask.slow("nonsense zzzzz", {}, engine);
+  const r = await spellcheckTask.slow("Please check the zzzzz now", {}, engine);
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].to, "apple");
 });
@@ -241,13 +246,13 @@ test("spellcheck: slow() still flags words with no plausible alternatives", asyn
   // these chips as "word → ?" so users see the word was flagged but
   // the model had nothing useful to suggest.
   const engine = makeMaskEngine({
-    "totally [MASK]": [
+    "The [MASK] was here": [
       { token: "xx", score: 0.3 },
       { token: "cd", score: 0.2 },
       { token: "##s", score: 0.1 },
     ],
   });
-  const r = await spellcheckTask.slow("totally qwertyuiop", {}, engine);
+  const r = await spellcheckTask.slow("The qwertyuiop was here", {}, engine);
   assert.equal(r.suggestions.length, 1);
   assert.equal(r.suggestions[0].from, "qwertyuiop");
   assert.equal(r.suggestions[0].to, null);
@@ -257,17 +262,19 @@ test("spellcheck: slow() still flags words with no plausible alternatives", asyn
 
 test("spellcheck: slow() tolerates a mask call failure without killing the run", async () => {
   // One of the mask calls throws. The run should continue with the others.
+  // Uses real English context to pass quality gate, with two non-word
+  // candidates (xbcdf, zmnpq) so both get masked. No vowels in either,
+  // so edit distance filter is skipped.
   let calls = 0;
   const engine = {
     maskToken: "[MASK]",
-    async fillMask(input, _topK) {
+    async fillMask(_input, _topK) {
       calls++;
       if (calls === 1) throw new Error("boom");
-      if (input === "qwerty [MASK]") return [{ token: "keyboard", score: 0.9 }];
-      return [];
+      return [{ token: "apple", score: 0.9 }];
     },
   };
-  const r = await spellcheckTask.slow("qwerty layout", {}, engine);
+  const r = await spellcheckTask.slow("please check xbcdf and zmnpq now", {}, engine);
   // The first mask call threw; the second ran.
   assert.ok(calls >= 2);
   // Run didn't crash; got a structured result.
