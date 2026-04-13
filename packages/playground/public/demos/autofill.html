@@ -23,13 +23,12 @@
       <a class="back-link" href="../">← all demos</a>
       <h1>address autofill</h1>
       <p class="lead">
-        Type a city below. Every keystroke fires the city-to-state task,
-        which hits a static gazetteer first (instant) and falls back to a
-        fuzzy match for typos. State, country, timezone, and currency
-        populate live. No network, no debouncing, no spinner.
+        Type any city in the world. Common cities resolve instantly from
+        a local gazetteer; everything else is answered by an on-device LLM
+        that downloads once and runs entirely in your browser.
         <br/><br/>
         Try: <code>San Francisco</code>, <code>sf</code>, <code>Tokyo</code>,
-        <code>Berlin</code>, <code>Arlington</code>, <code>San Francsico</code>
+        <code>Fort Collins</code>, <code>Bruges</code>, <code>San Francsico</code>
         (typo). All fields are editable — manual edits lock that field
         from further autofill.
       </p>
@@ -67,6 +66,10 @@
           </span>
           <span>resolved in <span class="pill" id="t-ms">— ms</span></span>
         </div>
+        <div class="tele" id="model-status" style="opacity:0.6">
+          <span id="model-label">loading LLM for unknown cities…</span>
+          <span class="pill" id="model-progress">0%</span>
+        </div>
       </form>
 
       <section class="notes">
@@ -76,7 +79,12 @@
        │
        ├─ rules: gazetteer exact match?  ← 0.01 ms
        ├─ fuzzy: Levenshtein ≤ 2 match?  ← 0.5 ms
-       └─ model: LLM fallback            ← 50 ms (not needed here)
+       └─ model: on-device LLM           ← 1–3 s (any city)
+
+  The gazetteer handles common cities instantly.
+  For everything else, an on-device LLM (SmolLM2 135M,
+  running via @huggingface/transformers in your browser)
+  answers from its training knowledge. No server call.
 
   SmartForm reads the resolved result and propagates to
   state / country / timezone / currency — synchronously.
@@ -85,10 +93,26 @@
     </main>
 
     <script type="module">
-      import { SmartField, SmartForm } from "dhamaka";
+      import { SmartField, SmartForm, reflex } from "dhamaka";
 
+      // ── Configure the on-device LLM for cities not in the gazetteer ──
+      const modelLabel    = document.getElementById("model-label");
+      const modelProgress = document.getElementById("model-progress");
+      const modelStatus   = document.getElementById("model-status");
+
+      reflex.configure({
+        backend: "transformers",
+        task: "text-generation",
+        onProgress: (e) => {
+          if (e.status === "progress" && e.total) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            modelProgress.textContent = `${pct}%`;
+          }
+        },
+      });
+
+      // ── SmartForm: propagate city → state/country/tz/currency ─────────
       const form = document.getElementById("address-form");
-
       new SmartForm(form, {
         infer: {
           "city → state":    "city-to-state:stateName",
@@ -98,6 +122,7 @@
         },
       });
 
+      // ── SmartField: on every keystroke, run city-to-state ─────────────
       const cityInput = document.getElementById("city");
       const tSource   = document.getElementById("t-source");
       const tConf     = document.getElementById("t-conf");
@@ -108,7 +133,7 @@
         startedAt = performance.now();
       });
 
-      new SmartField(cityInput, {
+      const sf = new SmartField(cityInput, {
         task: "city-to-state",
         onResult: (r) => {
           const ms = Math.max(0, performance.now() - startedAt).toFixed(2);
@@ -116,6 +141,21 @@
           tConf.textContent = (r.confidence ?? 0).toFixed(2);
           tMs.textContent = `${ms} ms`;
         },
+      });
+
+      // ── Load the model in the background ──────────────────────────────
+      // Gazetteer covers common cities instantly. Once the model is ready,
+      // re-run the current query so unknown cities get answered too.
+      reflex.ensure().then(() => {
+        modelLabel.textContent = "LLM ready — any city works";
+        modelProgress.textContent = "✓";
+        modelStatus.style.opacity = "1";
+        // Re-run in case the user already typed an unknown city.
+        if (cityInput.value.trim()) sf.refresh();
+      }).catch((err) => {
+        modelLabel.textContent = "LLM unavailable — gazetteer only";
+        modelProgress.textContent = "✗";
+        console.warn("[dhamaka] model load failed:", err);
       });
     </script>
   </body>

@@ -60,6 +60,36 @@ test("city-to-state: nonsense input returns null from the fast path", () => {
   assert.equal(r, null);
 });
 
+test("city-to-state: slow() parses model output into structured fields", async () => {
+  const engine = {
+    async complete() {
+      return " State: Colorado, Country: United States (US), Timezone: America/Denver, Currency: USD";
+    },
+  };
+  const r = await cityToStateTask.slow("Fort Collins", {}, engine);
+  assert.ok(r);
+  assert.equal(r.source, "model");
+  assert.equal(r.fields.stateName, "Colorado");
+  assert.equal(r.fields.countryName, "United States");
+  assert.equal(r.fields.country, "US");
+  assert.equal(r.fields.tz, "America/Denver");
+  assert.equal(r.fields.currency, "USD");
+});
+
+test("city-to-state: slow() returns null when model gives empty/unusable response", async () => {
+  const engine = { async complete() { return ""; } };
+  assert.equal(await cityToStateTask.slow("xyzqwerty", {}, engine), null);
+
+  const engine2 = { async complete() { return "I don't know this city."; } };
+  assert.equal(await cityToStateTask.slow("xyzqwerty", {}, engine2), null);
+});
+
+test("city-to-state: slow() returns null for empty input or missing complete()", async () => {
+  const engine = { async complete() { return "State: X"; } };
+  assert.equal(await cityToStateTask.slow("", {}, engine), null);
+  assert.equal(await cityToStateTask.slow("test", {}, {}), null);
+});
+
 // ─── task: spellcheck (model-only, masked-LM per-word scoring) ───────
 //
 // The spellcheck task is backed by a masked language model (distilBERT
