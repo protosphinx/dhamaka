@@ -68,12 +68,12 @@ export class SmartForm {
 
   _handleResolved(event) {
     const detail = event.detail;
-    if (!detail || !detail.result || !detail.result.fields) return;
+    if (!detail || !detail.result) return;
     const sourceEl = event.target;
     if (!sourceEl || !sourceEl.name) return;
 
     const sourceName = sourceEl.name;
-    const fields = detail.result.fields;
+    const fields = detail.result.fields ?? {};
 
     // Walk every declared inference rule whose source matches.
     for (const [rule, mapping] of Object.entries(this.infer)) {
@@ -84,16 +84,17 @@ export class SmartForm {
       if (taskId && detail.task !== taskId) continue;
       if (!resultKey) continue;
 
-      const value = fields[resultKey];
-      if (value == null || value === "") continue;
-
       const targetEl = this.form.elements.namedItem(tgt);
       if (!(targetEl instanceof HTMLInputElement || targetEl instanceof HTMLSelectElement || targetEl instanceof HTMLTextAreaElement)) continue;
       if (this.manualEdits.has(tgt)) continue; // user has taken over this field
 
+      // Set the value if present, or clear it when there's no match.
+      // This prevents stale data from intermediate keystrokes sticking
+      // (e.g., typing "newport" briefly matching "nyc" at "new").
+      const value = fields[resultKey];
       this._programmatic = true;
       try {
-        targetEl.value = String(value);
+        targetEl.value = (value != null && value !== "") ? String(value) : "";
         targetEl.dispatchEvent(new Event("change", { bubbles: true }));
       } finally {
         this._programmatic = false;
