@@ -17,24 +17,19 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: build demo site
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
-      # Self-provision Pages on the first run. Without this, deploy-pages@v4
-      # can fail with a "Pages site not found" error if the repo's Pages
-      # source has been set to "GitHub Actions" but no deploy has ever
-      # completed successfully. `enablement: true` has this step enable
-      # Pages via the API if it's not already enabled.
       - name: configure pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: install rust toolchain
         run: |
@@ -49,7 +44,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: assemble _site
+      - name: assemble site
         run: node packages/playground/build-site.mjs
 
       - name: upload artifact
@@ -57,14 +52,6 @@ jobs:
         with:
           path: packages/playground/_site
 
-  deploy:
-    name: deploy to github pages
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: deploy
-        id: deployment
+      - name: deploy to github pages
+        id: deploy
         uses: actions/deploy-pages@v4
