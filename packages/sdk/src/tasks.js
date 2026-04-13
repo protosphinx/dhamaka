@@ -58,21 +58,59 @@ export const cityToStateTask = {
   async slow(input, _context, engine) {
     // The LLM fallback. Only runs when both the exact and fuzzy tables
     // missed, which means the user typed something unusual. We ask the
-    // model for JSON and parse it.
-    const prompt =
-      `You are a geographic autofill helper. The user typed the city name ` +
-      `"${input}". Respond with a single line of JSON containing keys ` +
-      `"state", "stateName", "country", "countryName", "tz", "currency". ` +
-      `Use ISO 3166-1 alpha-2 for country and IANA names for tz. ` +
-      `If the city is ambiguous or unknown, respond with exactly NULL.`;
-    const reply = await engine.complete(prompt, { temperature: 0.0, maxTokens: 120 });
-    if (!reply || /^null$/i.test(reply.trim())) return null;
+    // model with a few-shot prompt and parse the structured reply.
+    //
+    // Few-shot pattern continuation works far better on small models
+    // (135M-250M params) than asking for JSON. The model just continues
+    // the established pattern.
+    if (!input || typeof input !== "string" || !input.trim()) return null;
+    if (typeof engine.complete !== "function") return null;
+
+    const prompt = [
+      "Complete the city information.",
+      "",
+      "City: San Francisco → State: California, Country: United States (US), Timezone: America/Los_Angeles, Currency: USD",
+      "City: Tokyo → State: Tokyo, Country: Japan (JP), Timezone: Asia/Tokyo, Currency: JPY",
+      "City: London → State: England, Country: United Kingdom (GB), Timezone: Europe/London, Currency: GBP",
+      "City: Mumbai → State: Maharashtra, Country: India (IN), Timezone: Asia/Kolkata, Currency: INR",
+      "City: Sydney → State: New South Wales, Country: Australia (AU), Timezone: Australia/Sydney, Currency: AUD",
+      `City: ${input.trim()} →`,
+    ].join("\n");
+
+    let reply;
     try {
-      const fields = JSON.parse(reply.trim());
-      return { confidence: 0.55, source: "model", fields };
+      reply = await engine.complete(prompt, { temperature: 0.0, maxTokens: 80 });
     } catch {
       return null;
     }
+    if (!reply) return null;
+
+    // Parse "State: X, Country: Y (Z), Timezone: T, Currency: C"
+    const stateMatch = reply.match(/State:\s*([^,]+)/i);
+    const countryMatch = reply.match(/Country:\s*([^(]+)\((\w{2})\)/i);
+    const countryFallback = !countryMatch ? reply.match(/Country:\s*([^,]+)/i) : null;
+    const tzMatch = reply.match(/Timezone:\s*([\w/._-]+)/i);
+    const currencyMatch = reply.match(/Currency:\s*(\w{3})/i);
+
+    const stateName = stateMatch?.[1]?.trim() ?? "";
+    const countryName = (countryMatch?.[1] ?? countryFallback?.[1] ?? "").trim();
+    const country = countryMatch?.[2]?.trim() ?? "";
+
+    // Need at least a state or country to be useful.
+    if (!stateName && !countryName) return null;
+
+    return {
+      confidence: 0.6,
+      source: "model",
+      fields: {
+        state: country || stateName.substring(0, 2).toUpperCase(),
+        stateName,
+        country,
+        countryName,
+        tz: tzMatch?.[1]?.trim() ?? "",
+        currency: currencyMatch?.[1]?.trim() ?? "",
+      },
+    };
   },
 };
 
