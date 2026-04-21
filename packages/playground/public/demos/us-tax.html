@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dhamaka · US Tax Calculator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./demos.css" />
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "../sdk/index.js",
+        "@dhamaka/runtime": "../runtime/index.js",
+        "@dhamaka/runtime/engine": "../runtime/engine.js",
+        "@dhamaka/runtime/mock": "../runtime/mock-engine.js"
+      }
+    }
+    </script>
+    <style>
+      /* ── line-items table ───────────────────────────────────────── */
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-top: 0.75rem;
+      }
+      .items-table th {
+        text-align: left;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        padding: 0 0.4rem 0.4rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .items-table td {
+        padding: 0.35rem 0.4rem;
+        vertical-align: middle;
+      }
+      .items-table input,
+      .items-table select {
+        width: 100%;
+        background: var(--bg-elev-2);
+        color: var(--text);
+        border: 1px solid var(--border-strong);
+        border-radius: 4px;
+        padding: 0.3rem 0.45rem;
+        font-family: inherit;
+        font-size: 12px;
+        box-sizing: border-box;
+      }
+      .items-table input:focus,
+      .items-table select:focus { outline: 1px solid var(--accent); }
+      .items-table .col-name   { width: 32%; }
+      .items-table .col-qty    { width: 10%; }
+      .items-table .col-price  { width: 14%; }
+      .items-table .col-cat    { width: 20%; }
+      .items-table .col-total  { width: 12%; text-align: right; color: var(--text-dim); }
+      .items-table .col-del    { width: 6%;  text-align: center; }
+      .items-table .col-total span { font-size: 11px; }
+      .items-table .exempt-badge {
+        display: inline-block;
+        font-size: 9px;
+        padding: 0.1rem 0.35rem;
+        background: #0d2e1a;
+        color: var(--accent-3);
+        border-radius: 3px;
+        border: 1px solid #1a5c34;
+        margin-left: 4px;
+      }
+      .del-btn {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 14px;
+        padding: 0.15rem 0.4rem;
+        line-height: 1;
+      }
+      .del-btn:hover { border-color: var(--err); color: var(--err); }
+
+      /* ── add-item row ───────────────────────────────────────────── */
+      .add-row {
+        margin-top: 0.6rem;
+        display: flex;
+        justify-content: flex-start;
+      }
+      .add-btn {
+        background: var(--bg-elev-2);
+        border: 1px dashed var(--border-strong);
+        border-radius: 6px;
+        color: var(--text-dim);
+        font-family: inherit;
+        font-size: 12px;
+        padding: 0.4rem 0.85rem;
+        cursor: pointer;
+      }
+      .add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+      /* ── tax type toggle ────────────────────────────────────────── */
+      .toggle-group {
+        display: inline-flex;
+        border: 1px solid var(--border-strong);
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 0.3rem;
+      }
+      .toggle-group label {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0;
+      }
+      .toggle-group input[type="radio"] { display: none; }
+      .toggle-group span {
+        display: block;
+        padding: 0.35rem 0.75rem;
+        font-size: 12px;
+        color: var(--text-dim);
+        cursor: pointer;
+        background: var(--bg-elev-2);
+        border-right: 1px solid var(--border-strong);
+        text-transform: none;
+        letter-spacing: 0;
+      }
+      .toggle-group label:last-child span { border-right: none; }
+      .toggle-group input[type="radio"]:checked + span {
+        background: var(--accent);
+        color: #0a0a10;
+        font-weight: 700;
+      }
+
+      /* ── breakdown panel ────────────────────────────────────────── */
+      .breakdown-panel {
+        margin-top: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--bg-elev-2);
+      }
+      .breakdown-panel .bp-header {
+        padding: 0.5rem 0.85rem;
+        background: var(--bg);
+        border-bottom: 1px solid var(--border);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--text-muted);
+      }
+      .breakdown-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.45rem 0.85rem;
+        font-size: 12px;
+        color: var(--text-dim);
+        border-bottom: 1px solid var(--border);
+      }
+      .breakdown-row:last-child { border-bottom: none; }
+      .breakdown-row.total-row {
+        color: var(--text);
+        font-weight: 700;
+        background: var(--bg-elev);
+        font-size: 13px;
+      }
+      .breakdown-row .label { color: var(--text-muted); }
+      .breakdown-row .rate-badge {
+        font-size: 10px;
+        color: var(--accent-2);
+        margin-left: 0.4rem;
+      }
+      .breakdown-row .value { color: var(--accent-3); font-family: var(--mono); }
+      .breakdown-row.total-row .value { color: var(--accent); }
+      .breakdown-row .exempt-note {
+        font-size: 10px;
+        color: var(--accent-3);
+        font-style: italic;
+      }
+
+      /* ── federal tax brackets table ─────────────────────────────── */
+      .brackets-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        margin-top: 0.5rem;
+      }
+      .brackets-table th {
+        text-align: left;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        padding: 0 0.5rem 0.4rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .brackets-table td {
+        padding: 0.35rem 0.5rem;
+        color: var(--text-dim);
+        border-bottom: 1px solid var(--border);
+      }
+      .brackets-table tr:last-child td { border-bottom: none; }
+      .brackets-table .active-row td { color: var(--text); background: #1a1220; }
+      .brackets-table .active-row td:first-child { color: var(--accent-2); font-weight: 700; }
+      .brackets-table .tax-col { text-align: right; color: var(--accent-3); }
+      .brackets-table .amt-col { text-align: right; }
+      .brackets-table .range-col { color: var(--text-muted); }
+
+      /* ── summary metrics ────────────────────────────────────────── */
+      .metric-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-top: 0.75rem;
+      }
+      .metric {
+        background: var(--bg-elev-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.75rem 0.9rem;
+        text-align: center;
+      }
+      .metric .m-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-muted);
+        margin-bottom: 0.3rem;
+      }
+      .metric .m-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .metric .m-sub {
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-top: 0.2rem;
+      }
+
+      /* ── section divider ────────────────────────────────────────── */
+      .section-divider {
+        border: none;
+        border-top: 1px dashed var(--border-strong);
+        margin: 1.5rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="demo-page">
+      <a class="back-link" href="../">← all demos</a>
+      <h1>US Tax Calculator</h1>
+      <p class="lead">
+        Build a sales invoice below. Tax is computed instantly from a 50-state
+        rate table with product-category exemptions — no network call, no model.
+        Switch to <b>Use Tax</b> to apply buyer-state rates instead.<br/><br/>
+        Try: grocery items in <code>NY</code> or <code>CA</code> (exempt),
+        clothing in <code>PA</code> or <code>MN</code> (exempt),
+        medicine anywhere (exempt). Compare <code>TN</code> (9.55% avg) vs
+        <code>OR</code> (0%).
+      </p>
+
+      <!-- ── Sales Invoice Form ─────────────────────────────────── -->
+      <div class="demo-panel">
+        <h2>sales invoice</h2>
+
+        <div class="field-row">
+          <div>
+            <label>seller state</label>
+            <select id="seller-state"></select>
+          </div>
+          <div>
+            <label>buyer state</label>
+            <select id="buyer-state"></select>
+          </div>
+        </div>
+
+        <div style="margin-top:0.75rem">
+          <label style="margin-bottom:0.4rem">tax type</label>
+          <div class="toggle-group">
+            <label>
+              <input type="radio" name="tax-type" value="sales" checked />
+              <span>Sales Tax</span>
+            </label>
+            <label>
+              <input type="radio" name="tax-type" value="use" />
+              <span>Use Tax</span>
+            </label>
+          </div>
+        </div>
+
+        <label style="margin-top:1rem">line items</label>
+        <table class="items-table" id="items-table">
+          <thead>
+            <tr>
+              <th class="col-name">product</th>
+              <th class="col-qty">qty</th>
+              <th class="col-price">unit price</th>
+              <th class="col-cat">category</th>
+              <th class="col-total">total</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+
+        <div class="add-row">
+          <button class="add-btn" id="add-item-btn" type="button">+ add item</button>
+        </div>
+      </div>
+
+      <!-- ── Tax Breakdown ──────────────────────────────────────── -->
+      <div class="breakdown-panel" id="breakdown-panel">
+        <div class="bp-header">tax breakdown — <span id="bp-state-name">select a state</span></div>
+        <div class="breakdown-row">
+          <span class="label">subtotal</span>
+          <span class="value" id="bp-subtotal">$0.00</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="label">
+            state tax
+            <span class="rate-badge" id="bp-state-rate"></span>
+          </span>
+          <span class="value" id="bp-state-tax">$0.00</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="label">
+            county/local avg
+            <span class="rate-badge" id="bp-local-rate"></span>
+          </span>
+          <span class="value" id="bp-county-tax">$0.00</span>
+        </div>
+        <div class="breakdown-row">
+          <span class="label">total tax</span>
+          <span class="value" id="bp-total-tax">$0.00</span>
+        </div>
+        <div class="breakdown-row total-row">
+          <span>grand total</span>
+          <span class="value" id="bp-grand-total">$0.00</span>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+
+      <!-- ── Federal Income Tax ─────────────────────────────────── -->
+      <div class="demo-panel">
+        <h2>federal income tax — 2024</h2>
+
+        <div class="field-row">
+          <div>
+            <label>gross income ($)</label>
+            <input type="number" id="gross-income" placeholder="e.g. 75000" min="0" step="1000" value="75000" />
+          </div>
+          <div>
+            <label>filing status</label>
+            <select id="filing-status">
+              <option value="single">Single</option>
+              <option value="married_jointly">Married Filing Jointly</option>
+              <option value="head_of_household">Head of Household</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Federal Summary Metrics ────────────────────────────── -->
+      <div class="metric-row" id="fed-metrics">
+        <div class="metric">
+          <div class="m-label">tax owed</div>
+          <div class="m-value" id="fed-tax-owed">—</div>
+          <div class="m-sub" id="fed-taxable-income">taxable income: —</div>
+        </div>
+        <div class="metric">
+          <div class="m-label">effective rate</div>
+          <div class="m-value" id="fed-effective-rate">—</div>
+          <div class="m-sub" id="fed-std-ded">std deduction: —</div>
+        </div>
+        <div class="metric">
+          <div class="m-label">marginal rate</div>
+          <div class="m-value" id="fed-marginal-rate">—</div>
+          <div class="m-sub">top bracket</div>
+        </div>
+      </div>
+
+      <!-- ── Bracket Breakdown ──────────────────────────────────── -->
+      <div class="breakdown-panel" style="margin-top:0.75rem">
+        <div class="bp-header">bracket breakdown</div>
+        <table class="brackets-table" id="brackets-table">
+          <thead>
+            <tr>
+              <th>rate</th>
+              <th class="range-col">income range</th>
+              <th class="amt-col">taxable in bracket</th>
+              <th class="tax-col">tax</th>
+            </tr>
+          </thead>
+          <tbody id="brackets-body"></tbody>
+        </table>
+      </div>
+
+      <section class="notes" style="margin-top:1rem">
+        <h3>what's happening</h3>
+        <pre class="diagram">
+  oninput → runTask("us-sales-tax", JSON.stringify(items), { context })
+       │
+       ├─ fast: STATE_TAX.get(stateCode)    ← 0.01 ms
+       ├─ per-item: effectiveRate(category) ← exemption + reducedRate table
+       └─ sum: subtotal / stateTax / countyTax / grandTotal
+
+  oninput → runTask("us-federal-tax", income, { context })
+       │
+       ├─ fast: BRACKETS_2024[filingStatus] ← 0.01 ms
+       ├─ standardDeduction subtracted
+       └─ marginal bracket walk → taxOwed, effectiveRate, marginalRate
+
+  50 states · 5 product categories · all rules-first · zero network
+        </pre>
+      </section>
+    </main>
+
+    <script type="module">
+      import { runTask } from "dhamaka";
+
+      // ── State list for dropdowns ──────────────────────────────────
+      const STATES = [
+        ["AL","Alabama"],["AK","Alaska"],["AZ","Arizona"],["AR","Arkansas"],
+        ["CA","California"],["CO","Colorado"],["CT","Connecticut"],["DE","Delaware"],
+        ["FL","Florida"],["GA","Georgia"],["HI","Hawaii"],["ID","Idaho"],
+        ["IL","Illinois"],["IN","Indiana"],["IA","Iowa"],["KS","Kansas"],
+        ["KY","Kentucky"],["LA","Louisiana"],["ME","Maine"],["MD","Maryland"],
+        ["MA","Massachusetts"],["MI","Michigan"],["MN","Minnesota"],["MS","Mississippi"],
+        ["MO","Missouri"],["MT","Montana"],["NE","Nebraska"],["NV","Nevada"],
+        ["NH","New Hampshire"],["NJ","New Jersey"],["NM","New Mexico"],["NY","New York"],
+        ["NC","North Carolina"],["ND","North Dakota"],["OH","Ohio"],["OK","Oklahoma"],
+        ["OR","Oregon"],["PA","Pennsylvania"],["RI","Rhode Island"],["SC","South Carolina"],
+        ["SD","South Dakota"],["TN","Tennessee"],["TX","Texas"],["UT","Utah"],
+        ["VT","Vermont"],["VA","Virginia"],["WA","Washington"],["WV","West Virginia"],
+        ["WI","Wisconsin"],["WY","Wyoming"],["DC","DC"],
+      ];
+
+      const CATEGORIES = [
+        ["general",   "General merchandise"],
+        ["grocery",   "Grocery / food"],
+        ["clothing",  "Clothing"],
+        ["digital",   "Digital goods"],
+        ["medicine",  "Medicine / prescription"],
+      ];
+
+      // ── Populate state dropdowns ──────────────────────────────────
+      function buildStateOptions(el, defaultCode) {
+        for (const [code, name] of STATES) {
+          const opt = document.createElement("option");
+          opt.value = code;
+          opt.textContent = `${code} — ${name}`;
+          if (code === defaultCode) opt.selected = true;
+          el.appendChild(opt);
+        }
+      }
+
+      const sellerStateEl  = document.getElementById("seller-state");
+      const buyerStateEl   = document.getElementById("buyer-state");
+      buildStateOptions(sellerStateEl, "CA");
+      buildStateOptions(buyerStateEl,  "NY");
+
+      // ── Line items state ──────────────────────────────────────────
+      let items = [
+        { name: "Laptop",       qty: 1, unitPrice: 1299.00, category: "general"  },
+        { name: "Organic Milk", qty: 3, unitPrice: 4.99,    category: "grocery"  },
+        { name: "Aspirin",      qty: 2, unitPrice: 8.50,    category: "medicine" },
+        { name: "T-Shirt",      qty: 2, unitPrice: 29.99,   category: "clothing" },
+      ];
+
+      // ── Render line items table ───────────────────────────────────
+      //
+      // Split into two functions to preserve input focus during typing:
+      //
+      //   renderItemRows()       — rebuilds <tr> elements and wires listeners.
+      //                           Only called when the item list changes
+      //                           (initial load, add, remove). Never called
+      //                           while the user is typing inside a cell.
+      //
+      //   updateItemTotals(r)    — updates only the read-only "total" display
+      //                           cell in each existing row. Called on every
+      //                           recalc so tax amounts stay live without
+      //                           touching the input elements.
+
+      const itemsBody = document.getElementById("items-body");
+
+      function renderItemRows() {
+        itemsBody.innerHTML = "";
+        items.forEach((item, idx) => {
+          const tr = document.createElement("tr");
+          tr.dataset.itemIdx = idx;
+          tr.innerHTML = `
+            <td class="col-name">
+              <input type="text" value="${esc(item.name)}" data-idx="${idx}" data-field="name" placeholder="product name" />
+            </td>
+            <td class="col-qty">
+              <input type="number" value="${item.qty}" data-idx="${idx}" data-field="qty" min="1" step="1" />
+            </td>
+            <td class="col-price">
+              <input type="number" value="${item.unitPrice}" data-idx="${idx}" data-field="unitPrice" min="0" step="0.01" />
+            </td>
+            <td class="col-cat">
+              <select data-idx="${idx}" data-field="category">
+                ${CATEGORIES.map(([v, l]) => `<option value="${v}" ${v === item.category ? "selected" : ""}>${l}</option>`).join("")}
+              </select>
+            </td>
+            <td class="col-total" data-total-idx="${idx}"></td>
+            <td class="col-del">
+              <button class="del-btn" data-idx="${idx}" type="button" title="remove">×</button>
+            </td>
+          `;
+          itemsBody.appendChild(tr);
+        });
+
+        // Input listeners — update data model then recalc (which calls
+        // updateItemTotals, NOT renderItemRows, so focus is never stolen).
+        itemsBody.querySelectorAll("input, select").forEach((el) => {
+          el.addEventListener("input", (e) => {
+            const i     = parseInt(e.target.dataset.idx, 10);
+            const field = e.target.dataset.field;
+            items[i][field] = (field === "qty" || field === "unitPrice")
+              ? parseFloat(e.target.value) || 0
+              : e.target.value;
+            recalc();
+          });
+        });
+
+        // Remove button — structural change, safe to fully re-render.
+        itemsBody.querySelectorAll(".del-btn").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            items.splice(parseInt(e.target.dataset.idx, 10), 1);
+            renderItemRows();
+            recalc();
+          });
+        });
+      }
+
+      // Updates only the read-only display cell of each row.
+      // Inputs are untouched, so the focused element keeps focus and caret.
+      function updateItemTotals(taxResult) {
+        const breakdown = taxResult?.fields?.breakdown ?? [];
+        items.forEach((item, idx) => {
+          const cell = itemsBody.querySelector(`td[data-total-idx="${idx}"]`);
+          if (!cell) return;
+          const b         = breakdown[idx];
+          const lineTotal = item.qty * item.unitPrice;
+          const lineTax   = b ? b.lineTax : 0;
+          const exempt    = b ? b.exempt  : false;
+          cell.innerHTML  =
+            `<span>$${fmt(lineTotal)}</span>` +
+            (b
+              ? `<br/><span style="color:${exempt ? "var(--accent-3)" : "var(--accent-2)"};font-size:10px">${exempt ? "exempt" : `+$${fmt(lineTax)} tax`}</span>`
+              : "");
+        });
+      }
+
+      // ── Sales tax breakdown ───────────────────────────────────────
+      function updateSalesBreakdown(r) {
+        const f = r?.fields;
+        const $ = (id, v) => { document.getElementById(id).textContent = v; };
+
+        $("bp-state-name", f
+          ? `${f.taxStateName} (${f.taxState}) — ${taxTypeLabel()}`
+          : "select a state");
+        $("bp-subtotal",    f ? `$${fmt(f.subtotal)}`  : "$0.00");
+        $("bp-state-tax",   f ? `$${fmt(f.stateTax)}`  : "$0.00");
+        $("bp-county-tax",  f ? `$${fmt(f.countyTax)}` : "$0.00");
+        $("bp-total-tax",   f ? `$${fmt(f.totalTax)}`  : "$0.00");
+        $("bp-grand-total", f ? `$${fmt(f.grandTotal)}` : "$0.00");
+        $("bp-state-rate",  f ? `${pct(f.stateRate)}`  : "");
+        $("bp-local-rate",  f ? `${pct(f.avgLocalRate)} avg` : "");
+      }
+
+      // ── Federal tax results ───────────────────────────────────────
+      function updateFederalResults(r) {
+        const f = r?.fields;
+        if (!f) return;
+
+        document.getElementById("fed-tax-owed").textContent      = `$${fmt(f.taxOwed)}`;
+        document.getElementById("fed-taxable-income").textContent = `taxable income: $${fmt(f.taxableIncome)}`;
+        document.getElementById("fed-effective-rate").textContent = `${(f.effectiveRate * 100).toFixed(2)}%`;
+        document.getElementById("fed-std-ded").textContent        = `std deduction: $${fmt(f.standardDeduction)}`;
+        document.getElementById("fed-marginal-rate").textContent  = `${(f.marginalRate * 100).toFixed(0)}%`;
+
+        const tbody = document.getElementById("brackets-body");
+        tbody.innerHTML = "";
+        for (const b of f.brackets) {
+          const tr = document.createElement("tr");
+          tr.className = b.rate === f.marginalRate ? "active-row" : "";
+          const rangeTo = b.to !== null ? `$${fmtK(b.to)}` : "∞";
+          tr.innerHTML = `
+            <td>${(b.rate * 100).toFixed(0)}%</td>
+            <td class="range-col">$${fmtK(b.from)} – ${rangeTo}</td>
+            <td class="amt-col">$${fmt(b.taxableAmount)}</td>
+            <td class="tax-col">$${fmt(b.taxAmount)}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      }
+
+      // ── Main recalc ───────────────────────────────────────────────
+      // Only updates computed display values. Never rebuilds input rows,
+      // so typing in any cell is never interrupted.
+
+      async function recalc() {
+        const sellerState = sellerStateEl.value;
+        const buyerState  = buyerStateEl.value;
+        const taxType     = document.querySelector("input[name='tax-type']:checked").value;
+
+        const salesResult = await runTask(
+          "us-sales-tax",
+          JSON.stringify(items),
+          { context: { sellerState, buyerState, taxType }, threshold: 0 }
+        );
+        updateSalesBreakdown(salesResult);
+        updateItemTotals(salesResult);    // in-place update, no DOM rebuild
+
+        const grossIncome  = document.getElementById("gross-income").value;
+        const filingStatus = document.getElementById("filing-status").value;
+        const fedResult = await runTask(
+          "us-federal-tax",
+          grossIncome,
+          { context: { filingStatus }, threshold: 0 }
+        );
+        updateFederalResults(fedResult);
+      }
+
+      // ── Wire up all controls ──────────────────────────────────────
+      sellerStateEl.addEventListener("change", recalc);
+      buyerStateEl.addEventListener("change", recalc);
+      document.querySelectorAll("input[name='tax-type']").forEach((r) =>
+        r.addEventListener("change", recalc)
+      );
+      document.getElementById("gross-income").addEventListener("input", recalc);
+      document.getElementById("filing-status").addEventListener("change", recalc);
+
+      document.getElementById("add-item-btn").addEventListener("click", () => {
+        items.push({ name: "", qty: 1, unitPrice: 0, category: "general" });
+        renderItemRows();   // structural change → rebuild rows
+        recalc();           // then fill in the display cells
+      });
+
+      // ── Helpers ───────────────────────────────────────────────────
+      function fmt(n) { return Number(n).toFixed(2); }
+      function fmtK(n) { return n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n); }
+      function pct(n) { return `${(n * 100).toFixed(2)}%`; }
+      function esc(s) { return String(s ?? "").replace(/"/g, "&quot;"); }
+      function taxTypeLabel() {
+        const v = document.querySelector("input[name='tax-type']:checked")?.value;
+        return v === "use" ? "use tax" : "sales tax";
+      }
+
+      // ── Initial render ────────────────────────────────────────────
+      renderItemRows();   // build input rows once
+      recalc();           // fill in computed values
+    </script>
+  </body>
+</html>
