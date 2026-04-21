@@ -22,6 +22,9 @@ import { Chat } from "./chat.js";
 // built-in task so apps don't have to chase per-family imports.
 import "./tasks/formula.js";
 
+// Auto-register US tax tasks (sales tax + federal income tax).
+import "./tasks/us-tax.js";
+
 // ─── Reflex family ────────────────────────────────────────────────────
 
 export { SmartField } from "./smart-field.js";
@@ -37,6 +40,16 @@ export {
   formulaExplainTask,
   formulaDebugTask,
 } from "./tasks/formula.js";
+
+// ─── US Tax family ────────────────────────────────────────────────────
+
+export {
+  usSalesTaxTask,
+  usFederalTaxTask,
+  STATE_TAX,
+  BRACKETS_2024,
+  STANDARD_DEDUCTION_2024,
+} from "./tasks/us-tax.js";
 
 // ─── shared infrastructure ────────────────────────────────────────────
 
