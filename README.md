@@ -18,20 +18,11 @@
 
 <br/>
 
-<sub>The banner above is animated — the block letters cycle through a rainbow gradient and the stars pulse. Static fallback:</sub>
-
+```bash
+npm install dhamaka
 ```
- ██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗
- ██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗
- ██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║
- ██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║
- ██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║
- ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
-                      d h a m a k a . d e v
 
-   the local AI capability layer for web apps
-   on-device · zero latency · zero cost · every browser · offline
-```
+[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [live demos →](https://protosphinx.github.io/dhamaka/)
 
 </div>
 
@@ -326,6 +317,25 @@ In browsers, the factory prefers `window.ai` when available and falls back to th
 ---
 
 ## ✦ five-minute quickstart
+
+### just want to use the SDK?
+
+```bash
+npm install dhamaka
+```
+
+```js
+import { SmartField } from "dhamaka";
+
+new SmartField(document.querySelector("#city"), {
+  task: "city-to-state",
+  onResult: (r) => console.log(r.fields), // { state, country, tz, currency, ... }
+});
+```
+
+The package is self-contained — the WASM runtime is bundled, no extra install step. See **[the API](#-the-api)** below for the full surface.
+
+### want to hack on the runtime itself?
 
 ```bash
 git clone https://github.com/protosphinx/dhamaka
