@@ -69,6 +69,23 @@
       </section>
 
       <section class="notes">
+        <h3>Install</h3>
+        <pre class="diagram">npm install dhamaka</pre>
+        <p>
+          The package ships with the WASM runtime bundled — one install,
+          nothing else to configure. Available on
+          <a href="https://www.npmjs.com/package/dhamaka">npm</a> and
+          <a href="https://github.com/protosphinx/dhamaka/packages">GitHub Packages</a>.
+        </p>
+        <pre class="diagram">import { SmartField } from "dhamaka";
+
+new SmartField(document.querySelector("#city"), {
+  task: "city-to-state",
+  onResult: (r) =&gt; console.log(r.fields),
+});</pre>
+      </section>
+
+      <section class="notes">
         <h3>The architecture</h3>
         <pre class="diagram">
   every &lt;input&gt; and &lt;textarea&gt;
