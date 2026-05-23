@@ -21,7 +21,7 @@
     "prepublish-stage": "node scripts/prepare-publish.mjs",
     "release:dry": "node scripts/prepare-publish.mjs && cd packages/sdk/_staging && npm pack --dry-run"
   },
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": "Dhamaka contributors",
   "repository": {
     "type": "git",

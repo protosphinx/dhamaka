@@ -24,7 +24,7 @@ npm install dhamaka
 
 ![tests](https://img.shields.io/badge/tests-115%20passing-green)
 
-[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [live demos →](https://protosphinx.github.io/dhamaka/)
+[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [live demos →](https://dhamaka.dev/#demos)
 
 </div>
 
@@ -830,7 +830,7 @@ No green CI, no merge.
 
 ## ✦ license
 
-MIT. See [LICENSE](./LICENSE).
+Apache-2.0. See [LICENSE](./LICENSE).
 
 <div align="center">
 

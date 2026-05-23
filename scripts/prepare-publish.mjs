@@ -127,7 +127,7 @@ async function main() {
       "transformer",
     ],
     author: "protosphinx",
-    license: rootPkg.license || "MIT",
+    license: rootPkg.license || "Apache-2.0",
     repository: rootPkg.repository,
     bugs: {
       url: "https://github.com/protosphinx/dhamaka/issues",

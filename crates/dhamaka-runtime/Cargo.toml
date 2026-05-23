@@ -3,7 +3,7 @@ name = "dhamaka-runtime"
 version = "0.1.0"
 edition = "2021"
 description = "Dhamaka inference runtime. Compiles to WebAssembly for in-browser LLM inference."
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/protosphinx/dhamaka"
 publish = false
 
