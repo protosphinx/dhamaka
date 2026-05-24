@@ -170,6 +170,8 @@ Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try th
 | **[Smart paste](packages/playground/public/demos/paste.html)** | Reflex | Paste a contact blob, watch it split into the right fields | `attachSmartPaste` |
 | **[Formula editor](packages/playground/public/demos/formula.html)** *(in progress)* | Transform | erp.ai-style spreadsheet, live formula rewrites from plain-English instructions | `Transform.formula()` |
 
+The `dhamaka.dev` website source lives in [`packages/playground/public`](packages/playground/public). Run `npm run build:site` to rebuild the static deploy bundle in `dist/`.
+
 ---
 
 ## ✦ the stack

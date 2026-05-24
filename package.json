@@ -12,6 +12,7 @@
     "start": "node packages/playground/server.js",
     "test": "node --test --test-reporter=spec 'packages/runtime/test/*.test.js' 'packages/sdk/test/*.test.js' 'packages/hub/test/*.test.js'",
     "test:e2e": "npx playwright test",
+    "build:site": "node scripts/build-site.js",
     "bench": "node bench/bench-tasks.js && node bench/bench-wasm.js && npx playwright test --config=bench/playwright.bench.config.js",
     "bench:tasks": "node bench/bench-tasks.js",
     "bench:wasm": "node bench/bench-wasm.js",

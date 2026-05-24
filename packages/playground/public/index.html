@@ -1,140 +1,1536 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <title>Dhamaka — on-device reflexes for every input field</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="A reflex layer for every input field on the web. Drop in SmartField and every form gets intelligent. Runs 100% on-device, zero network calls." />
-    <link rel="stylesheet" href="./styles.css" />
-    <link rel="stylesheet" href="./demos/demos.css" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dhamaka - Browser-native AI SDK for web apps</title>
+    <meta name="description" content="Dhamaka is an open-source JavaScript SDK for local AI in web apps: smart fields, smart paste, contextual spellcheck, and formula transforms that run in the browser.">
+    <meta name="robots" content="index,follow">
+    <meta name="application-name" content="Dhamaka">
+    <link rel="canonical" href="https://dhamaka.dev/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Dhamaka">
+    <meta property="og:url" content="https://dhamaka.dev/">
+    <meta property="og:title" content="Dhamaka - Browser-native AI SDK for web apps">
+    <meta property="og:description" content="Open-source local AI capabilities for web apps: SmartField, SmartForm, SmartText, smart paste, and formula transforms that run in the user's browser.">
+    <meta property="og:image" content="https://dhamaka.dev/assets/autofill-demo.jpg">
+    <meta property="og:image:secure_url" content="https://dhamaka.dev/assets/autofill-demo.jpg">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="720">
+    <meta property="og:image:alt" content="Dhamaka address autofill demo running in a browser">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Dhamaka - Browser-native AI SDK for web apps">
+    <meta name="twitter:description" content="Open-source JavaScript SDK for smart fields, smart paste, contextual spellcheck, and formula transforms that run locally in the browser.">
+    <meta name="twitter:image" content="https://dhamaka.dev/assets/autofill-demo.jpg">
+    <meta name="twitter:image:alt" content="Dhamaka address autofill demo running in a browser">
+    <meta name="theme-color" content="#fbfaf4">
+    <script type="importmap">
+    {
+      "imports": {
+        "dhamaka": "/sdk/index.js",
+        "@dhamaka/runtime": "/runtime/index.js",
+        "@dhamaka/runtime/engine": "/runtime/engine.js",
+        "@dhamaka/runtime/mock": "/runtime/mock-engine.js"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://dhamaka.dev/#organization",
+          "name": "Dhamaka",
+          "url": "https://dhamaka.dev/",
+          "sameAs": [
+            "https://github.com/protosphinx/dhamaka"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://dhamaka.dev/#website",
+          "name": "Dhamaka",
+          "url": "https://dhamaka.dev/",
+          "description": "Open-source browser-native AI capabilities for web apps.",
+          "publisher": {
+            "@id": "https://dhamaka.dev/#organization"
+          }
+        },
+        {
+          "@type": "SoftwareSourceCode",
+          "@id": "https://dhamaka.dev/#software",
+          "name": "Dhamaka",
+          "url": "https://dhamaka.dev/",
+          "description": "An open-source JavaScript SDK for local AI in web apps, including SmartField, SmartForm, SmartText, smart paste, and formula transforms.",
+          "codeRepository": "https://github.com/protosphinx/dhamaka",
+          "programmingLanguage": "JavaScript",
+          "runtimePlatform": "Web browser",
+          "applicationCategory": "DeveloperApplication",
+          "license": "https://www.apache.org/licenses/LICENSE-2.0",
+          "isAccessibleForFree": true,
+          "publisher": {
+            "@id": "https://dhamaka.dev/#organization"
+          }
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://dhamaka.dev/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Is Dhamaka a model runtime?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Not primarily. Dhamaka uses runtimes underneath, but the public value is the capability layer: tasks, reflexes, transforms, engine selection, and browser-native UX."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What ships today?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Reflex and Transform ship today, including SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Why local?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Latency, privacy, cost, rate limits, and offline support all improve when the model runs where the app data already is."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #fbfaf4;
+        --paper: #ffffff;
+        --ink: #111313;
+        --muted: #626866;
+        --soft: #8b918d;
+        --line: rgba(17, 19, 19, 0.12);
+        --line-strong: rgba(17, 19, 19, 0.22);
+        --red: #cf3e58;
+        --green: #1f775d;
+        --blue: #315f91;
+        --gold: #bd861c;
+        --dark: #111018;
+        --max: 1180px;
+        --pad: clamp(16px, 4vw, 42px);
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+      }
+
+      a {
+        color: inherit;
+        text-underline-offset: 0.18em;
+      }
+
+      .page {
+        width: min(calc(100% - 2 * var(--pad)), var(--max));
+        margin: 0 auto;
+        background: var(--paper);
+        border-left: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+      }
+
+      .topbar {
+        min-height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+        padding: 0 clamp(18px, 3vw, 34px);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 20px;
+        line-height: 1;
+        font-weight: 720;
+        letter-spacing: 0;
+        text-decoration: none;
+      }
+
+      .mark {
+        width: 34px;
+        height: 34px;
+        display: block;
+        flex: 0 0 auto;
+      }
+
+      .mark img {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .oss-badge,
+      .github-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .oss-badge {
+        min-height: 30px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .github-icon {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: currentColor;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: clamp(12px, 2vw, 22px);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .nav a {
+        text-decoration: none;
+      }
+
+      .nav a:hover {
+        color: var(--ink);
+      }
+
+      .github-link {
+        min-height: 34px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        color: var(--ink);
+        font-weight: 650;
+      }
+
+      .hero {
+        min-height: 520px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        text-align: center;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgba(17, 19, 19, 0.055) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(17, 19, 19, 0.055) 1px, transparent 1px);
+        background-size: 42px 42px;
+        mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        max-width: 920px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 86px 38px 76px;
+      }
+
+      .eyebrow {
+        width: fit-content;
+        margin: 0 auto 24px;
+        color: var(--green);
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      h1 {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        font-size: 118px;
+        line-height: 0.96;
+        letter-spacing: 0;
+        font-weight: 760;
+      }
+
+      .lede {
+        width: 100%;
+        max-width: 620px;
+        margin: 26px auto 0;
+        color: var(--muted);
+        font-size: 20px;
+        line-height: 1.5;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 34px;
+      }
+
+      .hero .actions {
+        justify-content: center;
+      }
+
+      .button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        color: var(--ink);
+        background: #fff;
+        font-size: 14px;
+        font-weight: 620;
+        text-decoration: none;
+      }
+
+      .button.primary {
+        border-color: var(--ink);
+        background: var(--ink);
+        color: #fff;
+      }
+
+      .demo-stage {
+        padding: 0 58px 58px;
+        border-bottom: 1px solid var(--line);
+        background: #fff;
+      }
+
+      .demo-shell {
+        width: 100%;
+        max-width: 900px;
+        margin: -28px auto 0;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 20px 80px rgba(17, 19, 19, 0.12);
+      }
+
+      .demo-shell-head {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .inline-demo {
+        display: grid;
+        grid-template-columns: 0.88fr 1.12fr;
+        min-height: 430px;
+      }
+
+      .inline-demo > *,
+      .demo-link-card,
+      .demo-workbench {
+        min-width: 0;
+      }
+
+      .demo-sidebar {
+        padding: 26px;
+        border-right: 1px solid var(--line);
+        background: #fbfaf4;
+      }
+
+      .demo-sidebar h2 {
+        width: 100%;
+        margin-top: 12px;
+        font-size: 26px;
+        line-height: 1.12;
+        overflow-wrap: break-word;
+      }
+
+      .demo-sidebar p {
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+        overflow-wrap: break-word;
+      }
+
+      .city-chips,
+      .demo-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .city-chips {
+        margin-top: 22px;
+      }
+
+      .city-chip {
+        max-width: 100%;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 12px;
+        cursor: pointer;
+      }
+
+      .city-chip:hover {
+        border-color: var(--ink);
+      }
+
+      .demo-sidebar .button {
+        width: fit-content;
+        margin-top: 24px;
+      }
+
+      .address-card {
+        padding: 26px;
+      }
+
+      .address-card h3 {
+        margin: 0 0 16px;
+        font-size: 18px;
+        line-height: 1.3;
+      }
+
+      .address-card label {
+        display: block;
+        margin: 12px 0 6px;
+        color: var(--soft);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .address-card input {
+        width: 100%;
+        min-height: 42px;
+        padding: 0 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 7px;
+        color: var(--ink);
+        background: #fff;
+        font: inherit;
+      }
+
+      .address-card input:focus {
+        outline: 2px solid rgba(31, 119, 93, 0.18);
+        border-color: var(--green);
+      }
+
+      .demo-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .telemetry-line {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 12px;
+        border: 1px dashed var(--line-strong);
+        border-radius: 7px;
+        color: var(--muted);
+        background: #fbfaf4;
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .telemetry-line strong {
+        color: var(--ink);
+      }
+
+      .demo-library {
+        width: 100%;
+        max-width: 900px;
+        margin: 18px auto 0;
+      }
+
+      .demo-library h2 {
+        margin: 0 0 14px;
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .demo-links {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 18px;
+      }
+
+      .demo-link-card {
+        min-height: 116px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        text-decoration: none;
+        background: #fff;
+      }
+
+      .demo-link-card strong {
+        display: block;
+        font-size: 15px;
+      }
+
+      .demo-link-card span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .demo-open {
+        color: var(--ink) !important;
+        font-weight: 700;
+      }
+
+      .demo-link-card:hover {
+        border-color: var(--ink);
+      }
+
+      .demo-workbench {
+        width: 100%;
+        max-width: 900px;
+        margin: 24px auto 0;
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .demo-workbench-head {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .demo-current-link {
+        color: var(--ink);
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .demo-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-bottom: 1px solid var(--line);
+        background: #fbfaf4;
+      }
+
+      .demo-tab {
+        min-height: 48px;
+        padding: 0 12px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+      }
+
+      .demo-tab:last-child {
+        border-right: 0;
+      }
+
+      .demo-tab[aria-selected="true"] {
+        background: var(--ink);
+        color: #fff;
+      }
+
+      .demo-frame-wrap {
+        height: 720px;
+        overflow: hidden;
+        background: #0a0a10;
+      }
+
+      .demo-frame {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #0a0a10;
+      }
+
+      .hero-panel {
+        border-left: 1px solid var(--line);
+        background: #f4f5ee;
+        padding: clamp(18px, 3vw, 28px);
+        display: grid;
+        align-content: center;
+        gap: 18px;
+      }
+
+      .terminal {
+        border: 1px solid var(--line-strong);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 18px 70px rgba(17, 19, 19, 0.09);
+      }
+
+      .terminal-head {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .dots {
+        display: inline-flex;
+        gap: 6px;
+      }
+
+      .dots span {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--line-strong);
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow-x: auto;
+        color: #151715;
+        background: #fff;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+        line-height: 1.68;
+        tab-size: 2;
+      }
+
+      .key {
+        color: var(--blue);
+      }
+
+      .str {
+        color: var(--green);
+      }
+
+      .note {
+        color: var(--red);
+      }
+
+      .demo-shot {
+        margin: 0;
+        height: 164px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--dark);
+      }
+
+      .demo-shot img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border-bottom: 1px solid var(--line);
+      }
+
+      .stat {
+        min-height: 104px;
+        padding: 18px;
+        border-right: 1px solid var(--line);
+      }
+
+      .stat:last-child {
+        border-right: 0;
+      }
+
+      .label {
+        display: block;
+        color: var(--soft);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.4;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stat strong {
+        display: block;
+        margin-top: 9px;
+        font-size: 16px;
+        line-height: 1.35;
+      }
+
+      section {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .section-inner {
+        padding: clamp(44px, 7vw, 86px) clamp(18px, 4vw, 58px);
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 0.86fr 1.14fr;
+        gap: clamp(28px, 6vw, 76px);
+        align-items: start;
+      }
+
+      h2 {
+        max-width: 660px;
+        margin: 0;
+        font-size: 52px;
+        line-height: 1.04;
+        letter-spacing: 0;
+        font-weight: 720;
+      }
+
+      .section-copy {
+        max-width: 620px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.65;
+      }
+
+      .capability-grid,
+      .faq-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .capability,
+      .faq,
+      .case-study,
+      .install-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      .capability {
+        min-height: 250px;
+        padding: 22px;
+      }
+
+      .capability h3,
+      .faq h3 {
+        margin: 0;
+        font-size: 20px;
+        line-height: 1.35;
+        letter-spacing: 0;
+      }
+
+      .capability p,
+      .faq p,
+      .case-study p {
+        margin: 11px 0 0;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.62;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 20px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .architecture {
+        display: grid;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .layer {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .layer:last-child {
+        border-bottom: 0;
+      }
+
+      .layer-name {
+        padding: 18px;
+        border-right: 1px solid var(--line);
+        color: var(--gold);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .layer-body {
+        padding: 18px;
+      }
+
+      .layer-body strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 17px;
+      }
+
+      .layer-body span {
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.55;
+      }
+
+      .case-study {
+        overflow: hidden;
+      }
+
+      .case-head {
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 0 18px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+
+      .case-body {
+        padding: 22px;
+      }
+
+      .formula {
+        margin-top: 18px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fbfaf4;
+        color: #1b1d1b;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        overflow-x: auto;
+      }
+
+      .install {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+
+      .install-panel {
+        overflow: hidden;
+      }
+
+      .install-panel .case-head {
+        min-height: 46px;
+      }
+
+      .install-panel pre {
+        min-height: 264px;
+      }
+
+      .faq {
+        padding: 22px;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 26px clamp(18px, 4vw, 58px);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          width: 100%;
+          border-left: 0;
+          border-right: 0;
+        }
+
+        .split,
+        .install,
+        .inline-demo {
+          grid-template-columns: 1fr;
+        }
+
+        .demo-sidebar {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .demo-links {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .demo-tabs {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .demo-tab:nth-child(2) {
+          border-right: 0;
+        }
+
+        .demo-tab:nth-child(-n + 2) {
+          border-bottom: 1px solid var(--line);
+        }
+
+        h1 {
+          font-size: 86px;
+        }
+
+        h2 {
+          font-size: 42px;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .topbar {
+          min-height: auto;
+          align-items: flex-start;
+          flex-direction: column;
+          padding-top: 18px;
+          padding-bottom: 18px;
+        }
+
+        .topbar-left {
+          width: 100%;
+          flex-wrap: wrap;
+          justify-content: flex-start;
+        }
+
+        .oss-badge {
+          max-width: 100%;
+          min-height: 32px;
+          padding-top: 6px;
+          padding-bottom: 6px;
+          font-size: 12px;
+          line-height: 1.25;
+          white-space: normal;
+        }
+
+        .nav {
+          width: 100%;
+          flex-wrap: wrap;
+          justify-content: flex-start;
+          gap: 8px;
+          font-size: 13px;
+        }
+
+        .hero {
+          min-height: auto;
+        }
+
+        .hero-copy {
+          max-width: 100%;
+          padding: 62px 22px 58px;
+        }
+
+        .eyebrow {
+          width: auto;
+          max-width: 280px;
+        }
+
+        h1 {
+          font-size: 52px;
+        }
+
+        h2 {
+          font-size: 34px;
+        }
+
+        .lede {
+          font-size: 18px;
+        }
+
+        .actions {
+          flex-direction: column;
+        }
+
+        .button {
+          width: 100%;
+        }
+
+        .demo-stage {
+          padding: 24px 16px 42px;
+        }
+
+        .demo-shell {
+          margin-top: 0;
+        }
+
+        .demo-shell-head,
+        .demo-workbench-head,
+        .telemetry-line {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .demo-workbench-head {
+          padding-top: 12px;
+          padding-bottom: 12px;
+        }
+
+        .demo-frame-wrap {
+          height: 680px;
+        }
+
+        .address-card,
+        .demo-sidebar {
+          padding: 20px;
+        }
+
+        .demo-row,
+        .demo-links {
+          grid-template-columns: 1fr;
+        }
+
+        .stats,
+        .capability-grid,
+        .faq-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stat {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .stat:last-child {
+          border-bottom: 0;
+        }
+
+        .layer {
+          grid-template-columns: 1fr;
+        }
+
+        .layer-name {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        pre {
+          font-size: 12px;
+        }
+
+        footer {
+          flex-direction: column;
+        }
+      }
+    </style>
   </head>
   <body>
-    <header class="topbar home-topbar">
-      <a class="brand home-brand" href="./" aria-label="Dhamaka home">
-        <span class="brand-glyph" aria-hidden="true">D</span>
-        <span class="brand-lockup">
-          <span class="brand-name">Dhamaka</span>
-          <span class="tagline">
-            on-device reflexes for every input
-          </span>
-        </span>
-      </a>
+    <div class="page">
+      <header class="topbar">
+        <div class="topbar-left">
+          <a class="brand" href="/" aria-label="Dhamaka home">
+            <span>Dhamaka</span>
+          </a>
+          <a class="oss-badge" href="https://github.com/protosphinx/dhamaka" aria-label="Dhamaka is open source on GitHub">
+            <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.16-.28-.16-.68-.56-.01-.57.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.43 7.43 0 0 1 8 3.92c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.14-1.87 3.83-3.65 4.04.29.25.54.75.54 1.53 0 1.1-.01 1.98-.01 2.25 0 .22.15.48.55.4A8.08 8.08 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"/></svg>
+            Open source · Apache-2.0
+          </a>
+        </div>
+        <nav class="nav" aria-label="Primary">
+          <a href="#capabilities">[C] Capabilities</a>
+          <a href="#architecture">[A] Architecture</a>
+          <a href="#demos">[D] Demos</a>
+          <a class="github-link" href="https://github.com/protosphinx/dhamaka">
+            <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.16-.28-.16-.68-.56-.01-.57.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.43 7.43 0 0 1 8 3.92c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.14-1.87 3.83-3.65 4.04.29.25.54.75.54 1.53 0 1.1-.01 1.98-.01 2.25 0 .22.15.48.55.4A8.08 8.08 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"/></svg>
+            GitHub
+          </a>
+        </nav>
+      </header>
 
-      <nav class="site-menu" aria-label="Primary navigation">
-        <a class="menu-item" href="#capabilities">
-          <span class="menu-signal" aria-hidden="true">01</span>
-          <span class="menu-label">Capabilities</span>
-        </a>
-        <a class="menu-item" href="#architecture">
-          <span class="menu-signal" aria-hidden="true">02</span>
-          <span class="menu-label">Architecture</span>
-        </a>
-        <a class="menu-item" href="#demos">
-          <span class="menu-signal" aria-hidden="true">03</span>
-          <span class="menu-label">Demos</span>
-        </a>
-        <a class="menu-item menu-source" href="https://github.com/protosphinx/dhamaka" target="_blank" rel="noopener">
-          <span class="menu-signal" aria-hidden="true">git</span>
-          <span class="menu-label">Source</span>
-        </a>
-      </nav>
-    </header>
+      <main>
+        <section class="hero" aria-label="Dhamaka introduction">
+          <div class="hero-copy">
+            <div class="eyebrow">open source · Apache-2.0 · browser-native AI</div>
+            <h1>Dhamaka</h1>
+            <p class="lede">Ship the model to the data. Dhamaka is a JavaScript SDK for smart fields, contextual spellcheck, smart paste, and formula transforms that run inside the user's browser tab.</p>
+            <div class="actions">
+              <a class="button primary" href="#demos">Try the demo</a>
+              <a class="button" href="#install">Install the SDK</a>
+              <a class="button" href="https://github.com/protosphinx/dhamaka">GitHub repo</a>
+            </div>
+          </div>
+        </section>
 
-    <main class="layout home-layout">
-      <section class="demo-grid" id="demos">
-        <a href="./demos/autofill.html" class="demo-card" id="capabilities">
-          <div class="demo-icon">✦</div>
-          <h2>Address autofill</h2>
-          <p>
-            Type a city — state, country, timezone, and currency fill in live,
-            under 5 ms, no network.
-          </p>
-          <code class="demo-snippet">&lt;smart-field task="city-to-state"&gt;</code>
-        </a>
+        <section id="demos" class="demo-stage" aria-label="Dhamaka demos">
+          <div class="demo-shell">
+            <div class="demo-shell-head">
+              <span>./demos/autofill.html</span>
+              <span>SmartField · SmartForm · local reflex</span>
+            </div>
+            <div class="inline-demo">
+              <aside class="demo-sidebar">
+                <span class="label">Live demo</span>
+                <h2>Address autofill that runs in the tab.</h2>
+                <p>Type a city and Dhamaka resolves state, country, timezone, and currency locally. The same SDK powers the inline demo and the full demo pages.</p>
+                <div class="city-chips" aria-label="Example cities">
+                  <button class="city-chip" type="button" data-city="San Francisco">San Francisco</button>
+                  <button class="city-chip" type="button" data-city="Tokyo">Tokyo</button>
+                  <button class="city-chip" type="button" data-city="Kanpur">Kanpur</button>
+                  <button class="city-chip" type="button" data-city="San Francsico">Typo match</button>
+                </div>
+                <a class="button" href="/demos/autofill.html">Open full demo</a>
+              </aside>
 
-        <a href="./demos/spellcheck.html" class="demo-card">
-          <div class="demo-icon">✦</div>
-          <h2>Contextual spellcheck</h2>
-          <p>
-            "I'll see you their" → "there" — catches homophones in context,
-            not just dictionary misses.
-          </p>
-          <code class="demo-snippet">new SmartText(textareaEl)</code>
-        </a>
+              <form id="inline-address-form" class="address-card" autocomplete="off">
+                <h3>Shipping address</h3>
+                <label for="demo-city">City</label>
+                <input name="city" id="demo-city" placeholder="Start typing...">
+                <div class="demo-row">
+                  <div>
+                    <label for="demo-state">State / region</label>
+                    <input name="state" id="demo-state" placeholder="-">
+                  </div>
+                  <div>
+                    <label for="demo-country">Country</label>
+                    <input name="country" id="demo-country" placeholder="-">
+                  </div>
+                </div>
+                <div class="demo-row">
+                  <div>
+                    <label for="demo-timezone">Timezone</label>
+                    <input name="timezone" id="demo-timezone" placeholder="-">
+                  </div>
+                  <div>
+                    <label for="demo-currency">Currency</label>
+                    <input name="currency" id="demo-currency" placeholder="-">
+                  </div>
+                </div>
+                <div class="telemetry-line" aria-live="polite">
+                  <span>source: <strong id="demo-source">-</strong></span>
+                  <span>confidence: <strong id="demo-conf">-</strong></span>
+                  <span>latency: <strong id="demo-ms">- ms</strong></span>
+                </div>
+              </form>
+            </div>
+          </div>
 
-        <a href="./demos/paste.html" class="demo-card">
-          <div class="demo-icon">✦</div>
-          <h2>Smart paste</h2>
-          <p>
-            Paste a business card blob — name, email, phone, company, website
-            split into the right fields, synchronously.
-          </p>
-          <code class="demo-snippet">attachSmartPaste(form)</code>
-        </a>
+          <div class="demo-library">
+            <h2>All demos on dhamaka.dev</h2>
+            <div class="demo-workbench" aria-label="Embedded Dhamaka demo browser">
+              <div class="demo-workbench-head">
+                <span id="demo-frame-label">Embedded demo: Address autofill</span>
+                <a class="demo-current-link" id="demo-frame-open" href="/demos/autofill.html">Open full page</a>
+              </div>
+              <div class="demo-tabs" role="tablist" aria-label="Dhamaka demo selector">
+                <button class="demo-tab" type="button" role="tab" aria-selected="true" data-demo-src="/demos/autofill.html" data-demo-title="Address autofill">Address autofill</button>
+                <button class="demo-tab" type="button" role="tab" aria-selected="false" data-demo-src="/demos/spellcheck.html" data-demo-title="Spellcheck">Spellcheck</button>
+                <button class="demo-tab" type="button" role="tab" aria-selected="false" data-demo-src="/demos/paste.html" data-demo-title="Smart paste">Smart paste</button>
+                <button class="demo-tab" type="button" role="tab" aria-selected="false" data-demo-src="/demos/formula.html" data-demo-title="Formula editor">Formula editor</button>
+              </div>
+              <div class="demo-frame-wrap">
+                <iframe class="demo-frame" id="demo-frame" title="Address autofill demo" src="/demos/autofill.html" loading="lazy"></iframe>
+              </div>
+            </div>
+            <div class="demo-links">
+              <a class="demo-link-card" href="/demos/autofill.html">
+                <strong>Address autofill</strong>
+                <span>SmartField and SmartForm resolving city data locally.</span>
+                <span class="demo-open">Open demo</span>
+              </a>
+              <a class="demo-link-card" href="/demos/spellcheck.html">
+                <strong>Spellcheck</strong>
+                <span>Context-aware SmartText with local model fallback.</span>
+                <span class="demo-open">Open demo</span>
+              </a>
+              <a class="demo-link-card" href="/demos/paste.html">
+                <strong>Smart paste</strong>
+                <span>Paste contact blobs into structured form fields.</span>
+                <span class="demo-open">Open demo</span>
+              </a>
+              <a class="demo-link-card" href="/demos/formula.html">
+                <strong>Formula editor</strong>
+                <span>Natural-language spreadsheet formula transforms.</span>
+                <span class="demo-open">Open demo</span>
+              </a>
+            </div>
+          </div>
+        </section>
 
-        <a href="./demos/formula.html" class="demo-card">
-          <div class="demo-icon">✦</div>
-          <h2>Formula editor <small style="color:#8a8a99;font-weight:400">(erp.ai-style)</small></h2>
-          <p>
-            A tiny spreadsheet. Select a cell, type "add a 10% discount" or
-            "round to 2 decimals", watch the formula rewrite live. No server,
-            no model call, just pattern rewrites.
-          </p>
-          <code class="demo-snippet">Transform.formula(input, instruction)</code>
-        </a>
-      </section>
+        <div class="stats" aria-label="Dhamaka product promises">
+          <div class="stat">
+            <span class="label">Location</span>
+            <strong>100% in the browser tab</strong>
+          </div>
+          <div class="stat">
+            <span class="label">Network</span>
+            <strong>0 external requests on fast paths</strong>
+          </div>
+          <div class="stat">
+            <span class="label">Cost</span>
+            <strong>$0 per AI call</strong>
+          </div>
+          <div class="stat">
+            <span class="label">Status</span>
+            <strong>Reflex and Transform ship today</strong>
+          </div>
+          <div class="stat">
+            <span class="label">License</span>
+            <strong>Open source under Apache-2.0</strong>
+          </div>
+        </div>
 
-      <section class="notes">
-        <h3>Install</h3>
-        <pre class="diagram">npm install dhamaka</pre>
-        <p>
-          The package ships with the WASM runtime bundled — one install,
-          nothing else to configure. Available on
-          <a href="https://www.npmjs.com/package/dhamaka">npm</a> and
-          <a href="https://github.com/protosphinx/dhamaka/packages">GitHub Packages</a>.
-        </p>
-        <pre class="diagram">import { SmartField } from "dhamaka";
+        <section id="capabilities" aria-label="Dhamaka capabilities">
+          <div class="section-inner split">
+            <div>
+              <span class="label">Capability families</span>
+              <h2>Not a raw model runtime. The product layer above it.</h2>
+              <p class="section-copy">Dhamaka sits above window.ai, Transformers.js, WASM, and mock engines. Developers ship task-oriented UX today: fields that infer, textareas that understand context, contact blobs that become form data, and formulas that rewrite without leaking company data.</p>
+            </div>
+            <div class="capability-grid">
+              <article class="capability">
+                <h3>Reflex</h3>
+                <p>Reactive, keystroke-level intelligence for inputs and textareas. Rules first, fuzzy second, model only when the fast path is uncertain.</p>
+                <div class="pill-row">
+                  <span class="pill">SmartField</span>
+                  <span class="pill">SmartForm</span>
+                  <span class="pill">SmartText</span>
+                  <span class="pill">smart paste</span>
+                </div>
+              </article>
+              <article class="capability">
+                <h3>Transform</h3>
+                <p>One-shot instruction-driven rewrites for app data. The flagship case is erp.ai-style formula editing, explanation, and debugging.</p>
+                <div class="pill-row">
+                  <span class="pill">formula-transform</span>
+                  <span class="pill">formula-explain</span>
+                  <span class="pill">formula-debug</span>
+                </div>
+              </article>
+              <article class="capability">
+                <h3>Smart paste</h3>
+                <p>Structured extraction for pasted contact blobs. Email, phone, website, social handles, names, and company hints land in the right fields without a server call.</p>
+                <div class="pill-row">
+                  <span class="pill">paste-extract</span>
+                  <span class="pill">onpaste</span>
+                  <span class="pill">form fill</span>
+                </div>
+              </article>
+              <article class="capability">
+                <h3>Formula tasks</h3>
+                <p>Deterministic spreadsheet edits use structural rewrites first, then the same task shape can escalate when the instruction needs model reasoning.</p>
+                <div class="pill-row">
+                  <span class="pill">rewrite</span>
+                  <span class="pill">explain</span>
+                  <span class="pill">debug</span>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
 
-new SmartField(document.querySelector("#city"), {
-  task: "city-to-state",
-  onResult: (r) =&gt; console.log(r.fields),
-});</pre>
-      </section>
+        <section aria-label="Dhamaka case study">
+          <div class="section-inner split">
+            <div>
+              <span class="label">Hero case</span>
+              <h2>Copilot for sensitive formulas, without shipping formulas away.</h2>
+              <p class="section-copy">ERP formulas contain pricing models, margins, payroll math, commission tiers, inventory rules, and compliance checks. Dhamaka lets products like erp.ai transform and explain those formulas in the tab where the data already lives.</p>
+            </div>
+            <article class="case-study">
+              <div class="case-head">
+                <span>Transform.formula()</span>
+                <span>source: rule</span>
+              </div>
+              <div class="case-body">
+                <p>A user selects a cell with a tax formula and types a plain-English instruction. The rules layer recognizes the discount pattern and rewrites structurally in microseconds. Weirder instructions can escalate to an on-device model.</p>
+                <div class="formula">input:  =SUM(A1:A10) * 1.08<br>ask:    add a 10% discount for employees<br>output: =(SUM(A1:A10) * 1.08) * 0.9<br>why:    multiplied by 0.9 to apply the discount</div>
+              </div>
+            </article>
+          </div>
+        </section>
 
-      <section class="notes" id="architecture">
-        <h3>The architecture</h3>
-        <pre class="diagram">
-  every &lt;input&gt; and &lt;textarea&gt;
-            │
-            ▼
-     [ SmartField ]   ←   rules-first (&lt;1 ms, always runs)
-            │
-            ▼
-       [ reflex ]     ←   resident engine (warm, KV-cached)
-            │
-            ▼
-        [ engine ]    ←   window.ai → WASM → MockEngine
-                          (task-specific models, ~50 ms cold)
-        </pre>
-        <p>
-          Every task layers rules → fuzzy → model. Most real inputs never
-          touch the model at all — they're answered by a lookup table or a
-          regex in microseconds. The model only runs when the fast path is
-          uncertain, and when it does, it's resident in the page, not on a
-          server.
-        </p>
-      </section>
+        <section id="architecture" aria-label="Dhamaka architecture">
+          <div class="section-inner split">
+            <div>
+              <span class="label">Architecture</span>
+              <h2>Every task runs through the fastest layer that can answer.</h2>
+              <p class="section-copy">Dhamaka optimizes for a simple test: would this still work if the user's laptop had no network connection and no account with an AI provider?</p>
+            </div>
+            <div class="architecture">
+              <div class="layer">
+                <div class="layer-name">your app</div>
+                <div class="layer-body"><strong>Inputs, textareas, formulas, tables, actions</strong><span>The product already holds schema, state, data, and affordances in JavaScript memory.</span></div>
+              </div>
+              <div class="layer">
+                <div class="layer-name">capabilities</div>
+                <div class="layer-body"><strong>SmartField, SmartForm, SmartText, Transform</strong><span>Task-oriented APIs that products can drop in without building model plumbing.</span></div>
+              </div>
+              <div class="layer">
+                <div class="layer-name">task registry</div>
+                <div class="layer-body"><strong>rules -> fuzzy -> model</strong><span>Exact lookups, regexes, structural rewrites, and local model fallback share one result shape.</span></div>
+              </div>
+              <div class="layer">
+                <div class="layer-name">engine</div>
+                <div class="layer-body"><strong>window.ai -> Transformers.js -> WASM -> MockEngine</strong><span>The SDK surface stays stable while the backend auto-selects the best available runtime.</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <section class="notes">
-        <h3>Looking for the old chat demo?</h3>
-        <p>
-          <a href="./chat.html">It's here →</a>. That's the low-level
-          <code>Dhamaka.load()</code> API (direct access to the runtime).
-          It still works, but for most use cases the <code>SmartField</code>
-          primitives above are what you want.
-        </p>
-      </section>
-    </main>
+        <section aria-label="Dhamaka evaluation highlights">
+          <div class="section-inner">
+            <div class="split">
+              <div>
+                <span class="label">Evals</span>
+                <h2>The hot path is microseconds; the browser path is measured end to end.</h2>
+                <p class="section-copy">Latest local eval run: May 24, 2026 on Apple Silicon, Node v22.22.2, and headless Chromium. The task pipeline measures local rule and heuristic paths; the browser evals measure real page load, debounce, DOM updates, and user-visible results.</p>
+              </div>
+              <div class="stats" style="border:1px solid var(--line); border-radius:8px; overflow:hidden;">
+                <div class="stat">
+                  <span class="label">Task p99</span>
+                  <strong>98.5 µs fuzzy city match</strong>
+                </div>
+                <div class="stat">
+                  <span class="label">Autofill</span>
+                  <strong>299 ms type to result</strong>
+                </div>
+                <div class="stat">
+                  <span class="label">Spellcheck</span>
+                  <strong>189 ms to suggestion</strong>
+                </div>
+                <div class="stat">
+                  <span class="label">Paste</span>
+                  <strong>18 ms blob to fields</strong>
+                </div>
+                <div class="stat">
+                  <span class="label">Network</span>
+                  <strong>0 external requests</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="install" aria-label="Install Dhamaka">
+          <div class="section-inner install">
+            <div>
+              <span class="label">Install</span>
+              <h2>One package. No provider account.</h2>
+              <p class="section-copy">Install the public SDK and attach Dhamaka where your app already has intent: form fields, textareas, spreadsheet cells, data import screens, and internal tools.</p>
+              <div class="actions">
+                <a class="button primary" href="https://www.npmjs.com/package/dhamaka">npm package</a>
+                <a class="button" href="https://github.com/protosphinx/dhamaka">GitHub repo</a>
+              </div>
+            </div>
+            <div class="install-panel">
+              <div class="case-head">
+                <span>quickstart.js</span>
+                <span>dhamaka@0.1.0</span>
+              </div>
+              <pre><code>import { SmartForm } from "dhamaka";
+
+const form = document.querySelector("#checkout");
+
+new SmartForm(form, {
+  tasks: { city: "city-to-state" },
+  infer: {
+    "city -> state": "city-to-state:stateName",
+    "city -> country": "city-to-state:countryName",
+    "city -> timezone": "city-to-state:tz",
+    "city -> currency": "city-to-state:currency",
+  },
+});</code></pre>
+            </div>
+          </div>
+        </section>
+
+        <section aria-label="Frequently asked questions">
+          <div class="section-inner split">
+            <div>
+              <span class="label">FAQ</span>
+              <h2>Local-first AI, built for product surfaces.</h2>
+            </div>
+            <div class="faq-grid">
+              <article class="faq">
+                <h3>Is Dhamaka a model runtime?</h3>
+                <p>Not primarily. It uses runtimes underneath, but the public value is the capability layer: tasks, reflexes, transforms, engine selection, and browser-native UX.</p>
+              </article>
+              <article class="faq">
+                <h3>What ships today?</h3>
+                <p>Reflex and Transform. That includes SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug.</p>
+              </article>
+              <article class="faq">
+                <h3>Why local?</h3>
+                <p>Latency, privacy, cost, rate limits, and offline support all improve when the model runs where the app data already is.</p>
+              </article>
+              <article class="faq">
+                <h3>What does the name mean?</h3>
+                <p>Dhamaka means a burst or impact. Here, it is the moment an ordinary web form gets an on-device intelligence layer.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>Apache-2.0 licensed. Open source on GitHub.</span>
+        <span>Stop sending the data to the model.</span>
+      </footer>
+    </div>
+    <script type="module">
+      import { SmartField, SmartForm } from "dhamaka";
+
+      const form = document.getElementById("inline-address-form");
+      const cityInput = document.getElementById("demo-city");
+      const sourceOut = document.getElementById("demo-source");
+      const confOut = document.getElementById("demo-conf");
+      const msOut = document.getElementById("demo-ms");
+      let startedAt = 0;
+
+      if (form && cityInput) {
+        new SmartForm(form, {
+          infer: {
+            "city -> state": "city-to-state:stateName",
+            "city -> country": "city-to-state:countryName",
+            "city -> timezone": "city-to-state:tz",
+            "city -> currency": "city-to-state:currency",
+          },
+        });
+
+        cityInput.addEventListener("input", () => {
+          startedAt = performance.now();
+        });
+
+        new SmartField(cityInput, {
+          task: "city-to-state",
+          debounceMs: 120,
+          onResult: (result) => {
+            const elapsed = startedAt ? performance.now() - startedAt : 0;
+            sourceOut.textContent = result.source || "-";
+            confOut.textContent = (result.confidence ?? 0).toFixed(2);
+            msOut.textContent = `${elapsed.toFixed(2)} ms`;
+          },
+        });
+
+        document.querySelectorAll("[data-city]").forEach((button) => {
+          button.addEventListener("click", () => {
+            cityInput.value = button.dataset.city || "";
+            startedAt = performance.now();
+            cityInput.dispatchEvent(new Event("input", { bubbles: true }));
+            cityInput.focus();
+          });
+        });
+      }
+
+      const demoFrame = document.getElementById("demo-frame");
+      const demoFrameLabel = document.getElementById("demo-frame-label");
+      const demoFrameOpen = document.getElementById("demo-frame-open");
+
+      document.querySelectorAll("[data-demo-src]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const src = button.dataset.demoSrc;
+          const title = button.dataset.demoTitle || button.textContent.trim();
+          document.querySelectorAll("[data-demo-src]").forEach((tab) => {
+            tab.setAttribute("aria-selected", String(tab === button));
+          });
+          if (demoFrame && src) {
+            demoFrame.src = src;
+            demoFrame.title = `${title} demo`;
+          }
+          if (demoFrameLabel) {
+            demoFrameLabel.textContent = `Embedded demo: ${title}`;
+          }
+          if (demoFrameOpen && src) {
+            demoFrameOpen.href = src;
+          }
+        });
+      });
+    </script>
   </body>
 </html>
