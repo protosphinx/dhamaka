@@ -1,0 +1,175 @@
+{
+  "generatedAt": "2026-05-24T11:06:38.713Z",
+  "source": "deterministic task evals against repo code",
+  "commit": "aac4648",
+  "totals": {
+    "passed": 64,
+    "total": 65,
+    "passRate": 0.9846153846153847
+  },
+  "suites": [
+    {
+      "id": "autofill",
+      "title": "Address autofill",
+      "passed": 16,
+      "total": 16,
+      "cases": [
+        "San Francisco -> California",
+        "sf alias -> CA",
+        "san fran alias -> CA",
+        "San Francsico typo -> fuzzy CA",
+        "Tokyo -> Japan / JPY",
+        "Berlin -> Germany",
+        "Paris -> France",
+        "Mumbai -> Maharashtra",
+        "Bengaluru alias -> Karnataka",
+        "Kanpur -> Uttar Pradesh",
+        "Singapore alias sg -> SGD",
+        "Sydney -> Australia / AUD",
+        "Toronto -> Ontario",
+        "New York City alias -> NY",
+        "Sao Paulo alias -> Brazil",
+        "nonsense city returns null"
+      ],
+      "failures": []
+    },
+    {
+      "id": "spellcheck",
+      "title": "Contextual spellcheck",
+      "passed": 14,
+      "total": 15,
+      "cases": [
+        "recieve -> receive",
+        "teh -> the",
+        "tommorow -> tomorrow",
+        "seperate -> separate",
+        "definately -> definitely",
+        "wierd -> weird",
+        "becuase -> because",
+        "your welcome -> you're",
+        "their context -> there",
+        "too context -> to",
+        "clean sentence no fast-path issues",
+        "empty input no suggestions",
+        "multiple issues in reading order",
+        "noone -> no one",
+        "accomodate -> accommodate"
+      ],
+      "failures": [
+        "too context -> to"
+      ]
+    },
+    {
+      "id": "paste",
+      "title": "Smart paste",
+      "passed": 10,
+      "total": 10,
+      "cases": [
+        "signature extracts core fields",
+        "freemail does not invent company",
+        "domain derives company",
+        "second email captured in emails array",
+        "phone normalizes punctuation",
+        "website extracted",
+        "twitter handle extracted",
+        "empty paste returns zero confidence",
+        "single email still useful",
+        "name heuristic from first line"
+      ],
+      "failures": []
+    },
+    {
+      "id": "formula-transform",
+      "title": "Formula transform",
+      "passed": 12,
+      "total": 12,
+      "cases": [
+        "10% discount",
+        "7.25% tax",
+        "round to 2 decimals",
+        "round nearest integer",
+        "multiply by 1.5",
+        "divide by 100",
+        "wrap in IFERROR",
+        "fallback to 5 on error",
+        "convert to EUR",
+        "flip sign",
+        "absolute value",
+        "unknown instruction falls through"
+      ],
+      "failures": []
+    },
+    {
+      "id": "formula-explain",
+      "title": "Formula explain",
+      "passed": 6,
+      "total": 6,
+      "cases": [
+        "SUM explanation",
+        "IFERROR VLOOKUP explanation",
+        "ROUND explanation",
+        "arithmetic addition explanation",
+        "arithmetic multiply then divide",
+        "unknown function falls through"
+      ],
+      "failures": []
+    },
+    {
+      "id": "formula-debug",
+      "title": "Formula debug",
+      "passed": 6,
+      "total": 6,
+      "cases": [
+        "#DIV/0! advice",
+        "#N/A lookup advice",
+        "#REF! reference advice",
+        "#NAME? spelling advice",
+        "static division risk",
+        "unknown error falls through"
+      ],
+      "failures": []
+    }
+  ],
+  "notes": [
+    "These are deterministic task-level evals for rules-first fast paths.",
+    "They do not download or call an LLM.",
+    "The failing case is intentionally published so regressions and product gaps are visible.",
+    "A separate stochastic LLM-quality eval harness is still needed for model fallback behavior."
+  ],
+  "scorecard": {
+    "taskAccuracy": {
+      "label": "Task accuracy",
+      "score": "98.5%",
+      "passed": 64,
+      "total": 65,
+      "notes": [
+        "Deterministic golden task evals",
+        "Current miss: too context -> to"
+      ]
+    },
+    "modelFallbacks": {
+      "label": "Model fallbacks",
+      "score": "18/18",
+      "passed": 18,
+      "total": 18,
+      "notes": [
+        "Factory selection",
+        "MockEngine streaming/determinism/abort",
+        "Real WASM load/generate/determinism/abort"
+      ]
+    },
+    "productBudgets": {
+      "label": "Product budgets",
+      "score": "17/17",
+      "passed": 17,
+      "total": 17,
+      "notes": [
+        "11 rules-path p99 checks under 1 ms",
+        "6 browser budget checks passed",
+        "0 external requests",
+        "WASM cold start median 0.69 ms",
+        "WASM binary 55.1 KB"
+      ]
+    }
+  }
+}

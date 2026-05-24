@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dhamaka Evals - real task eval results</title>
+    <meta name="description" content="Dhamaka evals: latest deterministic task eval results, passing and failing cases, and what still needs model-quality scoring.">
+    <link rel="canonical" href="https://dhamaka.dev/evals/">
+    <meta name="theme-color" content="#fbfaf4">
+    <style>
+      :root {
+        --paper: #fbfaf4;
+        --ink: #111313;
+        --muted: #5f625f;
+        --soft: #83877f;
+        --line: #ded9c8;
+        --gold: #b87503;
+        --blue: #1f5d78;
+        --red: #a0342f;
+        --green: #206a45;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.55;
+      }
+
+      a { color: inherit; }
+
+      .page {
+        width: min(1180px, calc(100% - 28px));
+        margin: 0 auto;
+        min-height: 100vh;
+        border-left: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+        background: #fffdf7;
+      }
+
+      header,
+      footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 20px clamp(18px, 4vw, 54px);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand {
+        font-weight: 760;
+        font-size: 20px;
+        text-decoration: none;
+      }
+
+      nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      nav a {
+        text-decoration: none;
+      }
+
+      nav a[aria-current="page"] {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      section {
+        border-bottom: 1px solid var(--line);
+        padding: clamp(38px, 6vw, 78px) clamp(18px, 4vw, 54px);
+      }
+
+      .hero,
+      .split {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: clamp(28px, 5vw, 72px);
+        align-items: start;
+      }
+
+      .label {
+        display: block;
+        color: var(--soft);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 11px;
+        line-height: 1.4;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 16px;
+        font-size: clamp(44px, 8vw, 84px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin-bottom: 16px;
+        font-size: clamp(30px, 4.4vw, 52px);
+        line-height: 1.04;
+      }
+
+      h3 {
+        margin-bottom: 10px;
+        font-size: 20px;
+      }
+
+      .lede,
+      .copy {
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.7;
+      }
+
+      .notice {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px;
+      }
+
+      .notice strong {
+        color: var(--ink);
+      }
+
+      .score-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .score {
+        min-height: 132px;
+        padding: 18px;
+        border-right: 1px solid var(--line);
+      }
+
+      .score:last-child {
+        border-right: 0;
+      }
+
+      .score strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 32px;
+        line-height: 1;
+      }
+
+      .score span:last-child {
+        display: block;
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .pass {
+        color: var(--green);
+        font-weight: 760;
+      }
+
+      .fail {
+        color: var(--red);
+        font-weight: 760;
+      }
+
+      .matrix,
+      .cards {
+        display: grid;
+        gap: 16px;
+      }
+
+      .matrix {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 180px minmax(0, 1fr) 180px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .row:last-child { border-bottom: 0; }
+
+      .row > div {
+        padding: 16px;
+        border-right: 1px solid var(--line);
+      }
+
+      .row > div:last-child { border-right: 0; }
+
+      .row strong {
+        display: block;
+      }
+
+      .row span,
+      .card p,
+      .notice p {
+        color: var(--muted);
+      }
+
+      .cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        min-height: 210px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 22px;
+      }
+
+      .case-list {
+        margin: 12px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .case-list li + li {
+        margin-top: 6px;
+      }
+
+      .next-scoreboard {
+        padding: clamp(42px, 6vw, 68px) clamp(18px, 4vw, 54px);
+        background: var(--paper);
+      }
+
+      .next-scoreboard .label {
+        color: #858981;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+      }
+
+      .next-scoreboard h2 {
+        max-width: 860px;
+        margin: 10px 0 24px;
+        color: #0d0f0e;
+        font-size: clamp(34px, 4.2vw, 58px);
+        line-height: 1.02;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .next-cards {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .next-card {
+        min-height: 0;
+        border: 1px solid #ddd8c8;
+        border-radius: 8px;
+        background: #fff;
+        padding: clamp(22px, 2.4vw, 30px);
+      }
+
+      .next-card h3 {
+        margin: 0 0 14px;
+        color: #101211;
+        font-size: clamp(20px, 1.7vw, 26px);
+        line-height: 1.16;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .next-metric {
+        margin-bottom: 12px;
+        color: #101211;
+        font-size: clamp(34px, 3.2vw, 48px);
+        line-height: 1;
+        font-weight: 780;
+        letter-spacing: 0;
+      }
+
+      .next-card p {
+        margin: 0;
+        max-width: 500px;
+        color: #62645f;
+        font-size: 16px;
+        line-height: 1.55;
+        letter-spacing: 0;
+      }
+
+      .next-card code {
+        color: #4d504b;
+        font-size: 0.88em;
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      footer {
+        border-bottom: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 840px) {
+        .page {
+          width: 100%;
+          border-left: 0;
+          border-right: 0;
+        }
+
+        header,
+        footer {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .hero,
+        .split,
+        .cards,
+        .score-grid,
+        .next-cards,
+        .row {
+          grid-template-columns: 1fr;
+        }
+
+        .next-scoreboard {
+          padding: 42px 18px 48px;
+        }
+
+        .next-scoreboard h2 {
+          margin-bottom: 20px;
+          font-size: clamp(34px, 10vw, 46px);
+          letter-spacing: 0;
+        }
+
+        .next-card {
+          min-height: 0;
+          padding: 22px;
+        }
+
+        .next-card h3 {
+          font-size: 22px;
+        }
+
+        .next-metric {
+          font-size: 38px;
+        }
+
+        .next-card p {
+          font-size: 15px;
+        }
+
+        .score {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .score:last-child {
+          border-bottom: 0;
+        }
+
+        .row > div {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .row > div:last-child {
+          border-bottom: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <a class="brand" href="/">Dhamaka</a>
+        <nav aria-label="Primary">
+          <a href="/#demos">Demos</a>
+          <a href="/#capabilities">Capabilities</a>
+          <a href="/test/">Tests</a>
+          <a href="/evals/" aria-current="page">Evals</a>
+          <a href="/llms/">LLMs</a>
+          <a href="https://github.com/protosphinx/dhamaka">GitHub</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <span class="label">Evals - updated May 24, 2026</span>
+            <h1>Real task evals, published with the failure.</h1>
+            <p class="lede">This page now includes a deterministic eval run against Dhamaka's actual task code: address autofill, contextual spellcheck, smart paste, formula transform, formula explain, and formula debug.</p>
+          </div>
+          <div class="notice">
+            <span class="label">Scope</span>
+            <p><strong>These are real evals, but they are task-fast-path evals.</strong> They do not download or call an LLM. They score the rules, regex, fuzzy, and structural rewrite layer that Dhamaka is supposed to use before a model is involved.</p>
+            <p>Model-quality scoring for Transformers.js and <code>window.ai</code> fallbacks is reported separately from this deterministic fast-path run.</p>
+          </div>
+        </section>
+
+        <section>
+          <span class="label">Latest deterministic eval run</span>
+          <h2>64 / 65 passing across six task suites.</h2>
+          <div class="score-grid" aria-label="Latest eval scorecard">
+            <div class="score">
+              <span class="label">Overall</span>
+              <strong>98.5%</strong>
+              <span>64 passing of 65 golden cases</span>
+            </div>
+            <div class="score">
+              <span class="label">Passing</span>
+              <strong>64</strong>
+              <span>autofill, paste, and formula suites are fully green</span>
+            </div>
+            <div class="score">
+              <span class="label">Failing</span>
+              <strong>1</strong>
+              <span>spellcheck misses one context rule: <code>too -> to</code></span>
+            </div>
+            <div class="score">
+              <span class="label">Artifact</span>
+              <strong>JSON</strong>
+              <span><a href="/evals/results.json">Download the eval result</a></span>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="split">
+            <div>
+              <span class="label">Suite results</span>
+              <h2>What passed, and what did not.</h2>
+              <p class="copy">The evals use gold assertions against structured task outputs. A pass means the current implementation returned the expected field, suggestion, formula rewrite, explanation, or diagnostic. The failing case stays visible because that is the point of evals.</p>
+            </div>
+            <div class="matrix">
+              <div class="row">
+                <div><strong>Address autofill</strong></div>
+                <div><span>Aliases, typos, international cities, currencies, and nonsense input.</span></div>
+                <div><span class="pass">16 / 16</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Spellcheck</strong></div>
+                <div><span>Common misspellings, homophones, clean text, empty input, and multiple suggestions.</span></div>
+                <div><span class="fail">14 / 15</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Smart paste</strong></div>
+                <div><span>Email, phone, website, Twitter handle, name heuristic, freemail handling, and multi-email capture.</span></div>
+                <div><span class="pass">10 / 10</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Formula transform</strong></div>
+                <div><span>Discount, tax, round, multiply, divide, IFERROR, currency conversion, sign flip, absolute value, and unknown instruction fallback.</span></div>
+                <div><span class="pass">12 / 12</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Formula explain</strong></div>
+                <div><span>Function explanation, arithmetic explanation, and unknown-function fallback.</span></div>
+                <div><span class="pass">6 / 6</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Formula debug</strong></div>
+                <div><span>Spreadsheet error advice for #DIV/0!, #N/A, #REF!, #NAME?, static division risk, and unknown errors.</span></div>
+                <div><span class="pass">6 / 6</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <span class="label">Failing eval</span>
+          <h2>The current miss is useful.</h2>
+          <div class="cards">
+            <article class="card">
+              <h3>Contextual spellcheck</h3>
+              <p>The rule layer catches <code>their -> there</code>, <code>Your welcome -> you're welcome</code>, and common misspellings like <code>recieve</code>, but this eval currently fails:</p>
+              <ul class="case-list">
+                <li><span class="fail">FAIL</span> <code>I am going too the store</code> expected <code>too -> to</code>.</li>
+              </ul>
+            </article>
+            <article class="card">
+              <h3>Why publish it?</h3>
+              <p>A real eval page exposes product gaps. This one shows the rules layer needs another context pattern, or the model fallback needs to cover this class reliably.</p>
+            </article>
+            <article class="card">
+              <h3>Scope boundary</h3>
+              <p>The current run does not score LLM fallback quality, model latency, cold-start download cost, or cross-browser backend differences. Those belong in a separate model-quality report.</p>
+            </article>
+          </div>
+        </section>
+
+        <section>
+          <div class="split">
+            <div>
+              <span class="label">Scoring model</span>
+              <h2>Each eval scores the task, not the model brand.</h2>
+              <p class="copy">A useful eval tells Dhamaka whether the fast path answered correctly, whether escalation was needed, and whether the final output was safe to apply.</p>
+            </div>
+            <div class="matrix">
+              <div class="row">
+                <div><strong>Autofill</strong></div>
+                <div><span>City aliases, typos, international regions, ambiguous city names, empty input, confidence calibration.</span></div>
+                <div><span>exact fields + latency</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Spellcheck</strong></div>
+                <div><span>Homophones, misspellings, clean text, bad model suggestions, multiple suggestions, apply-fix behavior.</span></div>
+                <div><span>precision + recall</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Smart paste</strong></div>
+                <div><span>Business cards, messy signatures, freemail domains, international phones, user-overridden fields.</span></div>
+                <div><span>field F1 + no overwrite</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Formulas</strong></div>
+                <div><span>Discounts, rounding, tax, IFERROR, references, non-formula cells, semantic equivalence.</span></div>
+                <div><span>golden output + AST checks</span></div>
+              </div>
+              <div class="row">
+                <div><strong>Privacy</strong></div>
+                <div><span>Confirm that rules-first paths make zero external requests and model downloads happen only when needed.</span></div>
+                <div><span>network audit</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="next-scoreboard">
+          <span class="label">Current scorecard</span>
+          <h2>Dhamaka evals at a glance.</h2>
+          <div class="next-cards">
+            <article class="next-card">
+              <h3>Task accuracy</h3>
+              <div class="next-metric">98.5%</div>
+              <p>64/65 golden task evals passed across autofill, spellcheck, smart paste, and formula tasks. Current miss: <code>too -&gt; to</code>.</p>
+            </article>
+            <article class="next-card">
+              <h3>Model fallbacks</h3>
+              <div class="next-metric">18/18</div>
+              <p>Runtime fallback tests passed for factory selection, MockEngine streaming and aborts, plus real WASM load, generate, determinism, and abort.</p>
+            </article>
+            <article class="next-card">
+              <h3>Product budgets</h3>
+              <div class="next-metric">17/17</div>
+              <p>11 rules-path p99 checks stayed under 1 ms, 6 browser budget checks passed, external requests stayed at 0, and WASM cold start median was 0.69 ms.</p>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <span>Good evals make Dhamaka smaller, faster, and more honest.</span>
+        <span><a href="/test/">Read the current tests</a></span>
+      </footer>
+    </div>
+  </body>
+</html>
