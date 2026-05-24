@@ -21,6 +21,19 @@
 [![CI](https://github.com/protosphinx/dhamaka/actions/workflows/ci.yml/badge.svg)](https://github.com/protosphinx/dhamaka/actions/workflows/ci.yml)
 [![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)](./LICENSE)
 [![evals: 64/65](https://img.shields.io/badge/evals-64%2F65-green)](https://dhamaka.dev/evals/)
+[![tests: 124 passing](https://img.shields.io/badge/tests-124%20passing-2f9e44)](#-tests)<br/>
+[![browser-local: LLM workflows](https://img.shields.io/badge/browser--local-LLM%20workflows-315f91)](#-what-is-this)
+[![private context: stays in tab](https://img.shields.io/badge/private%20context-stays%20in%20tab-1f775d)](#-the-thesis)
+[![provider calls: 0](https://img.shields.io/badge/provider%20calls-0-2f9e44)](#-what-is-this)
+[![offline: ready](https://img.shields.io/badge/offline-ready-495057)](#-download-once-use-everywhere--the-honest-version)
+[![workflow: model-first](https://img.shields.io/badge/workflow-model--first-315f91)](#-the-core-api--workflow)
+[![tools: app actions](https://img.shields.io/badge/tools-app%20actions-5f3dc4)](#-the-task-registry)<br/>
+[![validators: safety gates](https://img.shields.io/badge/validators-safety%20gates-cf3e58)](#-the-task-registry)
+[![output: structured JSON](https://img.shields.io/badge/output-structured%20JSON-0b7285)](#-the-core-api--workflow)
+[![engine: auto-select](https://img.shields.io/badge/engine-auto--select-7048e8)](#-the-engine-backends)
+[![wasm: 55 KB](https://img.shields.io/badge/wasm-55%20KB-b197fc)](packages/hub/public/runtime/dhamaka-runtime.wasm)
+[![node: 20 / 22](https://img.shields.io/badge/node-20%20%2F%2022-339933)](.github/workflows/ci.yml)
+[![e2e: Playwright](https://img.shields.io/badge/e2e-Playwright-45ba4b)](#end-to-end)
 
 [product site](https://dhamaka.dev/) &nbsp;·&nbsp; [evals](https://dhamaka.dev/evals/) &nbsp;·&nbsp; [source](https://github.com/protosphinx/dhamaka)
 
