@@ -9,12 +9,12 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/banner.svg">
   <source media="(prefers-color-scheme: light)" srcset="./docs/banner.svg">
-  <img src="./docs/banner.svg" alt="Dhamaka — the local AI capability layer for web apps." width="100%">
+  <img src="./docs/banner.svg" alt="Dhamaka - browser-local LLM workflows for web apps." width="100%">
 </picture>
 
 <br/>
 
-**`🧠 browser-local`** &nbsp;·&nbsp; **`🔒 private context`** &nbsp;·&nbsp; **`🛠 tools + validators`** &nbsp;·&nbsp; **`🆓 $0/call`** &nbsp;·&nbsp; **`🌐 every browser`** &nbsp;·&nbsp; **`📴 offline`**
+**Browser-local LLM workflows for private app context, app tools, validators, and structured output.**
 
 <br/>
 

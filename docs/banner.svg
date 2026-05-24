@@ -1,115 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
-     viewBox="0 0 960 320"
+     viewBox="0 0 1200 360"
      role="img"
-     aria-label="Dhamaka — the local AI capability layer for web apps">
+     aria-label="Dhamaka - browser-local LLM workflows for web apps">
   <title>Dhamaka</title>
-  <desc>The local AI capability layer for web apps. Ship the model to the data.</desc>
+  <desc>Browser-local LLM workflows for private app context, tools, validators, and structured output.</desc>
 
   <defs>
-    <!-- Animated rainbow gradient for the block-letter title. -->
-    <linearGradient id="rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ff4d6d">
-        <animate attributeName="stop-color"
-                 values="#ff4d6d;#ff9a3c;#ffd93d;#6bcb77;#4dc1ff;#b84dff;#ff4d6d"
-                 dur="8s" repeatCount="indefinite"/>
-      </stop>
-      <stop offset="33%" stop-color="#ffb84d">
-        <animate attributeName="stop-color"
-                 values="#ffb84d;#ffd93d;#6bcb77;#4dc1ff;#b84dff;#ff4d6d;#ffb84d"
-                 dur="8s" repeatCount="indefinite"/>
-      </stop>
-      <stop offset="66%" stop-color="#4dffb8">
-        <animate attributeName="stop-color"
-                 values="#4dffb8;#6bcb77;#4dc1ff;#b84dff;#ff4d6d;#ff9a3c;#4dffb8"
-                 dur="8s" repeatCount="indefinite"/>
-      </stop>
-      <stop offset="100%" stop-color="#4dc1ff">
-        <animate attributeName="stop-color"
-                 values="#4dc1ff;#b84dff;#ff4d6d;#ff9a3c;#ffd93d;#6bcb77;#4dc1ff"
-                 dur="8s" repeatCount="indefinite"/>
-      </stop>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f775d"/>
+      <stop offset="48%" stop-color="#315f91"/>
+      <stop offset="100%" stop-color="#cf3e58"/>
     </linearGradient>
-
-    <!-- Soft neon glow behind the title. -->
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2.2" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <!-- Pulsing radial spotlight behind everything. -->
-    <radialGradient id="spot" cx="50%" cy="50%" r="60%">
-      <stop offset="0%" stop-color="#ff4d6d" stop-opacity="0.20"/>
-      <stop offset="60%" stop-color="#4dc1ff" stop-opacity="0.05"/>
-      <stop offset="100%" stop-color="#0a0a10" stop-opacity="0"/>
-    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#20252b" stroke-width="1" opacity="0.45"/>
+    </pattern>
   </defs>
 
-  <!-- Background card. -->
-  <rect width="960" height="320" rx="14" fill="#0a0a10"/>
+  <rect width="1200" height="360" rx="28" fill="#0b0d10"/>
+  <rect width="1200" height="360" rx="28" fill="url(#grid)" opacity="0.42"/>
+  <rect x="48" y="48" width="1104" height="264" rx="20" fill="#11151a" stroke="#2a3038" stroke-width="2"/>
+  <rect x="48" y="48" width="1104" height="7" rx="3.5" fill="url(#accent)"/>
 
-  <!-- Animated spotlight wash. -->
-  <circle cx="480" cy="150" r="420" fill="url(#spot)">
-    <animate attributeName="r"
-             values="380;460;380"
-             dur="6s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-             values="0.55;1;0.55"
-             dur="6s" repeatCount="indefinite"/>
-  </circle>
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="92" y="156"
+          fill="#f7f8f5"
+          font-size="92"
+          font-weight="800"
+          letter-spacing="-1">
+      Dhamaka
+    </text>
 
-  <!-- Scanline shimmer across the title. -->
-  <rect x="0" y="40" width="960" height="6" fill="#ffffff" opacity="0.05">
-    <animate attributeName="y"
-             values="40;260;40"
-             dur="9s" repeatCount="indefinite"/>
-  </rect>
+    <text x="96" y="208"
+          fill="#cfd6d3"
+          font-size="30"
+          font-weight="560">
+      Browser-local LLM workflows for real web apps.
+    </text>
 
-  <!-- Block-letter DHAMAKA title. -->
-  <g font-family="'Cascadia Code','JetBrains Mono','Fira Code','SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace"
-     font-weight="700"
-     font-size="26"
-     fill="url(#rainbow)"
-     filter="url(#glow)"
-     text-anchor="middle"
-     xml:space="preserve">
-    <text x="480" y="85">
-      <tspan x="480" dy="0">██████╗ ██╗  ██╗ █████╗ ███╗   ███╗ █████╗ ██╗  ██╗ █████╗ </tspan>
-      <tspan x="480" dy="1.15em">██╔══██╗██║  ██║██╔══██╗████╗ ████║██╔══██╗██║ ██╔╝██╔══██╗</tspan>
-      <tspan x="480" dy="1.15em">██║  ██║███████║███████║██╔████╔██║███████║█████╔╝ ███████║</tspan>
-      <tspan x="480" dy="1.15em">██║  ██║██╔══██║██╔══██║██║╚██╔╝██║██╔══██║██╔═██╗ ██╔══██║</tspan>
-      <tspan x="480" dy="1.15em">██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║██║  ██╗██║  ██║</tspan>
-      <tspan x="480" dy="1.15em">╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝</tspan>
+    <text x="96" y="256"
+          fill="#8f9a96"
+          font-size="22"
+          font-weight="500">
+      private context  /  app tools  /  validators  /  structured output
     </text>
   </g>
 
-  <!-- Tagline with pulsing accent stars. -->
-  <g font-family="'Cascadia Code','JetBrains Mono','Fira Code','SF Mono',Menlo,Consolas,monospace"
-     font-size="15"
-     text-anchor="middle">
-    <text x="480" y="275" fill="#cfcfd8" letter-spacing="1.5">
-      <tspan fill="#ff4d6d">
-        ✦
-        <animate attributeName="fill"
-                 values="#ff4d6d;#ffb84d;#4dffb8;#4dc1ff;#b84dff;#ff4d6d"
-                 dur="4s" repeatCount="indefinite"/>
-      </tspan>
-      <tspan>  the local AI capability layer for web apps  </tspan>
-      <tspan fill="#4dc1ff">
-        ✦
-        <animate attributeName="fill"
-                 values="#4dc1ff;#b84dff;#ff4d6d;#ffb84d;#4dffb8;#4dc1ff"
-                 dur="4s" repeatCount="indefinite"/>
-      </tspan>
-    </text>
-    <text x="480" y="295" fill="#cfcfd8" letter-spacing="6" font-weight="700">
-      dhamaka.dev
-    </text>
-    <text x="480" y="312" fill="#5a5a6b" letter-spacing="3" font-size="12">
-      on-device  ·  zero latency  ·  zero cost  ·  every browser  ·  offline
-    </text>
+  <g transform="translate(846 112)">
+    <rect x="0" y="0" width="242" height="136" rx="16" fill="#0b0d10" stroke="#303842" stroke-width="2"/>
+    <circle cx="37" cy="40" r="9" fill="#1f775d"/>
+    <circle cx="67" cy="40" r="9" fill="#315f91"/>
+    <circle cx="97" cy="40" r="9" fill="#cf3e58"/>
+    <path d="M36 82 H206" stroke="#51606b" stroke-width="8" stroke-linecap="round"/>
+    <path d="M36 111 H164" stroke="#51606b" stroke-width="8" stroke-linecap="round"/>
+    <path d="M36 82 H136" stroke="url(#accent)" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+     font-size="18"
+     fill="#cfd6d3">
+    <text x="96" y="304">dhamaka.dev</text>
+    <text x="1032" y="304" text-anchor="end">Apache-2.0</text>
   </g>
 </svg>
