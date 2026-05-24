@@ -83,9 +83,21 @@ All three surfaces share the same engine, the same task registry, and the same d
 
 ---
 
+## ✦ latest snapshot
+
+As of **May 24, 2026**, the live product site is [dhamaka.dev](https://dhamaka.dev/) and the current public SDK surface is:
+
+- `Workflow.run()` for model-first browser-local workflows with app context, tools, validators, confidence, and review state
+- `Transform` for focused formula rewrites, explanations, and debugging
+- `SmartField`, `SmartForm`, `SmartText`, and `attachSmartPaste` for narrow UI primitives
+
+Current evals are published at [dhamaka.dev/evals](https://dhamaka.dev/evals/): **64/65 deterministic task evals passing**, **18/18 model fallback/runtime checks passing**, and **17/17 product budget checks passing**. The one published miss is `too -> to` in contextual spellcheck, which stays visible so regressions and gaps are not hidden.
+
+---
+
 ## ✦ the core API — Workflow
 
-Workflow is the product surface. It is what you use when a real app task is too rich for a demo-sized helper: invoice imports, formula edits, CRM cleanup, policy checks, schema mapping, spreadsheet operations, and internal workflows that need private state.
+Workflow is the product surface. It is what you use when a real app task needs private state, model reasoning, exact tools, and validation: invoice imports, formula edits, CRM cleanup, policy checks, schema mapping, spreadsheet operations, and internal workflows.
 
 ```js
 import { Workflow } from "dhamaka";
@@ -202,7 +214,7 @@ Every one of these is impossible as a server-side product because network latenc
 
 ---
 
-## ✦ working demos
+## ✦ proof surfaces
 
 Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try them live:
 
@@ -211,7 +223,7 @@ Spin up the dev stack (`npm run dev`) and open <http://localhost:5173> to try th
 | **[Address autofill](packages/playground/public/demos/autofill.html)** | Reflex | City → state / country / timezone / currency populate synchronously | `SmartField` + `SmartForm` |
 | **[Contextual spellcheck](packages/playground/public/demos/spellcheck.html)** | Reflex | Homophone-in-context detection, not just dictionary matches | `SmartText` |
 | **[Smart paste](packages/playground/public/demos/paste.html)** | Reflex | Paste a contact blob, watch it split into the right fields | `attachSmartPaste` |
-| **[Formula editor](packages/playground/public/demos/formula.html)** *(in progress)* | Transform | erp.ai-style spreadsheet, live formula rewrites from plain-English instructions | `Transform.formula()` |
+| **[Formula editor](packages/playground/public/demos/formula.html)** | Transform | erp.ai-style spreadsheet, live formula rewrites from plain-English instructions | `Transform.formula()` |
 
 The `dhamaka.dev` website source lives in [`packages/playground/public`](packages/playground/public). Run `npm run build:site` to rebuild the static deploy bundle in `dist/`.
 
@@ -264,13 +276,13 @@ The `dhamaka.dev` website source lives in [`packages/playground/public`](package
 | [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled v2 runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 55 KB `.wasm`. Architecture is done; real weights, Q4 quantization, and SIMD128 are the missing pieces before this replaces Transformers.js as the primary backend |
 | [`@dhamaka/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
 | [`@dhamaka/extension`](packages/extension) | Manifest V3 browser extension — shared cache across every site on the machine |
-| [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + live demos for every capability family |
+| [`@dhamaka/playground`](packages/playground) | zero-dep dev server running hub + playground + proof surfaces for Workflow, Transform, and Reflex |
 
 ---
 
 ## ✦ the task registry
 
-Developers think in **tasks**, not in models. Each task is a small, typed function that turns an input (plus optional instruction and context) into a structured inference. The SDK decides what runs — a lookup table, a regex, a fuzzy match, a pattern rewrite, or an on-device LLM — based on which path is fastest for the shape of the input. Registered tasks are available to every capability family that wants them.
+Developers think in **tasks**, not in models. Each task is a small, typed function that turns an input (plus optional instruction and context) into a structured inference. The SDK decides what runs: a lookup table, regex, fuzzy match, pattern rewrite, app tool, validator, or browser-local LLM. Registered tasks are available to every product surface that wants them.
 
 ### Reflex tasks
 
@@ -376,7 +388,7 @@ npm run dev
   Dhamaka dev stack running. Ctrl+C to stop.
 ```
 
-Open **http://localhost:5173** and click into any of the three demos. The playground hot-reads the SDK + runtime sources, so every JS edit shows up on refresh. Re-run `build.sh` only when editing the Rust runtime.
+Open **http://localhost:5173** and click into the demos. The playground hot-reads the SDK + runtime sources, so every JS edit shows up on refresh. Re-run `build.sh` only when editing the Rust runtime.
 
 > Don't have Rust installed? The compiled `.wasm` is checked in under `packages/hub/public/runtime/` so `npm run dev` works on a fresh clone too. Install Rust only if you want to modify the inference engine itself.
 
@@ -424,9 +436,9 @@ if (result.needsReview) showReview(result);
 else applyDecision(result.output);
 ```
 
-`Workflow.run()` always returns a structured object with `source`, `action`, `summary`, `output`, `toolCalls`, `confidence`, `needsReview`, `validation`, `raw`, and `backend`. That makes the browser LLM useful inside product flows instead of sitting beside them as a chat box.
+`Workflow.run()` always returns a structured object with `source`, `action`, `summary`, `output`, `toolCalls`, `toolResults`, `confidence`, `needsReview`, `validation`, `raw`, and `backend`. That makes the browser LLM useful inside product flows instead of sitting beside them as a chat box.
 
-### 🪞 Reflex family — reactive, continuous, rules-first
+### 🪞 Reflex family — reactive, continuous, deterministic where possible
 
 #### `SmartField` — one field, one task
 
@@ -443,7 +455,7 @@ new SmartField(document.querySelector("#city"), {
 });
 ```
 
-Every keystroke fires the task. Rules-first, so typical inputs resolve in under a millisecond with no model involvement. The task registry decides when (and whether) to escalate to the LLM.
+Every keystroke fires the task. Deterministic paths answer common inputs in under a millisecond; the task registry decides when the local model is the right layer.
 
 #### `SmartForm` — cross-field inference
 
@@ -524,7 +536,7 @@ const r = await t.run({
 // r.explanation → "Multiplied by 0.9 to apply a 10% discount."
 ```
 
-One call, one answer, all local. If the task's rules layer can handle the instruction it resolves in microseconds with zero model calls. Otherwise it transparently escalates to the on-device LLM with a well-structured prompt including context, dialect, and schema hints — the app doesn't have to know which path ran.
+One call, one answer, all local. If a deterministic formula tool can handle the instruction it resolves in microseconds with zero model calls. Otherwise it escalates to the browser-local LLM with a structured prompt including context, dialect, and schema hints; the app gets one result shape either way.
 
 #### `Transform.formula` / `.explain` / `.debug` — formula shortcuts
 
