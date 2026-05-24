@@ -18,13 +18,11 @@
 
 <br/>
 
-```bash
-npm install dhamaka
-```
+[![CI](https://github.com/protosphinx/dhamaka/actions/workflows/ci.yml/badge.svg)](https://github.com/protosphinx/dhamaka/actions/workflows/ci.yml)
+[![license: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-green)](./LICENSE)
+[![evals: 64/65](https://img.shields.io/badge/evals-64%2F65-green)](https://dhamaka.dev/evals/)
 
-![tests](https://img.shields.io/badge/tests-124%20passing-green)
-
-[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [product site →](https://dhamaka.dev/)
+[product site](https://dhamaka.dev/) &nbsp;·&nbsp; [evals](https://dhamaka.dev/evals/) &nbsp;·&nbsp; [source](https://github.com/protosphinx/dhamaka)
 
 </div>
 
@@ -92,6 +90,8 @@ As of **May 24, 2026**, the live product site is [dhamaka.dev](https://dhamaka.d
 - `SmartField`, `SmartForm`, `SmartText`, and `attachSmartPaste` for narrow UI primitives
 
 Current evals are published at [dhamaka.dev/evals](https://dhamaka.dev/evals/): **64/65 deterministic task evals passing**, **18/18 model fallback/runtime checks passing**, and **17/17 product budget checks passing**. The one published miss is `too -> to` in contextual spellcheck, which stays visible so regressions and gaps are not hidden.
+
+**Release status:** the npm package currently published as `dhamaka@0.1.0` is older than this repository snapshot. It still advertises the pre-Workflow reflex API and MIT license metadata. Use the repo source for the current Workflow API until the package is republished from `packages/sdk`.
 
 ---
 
@@ -345,11 +345,7 @@ In browsers, the factory prefers `LanguageModel`, falls back to the legacy `wind
 
 ## ✦ five-minute quickstart
 
-### just want to use the SDK?
-
-```bash
-npm install dhamaka
-```
+### use the current source
 
 ```js
 import { Workflow } from "dhamaka";
@@ -366,13 +362,14 @@ const result = await workflow.run({
 if (!result.needsReview) saveCustomer(result.output);
 ```
 
-The package is self-contained — the WASM runtime is bundled, no extra install step. See **[the API](#-the-api)** below for the full surface.
+In this repository, the playground import map aliases `dhamaka` to `packages/sdk/src`, so the current Workflow API is available immediately in local development. See **[the API](#-the-api)** below for the full surface.
 
-### want to hack on the runtime itself?
+### run the repo
 
 ```bash
 git clone https://github.com/protosphinx/dhamaka
 cd dhamaka
+npm install
 
 # one-time: compile the Rust runtime to WebAssembly
 crates/dhamaka-runtime/build.sh
