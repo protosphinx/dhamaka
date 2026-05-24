@@ -1,14 +1,17 @@
 // ╭──────────────────────────────────────────────────────────────────────╮
 // │  dhamaka — the public SDK                                            │
 // │                                                                      │
-// │  A reflex layer for every input on the web. Drop in a SmartField or │
-// │  SmartForm, get on-device intelligence (autofill, spellcheck, smart  │
-// │  paste, cross-field inference) with zero network latency.            │
+// │  Browser-local LLM workflows for real app surfaces. Give Workflow    │
+// │  user intent, app context, tools, and validators; keep SmartField,    │
+// │  SmartForm, SmartText, and Transform for narrower UI capabilities.   │
 // │                                                                      │
-// │    import { SmartField, SmartForm, SmartText } from "dhamaka";       │
+// │    import { Workflow } from "dhamaka";                               │
 // │                                                                      │
-// │    new SmartField(document.querySelector("#city"), {                 │
-// │      task: "city-to-state",                                          │
+// │    const workflow = new Workflow();                                  │
+// │    await workflow.run({                                              │
+// │      intent: "Map this pasted CSV row to our invoice schema",         │
+// │      input: pastedRow,                                               │
+// │      context: { schema: invoiceSchema },                             │
 // │    });                                                               │
 // │                                                                      │
 // ╰──────────────────────────────────────────────────────────────────────╯
@@ -21,6 +24,10 @@ import { Chat } from "./chat.js";
 // side-effect import — pulling in `dhamaka` at all registers every
 // built-in task so apps don't have to chase per-family imports.
 import "./tasks/formula.js";
+
+// ─── Workflow family ─────────────────────────────────────────────────
+
+export { Workflow } from "./workflow.js";
 
 // ─── Reflex family ────────────────────────────────────────────────────
 
@@ -53,7 +60,8 @@ export {
 
 // ─── legacy / advanced surface ────────────────────────────────────────
 // Kept for people who want direct model access (chat, completion,
-// streaming). Most users should use the SmartField API above.
+// streaming). Most apps should start with Workflow or the capability
+// APIs above.
 
 const DEFAULT_MODEL = "dhamaka-micro";
 const DEFAULT_HUB_URL = "https://hub.dhamaka.dev/";
@@ -62,7 +70,7 @@ const DEFAULT_HUB_URL = "https://hub.dhamaka.dev/";
  * @typedef {object} DhamakaLoadOptions
  * @property {string} [hubUrl]
  * @property {string} [manifestUrl]
- * @property {"auto"|"mock"|"wasm"|"window-ai"} [backend]
+ * @property {"auto"|"mock"|"wasm"|"window-ai"|"transformers"} [backend]
  * @property {string} [wasmUrl]
  * @property {(p: object) => void} [onProgress]
  */

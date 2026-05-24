@@ -3,24 +3,24 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dhamaka - Browser-native AI SDK for web apps</title>
-    <meta name="description" content="Dhamaka is an open-source JavaScript SDK for local AI in web apps: smart fields, smart paste, contextual spellcheck, and formula transforms that run in the browser.">
+    <title>Dhamaka - Browser-local LLM workflows for web apps</title>
+    <meta name="description" content="Dhamaka is an open-source JavaScript SDK for browser-local LLM workflows: complex app tasks, private context, local model backends, app tools, validators, smart fields, and transforms.">
     <meta name="robots" content="index,follow">
     <meta name="application-name" content="Dhamaka">
     <link rel="canonical" href="https://dhamaka.dev/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Dhamaka">
     <meta property="og:url" content="https://dhamaka.dev/">
-    <meta property="og:title" content="Dhamaka - Browser-native AI SDK for web apps">
-    <meta property="og:description" content="Open-source local AI capabilities for web apps: SmartField, SmartForm, SmartText, smart paste, and formula transforms that run in the user's browser.">
+    <meta property="og:title" content="Dhamaka - Browser-local LLM workflows for web apps">
+    <meta property="og:description" content="Open-source browser-local LLM workflows for complex web app tasks: private app context, local model backends, tools, validators, smart fields, and transforms.">
     <meta property="og:image" content="https://dhamaka.dev/assets/autofill-demo.jpg">
     <meta property="og:image:secure_url" content="https://dhamaka.dev/assets/autofill-demo.jpg">
     <meta property="og:image:width" content="1280">
     <meta property="og:image:height" content="720">
     <meta property="og:image:alt" content="Dhamaka address autofill demo running in a browser">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Dhamaka - Browser-native AI SDK for web apps">
-    <meta name="twitter:description" content="Open-source JavaScript SDK for smart fields, smart paste, contextual spellcheck, and formula transforms that run locally in the browser.">
+    <meta name="twitter:title" content="Dhamaka - Browser-local LLM workflows for web apps">
+    <meta name="twitter:description" content="Open-source JavaScript SDK for model-first app workflows that run locally in the browser with private context, tools, validators, and transforms.">
     <meta name="twitter:image" content="https://dhamaka.dev/assets/autofill-demo.jpg">
     <meta name="twitter:image:alt" content="Dhamaka address autofill demo running in a browser">
     <meta name="theme-color" content="#fbfaf4">
@@ -52,7 +52,7 @@
           "@id": "https://dhamaka.dev/#website",
           "name": "Dhamaka",
           "url": "https://dhamaka.dev/",
-          "description": "Open-source browser-native AI capabilities for web apps.",
+          "description": "Open-source browser-local LLM workflows for complex web app tasks.",
           "publisher": {
             "@id": "https://dhamaka.dev/#organization"
           }
@@ -62,7 +62,7 @@
           "@id": "https://dhamaka.dev/#software",
           "name": "Dhamaka",
           "url": "https://dhamaka.dev/",
-          "description": "An open-source JavaScript SDK for local AI in web apps, including SmartField, SmartForm, SmartText, smart paste, and formula transforms.",
+          "description": "An open-source JavaScript SDK for browser-local LLM workflows, including Workflow, Transform, SmartField, SmartForm, SmartText, and smart paste.",
           "codeRepository": "https://github.com/protosphinx/dhamaka",
           "programmingLanguage": "JavaScript",
           "runtimePlatform": "Web browser",
@@ -82,7 +82,7 @@
               "name": "Is Dhamaka a model runtime?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Not primarily. Dhamaka uses runtimes underneath, but the public value is the capability layer: tasks, reflexes, transforms, engine selection, and browser-native UX."
+                "text": "Not primarily. Dhamaka is the workflow and capability layer above browser model runtimes. It gives apps a stable API for intent, context, tools, validators, and structured output."
               }
             },
             {
@@ -90,7 +90,15 @@
               "name": "What ships today?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Reflex and Transform ship today, including SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug."
+                "text": "Workflow, Transform, and Reflex ship today, including Workflow.run, SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "What if the browser Prompt API is unavailable?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Dhamaka keeps the same Workflow API and falls back through Transformers.js, WASM, and MockEngine depending on the environment."
               }
             },
             {
@@ -98,7 +106,7 @@
               "name": "Why local?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Latency, privacy, cost, rate limits, and offline support all improve when the model runs where the app data already is."
+                "text": "Complex app work needs private context: schemas, formulas, rows, permissions, customer data, and drafts. Keeping the model local avoids provider calls while preserving low-latency UX."
               }
             }
           ]
@@ -1103,6 +1111,8 @@
 
         pre {
           font-size: 12px;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
         }
 
         footer {
@@ -1124,9 +1134,9 @@
           </a>
         </div>
         <nav class="nav" aria-label="Primary">
+          <a href="#workflow">[W] Workflow</a>
           <a href="#capabilities">[C] Capabilities</a>
           <a href="#architecture">[A] Architecture</a>
-          <a href="#demos">[D] Demos</a>
           <a class="github-link" href="https://github.com/protosphinx/dhamaka">
             <svg class="github-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.86-.01-1.56-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.16-.28-.16-.68-.56-.01-.57.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.04 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.43 7.43 0 0 1 8 3.92c.68 0 1.36.09 2 .27 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.14-1.87 3.83-3.65 4.04.29.25.54.75.54 1.53 0 1.1-.01 1.98-.01 2.25 0 .22.15.48.55.4A8.08 8.08 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"/></svg>
             GitHub
@@ -1137,13 +1147,60 @@
       <main>
         <section class="hero" aria-label="Dhamaka introduction">
           <div class="hero-copy">
-            <div class="eyebrow">open source · Apache-2.0 · browser-native AI</div>
+            <div class="eyebrow">open source · Apache-2.0 · browser-local LLM workflows</div>
             <h1>Dhamaka</h1>
-            <p class="lede">Ship the model to the data. Dhamaka is a JavaScript SDK for smart fields, contextual spellcheck, smart paste, and formula transforms that run inside the user's browser tab.</p>
+            <p class="lede">Ship the model to the data. Dhamaka gives web apps a model-first workflow layer: local LLMs read private app context, reason over complex tasks, request app tools, and return validated structured output in the browser tab.</p>
             <div class="actions">
-              <a class="button primary" href="#demos">Try the demo</a>
-              <a class="button" href="#install">Install the SDK</a>
-              <a class="button" href="https://github.com/protosphinx/dhamaka">GitHub repo</a>
+              <a class="button primary" href="#workflow">Build a workflow</a>
+              <a class="button" href="#architecture">See architecture</a>
+              <a class="button" href="#demos">Try demos</a>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" aria-label="Dhamaka workflow API">
+          <div class="section-inner install">
+            <div>
+              <span class="label">Product surface</span>
+              <h2>Let the browser model do the hard app work.</h2>
+              <p class="section-copy">Workflow is the core Dhamaka API. Give it user intent, focused input, app state, schema, available actions, and validators. The local model handles the messy reasoning; your app keeps control over tools, permissions, and whether the answer can be applied.</p>
+              <p class="section-copy">This is for real product work: invoice imports, formula changes, policy checks, schema mapping, CRM cleanup, spreadsheet edits, and internal operations where the context is sensitive and the workflow is too complex for a handful of regexes.</p>
+            </div>
+            <div class="install-panel">
+              <div class="case-head">
+                <span>workflow.js</span>
+                <span>model first · validated output</span>
+              </div>
+              <pre><code>import { Workflow } from "dhamaka";
+
+const workflow = new Workflow({ backend: "auto" });
+
+const result = await workflow.run({
+  intent: "Turn this invoice email into an AP draft.",
+  input: emailText,
+  context: {
+    vendorSchema,
+    openPurchaseOrders,
+    selectedCompany,
+  },
+  schema: {
+    invoiceNo: "string",
+    total: "number",
+    dueDate: "string",
+    reviewFlags: ["string"],
+  },
+  tools: [{
+    name: "matchPurchaseOrder",
+    description: "Find a likely PO by vendor and amount",
+    run: ({ vendor, total }) => matchPurchaseOrder(vendor, total),
+  }],
+  validators: [
+    (r) => r.output.total > 0 || "missing total",
+    (r) => r.confidence >= 0.7 || "low confidence",
+  ],
+});
+
+if (!result.needsReview) applyDraft(result.output);</code></pre>
             </div>
           </div>
         </section>
@@ -1152,13 +1209,13 @@
           <div class="demo-shell">
             <div class="demo-shell-head">
               <span>./demos/autofill.html</span>
-              <span>SmartField · SmartForm · local reflex</span>
+              <span>small surface · same local runtime</span>
             </div>
             <div class="inline-demo">
               <aside class="demo-sidebar">
                 <span class="label">Live demo</span>
-                <h2>Address autofill that runs in the tab.</h2>
-                <p>Type a city and Dhamaka resolves state, country, timezone, and currency locally. The same SDK powers the inline demo and the full demo pages.</p>
+                <h2>A tiny proof surface, not the whole product.</h2>
+                <p>Type a city and Dhamaka resolves state, country, timezone, and currency locally. The demo is intentionally small; the product surface is Workflow, where the same local runtime handles richer app context.</p>
                 <div class="city-chips" aria-label="Example cities">
                   <button class="city-chip" type="button" data-city="San Francisco">San Francisco</button>
                   <button class="city-chip" type="button" data-city="Tokyo">Tokyo</button>
@@ -1202,7 +1259,7 @@
           </div>
 
           <div class="demo-library">
-            <h2>All demos on dhamaka.dev</h2>
+            <h2>Demos on dhamaka.dev</h2>
             <div class="demo-workbench" aria-label="Embedded Dhamaka demo browser">
               <div class="demo-workbench-head">
                 <span id="demo-frame-label">Embedded demo: Address autofill</span>
@@ -1246,19 +1303,19 @@
         <div class="stats" aria-label="Dhamaka product promises">
           <div class="stat">
             <span class="label">Location</span>
-            <strong>100% in the browser tab</strong>
+            <strong>Private context stays in the browser tab</strong>
           </div>
           <div class="stat">
             <span class="label">Network</span>
-            <strong>0 external requests on fast paths</strong>
+            <strong>No provider calls by default</strong>
           </div>
           <div class="stat">
             <span class="label">Cost</span>
-            <strong>$0 per AI call</strong>
+            <strong>$0 per local model call</strong>
           </div>
           <div class="stat">
             <span class="label">Status</span>
-            <strong>Reflex and Transform ship today</strong>
+            <strong>Workflow, Transform, and Reflex ship today</strong>
           </div>
           <div class="stat">
             <span class="label">License</span>
@@ -1270,23 +1327,33 @@
           <div class="section-inner split">
             <div>
               <span class="label">Capability families</span>
-              <h2>Not a raw model runtime. The product layer above it.</h2>
-              <p class="section-copy">Dhamaka sits above window.ai, Transformers.js, WASM, and mock engines. Developers ship task-oriented UX today: fields that infer, textareas that understand context, contact blobs that become form data, and formulas that rewrite without leaking company data.</p>
+              <h2>Model-first workflows, with deterministic rails.</h2>
+              <p class="section-copy">Dhamaka sits above the browser Prompt API, Transformers.js, WASM, and mock engines. The model does the reasoning over app context; deterministic code provides tools, calculators, parsers, and validators so products can trust what gets applied.</p>
             </div>
             <div class="capability-grid">
               <article class="capability">
-                <h3>Reflex</h3>
-                <p>Reactive, keystroke-level intelligence for inputs and textareas. Rules first, fuzzy second, model only when the fast path is uncertain.</p>
+                <h3>Workflow</h3>
+                <p>One model-first call for complex app tasks. Pass intent, input, schema, context, tools, and validators; get structured output with confidence and review state.</p>
                 <div class="pill-row">
-                  <span class="pill">SmartField</span>
-                  <span class="pill">SmartForm</span>
-                  <span class="pill">SmartText</span>
-                  <span class="pill">smart paste</span>
+                  <span class="pill">Workflow.run</span>
+                  <span class="pill">schema-aware</span>
+                  <span class="pill">tool calls</span>
+                  <span class="pill">needsReview</span>
+                </div>
+              </article>
+              <article class="capability">
+                <h3>Tools and validators</h3>
+                <p>The model can request app actions, but your code executes them. Validators gate totals, required fields, permissions, and confidence before data changes.</p>
+                <div class="pill-row">
+                  <span class="pill">calculators</span>
+                  <span class="pill">lookups</span>
+                  <span class="pill">policy checks</span>
+                  <span class="pill">apply gates</span>
                 </div>
               </article>
               <article class="capability">
                 <h3>Transform</h3>
-                <p>One-shot instruction-driven rewrites for app data. The flagship case is erp.ai-style formula editing, explanation, and debugging.</p>
+                <p>Instruction-driven rewrites for focused data: formulas, DSL snippets, field values, and structured text. Fast paths stay deterministic; weird asks escalate locally.</p>
                 <div class="pill-row">
                   <span class="pill">formula-transform</span>
                   <span class="pill">formula-explain</span>
@@ -1294,21 +1361,13 @@
                 </div>
               </article>
               <article class="capability">
-                <h3>Smart paste</h3>
-                <p>Structured extraction for pasted contact blobs. Email, phone, website, social handles, names, and company hints land in the right fields without a server call.</p>
+                <h3>Reflex</h3>
+                <p>Keystroke-level help for inputs and textareas: autofill, contextual spellcheck, and smart paste. These are the narrow UX primitives underneath larger workflows.</p>
                 <div class="pill-row">
-                  <span class="pill">paste-extract</span>
-                  <span class="pill">onpaste</span>
-                  <span class="pill">form fill</span>
-                </div>
-              </article>
-              <article class="capability">
-                <h3>Formula tasks</h3>
-                <p>Deterministic spreadsheet edits use structural rewrites first, then the same task shape can escalate when the instruction needs model reasoning.</p>
-                <div class="pill-row">
-                  <span class="pill">rewrite</span>
-                  <span class="pill">explain</span>
-                  <span class="pill">debug</span>
+                  <span class="pill">SmartField</span>
+                  <span class="pill">SmartForm</span>
+                  <span class="pill">SmartText</span>
+                  <span class="pill">smart paste</span>
                 </div>
               </article>
             </div>
@@ -1319,17 +1378,17 @@
           <div class="section-inner split">
             <div>
               <span class="label">Hero case</span>
-              <h2>Copilot for sensitive formulas, without shipping formulas away.</h2>
-              <p class="section-copy">ERP formulas contain pricing models, margins, payroll math, commission tiers, inventory rules, and compliance checks. Dhamaka lets products like erp.ai transform and explain those formulas in the tab where the data already lives.</p>
+              <h2>Complex app work, without shipping the app away.</h2>
+              <p class="section-copy">ERP formulas, invoice imports, payroll checks, pricing rules, and compliance edits all need sensitive context. Dhamaka lets products reason over that context in the tab, call local tools for exact calculations, and return an answer the app can validate before applying.</p>
             </div>
             <article class="case-study">
               <div class="case-head">
-                <span>Transform.formula()</span>
-                <span>source: rule</span>
+                <span>Workflow.run()</span>
+                <span>source: local model + validators</span>
               </div>
               <div class="case-body">
-                <p>A user selects a cell with a tax formula and types a plain-English instruction. The rules layer recognizes the discount pattern and rewrites structurally in microseconds. Weirder instructions can escalate to an on-device model.</p>
-                <div class="formula">input:  =SUM(A1:A10) * 1.08<br>ask:    add a 10% discount for employees<br>output: =(SUM(A1:A10) * 1.08) * 0.9<br>why:    multiplied by 0.9 to apply the discount</div>
+                <p>A user selects a tax formula and asks for an employee discount. The local model understands the request, the formula tool performs the structural edit, and validators check that the output is still a formula and that the discount is explicit.</p>
+                <div class="formula">intent:  add a 10% employee discount<br>input:   =SUM(A1:A10) * 1.08<br>tool:    rewriteFormula({ discount: 0.10 })<br>output:  =(SUM(A1:A10) * 1.08) * 0.9<br>review:  false, confidence: 0.94</div>
               </div>
             </article>
           </div>
@@ -1339,25 +1398,29 @@
           <div class="section-inner split">
             <div>
               <span class="label">Architecture</span>
-              <h2>Every task runs through the fastest layer that can answer.</h2>
-              <p class="section-copy">Dhamaka optimizes for a simple test: would this still work if the user's laptop had no network connection and no account with an AI provider?</p>
+              <h2>The model reasons; the app stays in control.</h2>
+              <p class="section-copy">Dhamaka optimizes for a simple test: can the browser model use the same private state the app already has, produce structured output, and let code verify it before anything changes?</p>
             </div>
             <div class="architecture">
               <div class="layer">
                 <div class="layer-name">your app</div>
-                <div class="layer-body"><strong>Inputs, textareas, formulas, tables, actions</strong><span>The product already holds schema, state, data, and affordances in JavaScript memory.</span></div>
+                <div class="layer-body"><strong>State, schema, permissions, selections, drafts</strong><span>The product already holds the context a remote model would have to be sent.</span></div>
               </div>
               <div class="layer">
-                <div class="layer-name">capabilities</div>
-                <div class="layer-body"><strong>SmartField, SmartForm, SmartText, Transform</strong><span>Task-oriented APIs that products can drop in without building model plumbing.</span></div>
+                <div class="layer-name">workflow</div>
+                <div class="layer-body"><strong>Workflow.run({ intent, input, context, schema, tools, validators })</strong><span>The app asks for complex work in one structured call instead of wiring a chatbot beside the product.</span></div>
               </div>
               <div class="layer">
-                <div class="layer-name">task registry</div>
-                <div class="layer-body"><strong>rules -> fuzzy -> model</strong><span>Exact lookups, regexes, structural rewrites, and local model fallback share one result shape.</span></div>
+                <div class="layer-name">local model</div>
+                <div class="layer-body"><strong>LanguageModel -> Transformers.js -> WASM -> MockEngine</strong><span>The SDK keeps one surface while the runtime picks the best available browser-local backend.</span></div>
               </div>
               <div class="layer">
-                <div class="layer-name">engine</div>
-                <div class="layer-body"><strong>window.ai -> Transformers.js -> WASM -> MockEngine</strong><span>The SDK surface stays stable while the backend auto-selects the best available runtime.</span></div>
+                <div class="layer-name">tools</div>
+                <div class="layer-body"><strong>Calculators, lookups, parsers, rewrites</strong><span>The model can request actions, but deterministic app code executes them and returns exact results.</span></div>
+              </div>
+              <div class="layer">
+                <div class="layer-name">trust</div>
+                <div class="layer-body"><strong>Validators, confidence, needsReview</strong><span>Every workflow result is inspectable before the UI applies it to business data.</span></div>
               </div>
             </div>
           </div>
@@ -1368,8 +1431,8 @@
             <div class="split">
               <div>
                 <span class="label">Evals</span>
-                <h2>The hot path is microseconds; the browser path is measured end to end.</h2>
-                <p class="section-copy">Latest local eval run: May 24, 2026 on Apple Silicon, Node v22.22.2, and headless Chromium. The task pipeline measures local rule and heuristic paths; the browser evals measure real page load, debounce, DOM updates, and user-visible results.</p>
+                <h2>The local rails are measured, so model workflows stay honest.</h2>
+                <p class="section-copy">Latest local eval run: May 24, 2026 on Apple Silicon, Node v22.22.2, and headless Chromium. The task pipeline measures deterministic tools and validators; browser evals measure real page load, debounce, DOM updates, and user-visible results.</p>
               </div>
               <div class="stats" style="border:1px solid var(--line); border-radius:8px; overflow:hidden;">
                 <div class="stat">
@@ -1402,7 +1465,7 @@
             <div>
               <span class="label">Install</span>
               <h2>One package. No provider account.</h2>
-              <p class="section-copy">Install the public SDK and attach Dhamaka where your app already has intent: form fields, textareas, spreadsheet cells, data import screens, and internal tools.</p>
+              <p class="section-copy">Install the public SDK and attach Dhamaka where your app already has intent and context: import screens, spreadsheets, internal tools, form fields, textareas, and workflow-heavy product surfaces.</p>
               <div class="actions">
                 <a class="button primary" href="https://www.npmjs.com/package/dhamaka">npm package</a>
                 <a class="button" href="https://github.com/protosphinx/dhamaka">GitHub repo</a>
@@ -1413,18 +1476,29 @@
                 <span>quickstart.js</span>
                 <span>dhamaka@0.1.0</span>
               </div>
-              <pre><code>import { SmartForm } from "dhamaka";
+              <pre><code>import { Workflow, Transform } from "dhamaka";
 
-const form = document.querySelector("#checkout");
+const workflow = new Workflow({ backend: "auto" });
 
-new SmartForm(form, {
-  tasks: { city: "city-to-state" },
-  infer: {
-    "city -> state": "city-to-state:stateName",
-    "city -> country": "city-to-state:countryName",
-    "city -> timezone": "city-to-state:tz",
-    "city -> currency": "city-to-state:currency",
+const result = await workflow.run({
+  intent: "Map this CSV import to our customer schema.",
+  input: pastedCsv,
+  context: {
+    schema: customerSchema,
+    duplicatePolicy: "flag-review",
   },
+  validators: [
+    (r) => r.output.email || "missing email",
+  ],
+});
+
+if (result.needsReview) showReview(result);
+else saveCustomer(result.output);
+
+await Transform.run({
+  task: "formula-transform",
+  input: "=SUM(A1:A10)",
+  instruction: "add 8% tax",
 });</code></pre>
             </div>
           </div>
@@ -1434,24 +1508,24 @@ new SmartForm(form, {
           <div class="section-inner split">
             <div>
               <span class="label">FAQ</span>
-              <h2>Local-first AI, built for product surfaces.</h2>
+              <h2>Browser-local AI, built for real product work.</h2>
             </div>
             <div class="faq-grid">
               <article class="faq">
                 <h3>Is Dhamaka a model runtime?</h3>
-                <p>Not primarily. It uses runtimes underneath, but the public value is the capability layer: tasks, reflexes, transforms, engine selection, and browser-native UX.</p>
+                <p>Not primarily. Dhamaka is the workflow and capability layer above browser model runtimes. It gives apps a stable API for intent, context, tools, validators, and structured output.</p>
               </article>
               <article class="faq">
                 <h3>What ships today?</h3>
-                <p>Reflex and Transform. That includes SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug.</p>
+                <p>Workflow, Transform, and Reflex. That includes Workflow.run, SmartField, SmartForm, SmartText, smart paste, formula transform, formula explain, and formula debug.</p>
+              </article>
+              <article class="faq">
+                <h3>What if the browser model is unavailable?</h3>
+                <p>The API stays the same. Dhamaka falls back through Transformers.js, WASM, and MockEngine depending on the environment, so products can feature-detect capability without changing workflow code.</p>
               </article>
               <article class="faq">
                 <h3>Why local?</h3>
-                <p>Latency, privacy, cost, rate limits, and offline support all improve when the model runs where the app data already is.</p>
-              </article>
-              <article class="faq">
-                <h3>What does the name mean?</h3>
-                <p>Dhamaka means a burst or impact. Here, it is the moment an ordinary web form gets an on-device intelligence layer.</p>
+                <p>Complex workflows need private app context: schemas, formulas, rows, permissions, customer data, and drafts. Keeping the model local avoids provider calls while preserving low-latency UX.</p>
               </article>
             </div>
           </div>

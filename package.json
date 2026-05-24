@@ -2,7 +2,7 @@
   "name": "dhamaka",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser-native LLM that runs in WASM. Download once, use on every Dhamaka-powered site forever.",
+  "description": "Browser-local LLM workflows for complex web app use cases, with private app context, local model backends, tools, validators, and zero provider calls.",
   "type": "module",
   "workspaces": [
     "packages/*"
@@ -36,6 +36,8 @@
     "on-device",
     "local-first",
     "privacy",
+    "workflow",
+    "browser-local",
     "smollm",
     "inference"
   ],

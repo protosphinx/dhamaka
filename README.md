@@ -14,7 +14,7 @@
 
 <br/>
 
-**`🧠 on-device`** &nbsp;·&nbsp; **`⚡ 0 ms`** &nbsp;·&nbsp; **`🔒 private`** &nbsp;·&nbsp; **`🆓 $0/call`** &nbsp;·&nbsp; **`🌐 every browser`** &nbsp;·&nbsp; **`📴 offline`**
+**`🧠 browser-local`** &nbsp;·&nbsp; **`🔒 private context`** &nbsp;·&nbsp; **`🛠 tools + validators`** &nbsp;·&nbsp; **`🆓 $0/call`** &nbsp;·&nbsp; **`🌐 every browser`** &nbsp;·&nbsp; **`📴 offline`**
 
 <br/>
 
@@ -22,9 +22,9 @@
 npm install dhamaka
 ```
 
-![tests](https://img.shields.io/badge/tests-115%20passing-green)
+![tests](https://img.shields.io/badge/tests-124%20passing-green)
 
-[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [live demos →](https://dhamaka.dev/#demos)
+[![npm](https://img.shields.io/npm/v/dhamaka.svg?logo=npm)](https://www.npmjs.com/package/dhamaka) &nbsp;·&nbsp; [![license](https://img.shields.io/npm/l/dhamaka.svg)](./LICENSE) &nbsp;·&nbsp; [product site →](https://dhamaka.dev/)
 
 </div>
 
@@ -38,12 +38,11 @@ A web application already holds everything an AI call needs to be useful. The us
 
 That's no longer true. Local models are now small enough, fast enough, and good enough to run inside a browser tab. Which means the whole mental model of cloud AI — *data travels to model* — is upside down. Flip it. Ship the model to the data.
 
-Every architectural decision in Dhamaka follows from that one inversion. The four capability families below are not a feature list — they're the four *shapes* a call can take once you accept that the model lives where the data already is:
+Every architectural decision in Dhamaka follows from that one inversion. The product is not a pile of demos and it is not a raw runtime. It is a browser-local workflow layer for serious app work: user intent comes in, app context stays local, the model reasons, tools do exact work, validators decide whether the result can be applied.
 
-- **🪞 Reflex** — understand what the user typed, in the field they typed it
-- **🔧 Transform** — rewrite what the app holds, using the app's own context
-- **🔎 Search** — retrieve from the user's own data, locally *(planned)*
-- **🤖 Agent** — act through the actions the app already exposes *(v2)*
+- **Workflow** — model-first complex tasks with intent, context, schema, tools, validators, and structured output
+- **Transform** — focused instruction-driven rewrites for formulas, DSLs, field values, and structured text
+- **Reflex** — narrow UI primitives for smart fields, contextual spellcheck, and smart paste
 
 When in doubt, optimize for this test: *would this call still work if the user's laptop had no network connection and no account with any AI provider?* If yes, it belongs in Dhamaka. If no, it doesn't.
 
@@ -51,81 +50,125 @@ When in doubt, optimize for this test: *would this call still work if the user's
 
 ## ✦ what is this
 
-**Dhamaka is a JavaScript SDK that lets any web app add AI capabilities that run 100% in the user's browser tab.** No servers. No API keys. No round trips. No rate limits. No privacy exposure. Your prompts never leave the device, your model weights never leave the device, your users' data never leaves the device.
+**Dhamaka is a JavaScript SDK for browser-local LLM workflows inside real web apps.** No provider account. No API keys. No round trips for private context. The model sees the same app state your UI already has, then returns structured output your code can validate before applying.
 
-It is **not** another general-purpose browser LLM runtime. Transformers.js, WebLLM, wllama, and Chrome's `window.ai` already occupy that layer. Dhamaka sits three layers above them — a task-oriented capability layer that any product can drop in to add on-device reflexes, transformations, and reasoning without building any of the plumbing.
+It is **not** another general-purpose browser LLM runtime. Chrome's Prompt API, Transformers.js, WebLLM, and wllama already occupy that layer. Dhamaka sits above them as the product layer: workflows, transforms, reflexes, tool calls, validators, engine selection, and browser-native UX.
 
-### Four capability families, one SDK
+### Three product surfaces, one SDK
 
 ```
   ┌────────────────────────────────────────────────────────────────────┐
-  │  Dhamaka — local AI capability layer                               │
+  │  Dhamaka — browser-local LLM workflow layer                        │
   ├────────────────────────────────────────────────────────────────────┤
   │                                                                    │
-  │  🪞 Reflex    reactive, keystroke-level, rules-first               │
-  │              SmartField · SmartForm · SmartText · attachSmartPaste │
-  │              use when: every <input> should feel intelligent       │
+  │  Workflow   model-first app work                                   │
+  │             intent · input · context · schema · tools · validators │
+  │             use when: the task needs private app state + reasoning │
   │                                                                    │
-  │  🔧 Transform imperative, one-shot, instruction-driven             │
-  │              Transform · Formula.* · Text.* · Code.*               │
-  │              use when: an app needs "rewrite this X given Y"       │
+  │  Transform  focused rewrites and explanations                      │
+  │             formulas · DSL snippets · structured text              │
+  │             use when: rewrite this X given instruction Y           │
   │                                                                    │
-  │  🔎 Search    semantic search over in-memory data (later)          │
-  │              use when: users search their own local data           │
-  │                                                                    │
-  │  🤖 Agent     multi-step tool use over app-exposed actions (v2)    │
-  │              use when: the app has actions and the user has intent │
+  │  Reflex     narrow UI primitives                                   │
+  │             SmartField · SmartForm · SmartText · attachSmartPaste  │
+  │             use when: the field itself should feel intelligent     │
   │                                                                    │
   ├────────────────────────────────────────────────────────────────────┤
   │  shared: task registry · reflex service · engine backends          │
-  │  (window.ai → Rust WASM → MockEngine)                              │
+  │  (LanguageModel → Transformers.js → WASM → MockEngine)             │
   └────────────────────────────────────────────────────────────────────┘
 ```
 
-Two families are shipping today — **Reflex** and **Transform**. The other two are planned. Every family shares the same engine, the same task registry, and the same deploy story, so adding a new family is a matter of adding tasks, not forking the SDK.
+All three surfaces share the same engine, the same task registry, and the same deploy story. The important bit is the trust boundary: the model can reason, but the app owns tools, permissions, and validation.
 
 ---
 
-## ✦ the hero use case — formula editing in erp.ai
+## ✦ the core API — Workflow
 
-Dhamaka's flagship Transform integration is the formula editor in **[erp.ai](https://erp.ai)**. ERP formulas are the single most sensitive thing a company owns — pricing models, margins, payroll math, commission tiers, inventory rules, compliance checks. The idea of shipping them to a third-party AI provider is a non-starter for any serious enterprise, which is exactly why Microsoft's Copilot-for-Excel is blocked in so many orgs.
-
-Dhamaka lets erp.ai ship **Copilot-for-your-formulas that runs in the user's tab** — every formula edit, every explain-this, every debug-this call happens locally. No SOC2 questionnaires, no data-residency contracts, no per-user AI subscription, no latency on per-cell edits, no rate limits when 50 analysts hit the same sheet at once.
+Workflow is the product surface. It is what you use when a real app task is too rich for a demo-sized helper: invoice imports, formula edits, CRM cleanup, policy checks, schema mapping, spreadsheet operations, and internal workflows that need private state.
 
 ```js
-import { Transform } from "dhamaka";
-const t = new Transform();
+import { Workflow } from "dhamaka";
+const workflow = new Workflow({ backend: "auto" });
+
+const result = await workflow.run({
+  intent: "Turn this invoice email into an AP draft.",
+  input: emailText,
+  context: {
+    vendorSchema,
+    openPurchaseOrders,
+    selectedCompany,
+  },
+  schema: {
+    invoiceNo: "string",
+    total: "number",
+    dueDate: "string",
+    reviewFlags: ["string"],
+  },
+  tools: [{
+    name: "matchPurchaseOrder",
+    description: "Find a likely PO by vendor and amount",
+    run: ({ vendor, total }) => matchPurchaseOrder(vendor, total),
+  }],
+  validators: [
+    (r) => r.output.total > 0 || "missing total",
+    (r) => r.confidence >= 0.7 || "low confidence",
+  ],
+});
+
+if (!result.needsReview) applyDraft(result.output);
+else showReview(result);
+```
+
+The model does the messy reasoning over user intent and app context. Your app still owns the action layer: calculators, lookups, parsers, permissions, persistence, and review gates.
+
+## ✦ the hero use case — private formula work
+
+```js
+import { Workflow } from "dhamaka";
+const workflow = new Workflow({ backend: "auto" });
 
 // User selects a cell showing `=SUM(A1:A10) * 1.08` and types
 // "add a 10% discount for employees"
-const r = await t.formula(
-  "=SUM(A1:A10) * 1.08",
-  "add a 10% discount for employees",
-  { dialect: "excel", headers: ["amount", "isEmployee"] },
-);
-// r.output       → "=(SUM(A1:A10) * 1.08) * 0.9"
-// r.source       → "rule"   (the discount pattern matched the fast path)
-// r.explanation  → "Multiplied by 0.9 to apply a 10% discount."
-// r.confidence   → 0.95
+const r = await workflow.run({
+  intent: "Add a 10% discount for employees.",
+  input: "=SUM(A1:A10) * 1.08",
+  context: { dialect: "excel", headers: ["amount", "isEmployee"] },
+  schema: { formula: "string", explanation: "string" },
+  tools: [{
+    name: "rewriteFormula",
+    description: "Safely rewrite an Excel formula",
+    run: rewriteFormula,
+  }],
+  validators: [
+    (r) => String(r.output.formula || "").startsWith("=") || "not a formula",
+  ],
+});
+// r.output.formula → "=(SUM(A1:A10) * 1.08) * 0.9"
+// r.needsReview    → false
+// r.confidence     → 0.94
 ```
 
-That call resolved in under a millisecond — no model ran, because "add a 10% discount" is a pattern the rules layer recognises and rewrites structurally. When the instruction is something weirder ("pull the tax rate from the third sheet and apply it only to rows where the vendor country is DE"), the same call transparently escalates to the on-device LLM.
+Dhamaka's formula story is not "a formula demo." ERP formulas contain pricing models, margins, payroll math, commission tiers, inventory rules, and compliance checks. The point is to let a local model understand the requested change while deterministic tools perform exact rewrites and validators decide whether the output is safe to apply.
 
 More formula-family calls on the same primitive:
 
 ```js
+import { Transform } from "dhamaka";
+const transform = new Transform();
+
 // Explain a formula in plain English
-await t.explain("=IFERROR(VLOOKUP(A2, Prices!A:B, 2, FALSE), 0)");
+await transform.explain("=IFERROR(VLOOKUP(A2, Prices!A:B, 2, FALSE), 0)");
 // → "This formula uses IFERROR catches errors from the wrapped expression…
 //    and VLOOKUP looks up a value in the first column of a table…"
 
 // Diagnose and fix a broken formula
-await t.debug("=A1/B1", { error: "#DIV/0!" });
+await transform.debug("=A1/B1", { error: "#DIV/0!" });
 // → "The formula is dividing by a zero or empty cell. Wrap the denominator
 //    in IFERROR: =IFERROR(A1/B1, 0)."
 ```
 
-Every one of these runs on-device. Every one is free. Every one is instant. Every one works offline. None of them touch a server erp.ai has to run or pay for.
+Every one of these runs on-device. Fast paths are instant; model paths stay local and provider-free. None of them touch a server erp.ai has to run or pay for.
 
 ---
 
@@ -180,63 +223,43 @@ The `dhamaka.dev` website source lives in [`packages/playground/public`](package
   ┌──────────────────────────────────────────────────────────────────────┐
   │  your app                                                            │
   │                                                                      │
-  │   <input>      <input>      <textarea>      <cell formula>           │
-  │      │            │              │                 │                 │
-  │      ▼            ▼              ▼                 ▼                 │
+  │   import screen     formula editor     textarea      form fields      │
+  │        │                 │                │              │            │
+  │        ▼                 ▼                ▼              ▼            │
   │  ╔════════════════════════════╗ ╔══════════════════════════════════╗ │
-  │  ║     🪞 Reflex family       ║ ║    🔧 Transform family           ║ │
-  │  ║                            ║ ║                                  ║ │
-  │  ║   SmartField               ║ ║   Transform.run({…})             ║ │
-  │  ║   SmartForm                ║ ║   Transform.formula(…)           ║ │
-  │  ║   SmartText                ║ ║   Transform.explain(…)           ║ │
-  │  ║   attachSmartPaste         ║ ║   Transform.debug(…)             ║ │
-  │  ║                            ║ ║                                  ║ │
-  │  ║   (reactive, keystroke,    ║ ║   (imperative, one-shot,         ║ │
-  │  ║    rules-first)            ║ ║    instruction-driven)           ║ │
+  │  ║      Workflow              ║ ║     Transform + Reflex           ║ │
+  │  ║ intent · input · context   ║ ║ focused rewrites + UI helpers     ║ │
+  │  ║ schema · tools · validators║ ║ SmartField · SmartText · paste    ║ │
   │  ╚═════════════╦══════════════╝ ╚═══════════════╦══════════════════╝ │
   │                │                                │                     │
   │                └────────────────┬───────────────┘                     │
   │                                 ▼                                     │
   │         ┌────────────────────────────────────────────┐                │
-  │         │  task registry                             │                │
+  │         │  tools + task registry + validators        │                │
+  │         │  formula rewrites · parsers · lookups      │                │
   │         │  city-to-state · spellcheck · paste-extract│                │
-  │         │  formula-transform · formula-explain · …   │                │
-  │         │  (every task: rules → fuzzy → model)       │                │
-  │         └──────────────────┬─────────────────────────┘                │
-  │                            │                                         │
-  │                            ▼                                         │
-  │         ┌────────────────────────────────────────────┐                │
-  │         │  reflex service   ← resident engine        │                │
-  │         │                     (warm, KV-cached)      │                │
+  │         │  exact paths feed or check model output    │                │
   │         └──────────────────┬─────────────────────────┘                │
   │                            │                                         │
   │                            ▼                                         │
   │         ┌────────────────────────────────────────────────────┐        │
   │         │  engine backends (auto-selected by factory)        │        │
-  │         │  ┌─────────────┐ ┌───────────────┐ ┌────────────┐  │        │
-  │         │  │  window.ai  │ │ Transformers  │ │ MockEngine │  │        │
-  │         │  │  (Chrome)   │ │     .js       │ │  (Node /   │  │        │
-  │         │  │  Gemini     │ │  (every other │ │  tests)    │  │        │
-  │         │  │  Nano       │ │   browser)    │ │            │  │        │
-  │         │  │  resident   │ │  real LLMs    │ │ canned     │  │        │
-  │         │  │  free fast  │ │  ~90–250 MB   │ │ responses  │  │        │
-  │         │  │             │ │  1st-visit DL │ │            │  │        │
-  │         │  └─────────────┘ └───────────────┘ └────────────┘  │        │
+  │         │  ┌───────────────┐ ┌───────────────┐ ┌──────────┐ │        │
+  │         │  │ LanguageModel │ │ Transformers  │ │ WASM /   │ │        │
+  │         │  │ Prompt API    │ │     .js       │ │ Mock     │ │        │
+  │         │  │ Gemini Nano   │ │ real LLMs     │ │ tests    │ │        │
+  │         │  └───────────────┘ └───────────────┘ └──────────┘ │        │
   │         │           ↑               ↑              ↑         │        │
   │         │           └── auto pick in priority order ──┘      │        │
-  │         │                                                    │        │
-  │         │  crates/dhamaka-runtime (Rust → 55 KB .wasm) is a  │        │
-  │         │  v2 swap target, wired in but not yet primary —    │        │
-  │         │  needs Q4 quant + SIMD128 + real SmolLM2 weights   │        │
   │         └────────────────────────────────────────────────────┘        │
   └──────────────────────────────────────────────────────────────────────┘
 ```
 
-**The shape that matters:** Dhamaka is the **product layer above the runtime**. The SDK is split into capability families (Reflex, Transform, and soon Search / Agent) that share everything below them — task registry, reflex service, engine backends. Adding a new family is a matter of adding tasks, not forking the SDK. The runtime underneath is a swappable dependency — Chrome's `window.ai` when present, otherwise `@huggingface/transformers` loaded lazily from `esm.sh`. The Rust crate in `crates/dhamaka-runtime` is a v2 swap target, not the primary runtime: Transformers.js has years of quantization, BPE tokenization, and ONNX/WebAssembly runtime work we're not going to reinvent, and trying to be *both* the product layer and the runtime would mean fighting HuggingFace on a layer they'll always win. We pick the product layer and let them pick the runtime.
+**The shape that matters:** Dhamaka is the **product layer above the runtime**. The SDK is split into Workflow, Transform, and Reflex surfaces that share everything below them: task registry, reflex service, engine backends, tools, and validators. The runtime underneath is a swappable dependency: Chrome's Prompt API when present, otherwise `@huggingface/transformers` loaded lazily from `esm.sh`. The Rust crate in `crates/dhamaka-runtime` is a v2 swap target, not the primary runtime: Transformers.js has years of quantization, BPE tokenization, and ONNX/WebAssembly runtime work we're not going to reinvent, and trying to be *both* the product layer and the runtime would mean fighting HuggingFace on a layer they'll always win. We pick the product layer and let them pick the runtime.
 
 | package | what it does |
 |---|---|
-| [`dhamaka`](packages/sdk)              | **public SDK**: `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, `Transform`, task registry, reflex service. The thing you actually install. |
+| [`dhamaka`](packages/sdk)              | **public SDK**: `Workflow`, `Transform`, `SmartField`, `SmartForm`, `SmartText`, `attachSmartPaste`, task registry, reflex service. The thing you actually install. |
 | [`@dhamaka/runtime`](packages/runtime) | engine backends: `WindowAiBackend` → `TransformersBackend` → `WasmEngine` → `MockEngine`, plus the factory that picks one |
 | [`dhamaka-runtime` (Rust)](crates/dhamaka-runtime) | the compiled v2 runtime — matmul, RMSNorm, softmax, RoPE, KV-cache, sampling — 55 KB `.wasm`. Architecture is done; real weights, Q4 quantization, and SIMD128 are the missing pieces before this replaces Transformers.js as the primary backend |
 | [`@dhamaka/hub`](packages/hub)         | static origin hosting the cross-site model cache + `.wasm` runtime |
@@ -249,35 +272,23 @@ The `dhamaka.dev` website source lives in [`packages/playground/public`](package
 
 Developers think in **tasks**, not in models. Each task is a small, typed function that turns an input (plus optional instruction and context) into a structured inference. The SDK decides what runs — a lookup table, a regex, a fuzzy match, a pattern rewrite, or an on-device LLM — based on which path is fastest for the shape of the input. Registered tasks are available to every capability family that wants them.
 
-### Reflex family
+### Reflex tasks
 
-| task id              | status | what it does                                                       | backend layers                             |
-|----------------------|:------:|--------------------------------------------------------------------|--------------------------------------------|
-| `city-to-state`      |   ⬤    | city → state, country, timezone, currency                          | gazetteer → fuzzy → LLM                    |
-| `spellcheck`         |   ⬤    | misspellings + homophone-in-context                                | dictionary → context regex → masked LM     |
-| `paste-extract`      |   ⬤    | contact blob → name / email / phone / company / website / twitter  | regex → heuristic → LLM                    |
-| `address-autofill`   |   ◎    | street → city, state, ZIP                                          | geocoder → LLM                             |
-| `date-parse`         |   ◎    | "next Tuesday" → ISO date                                          | chrono-node-style rules → LLM              |
-| `color-name`         |   ◎    | "forest green" → `#228B22`                                         | static table → embedding similarity        |
-| `format-validate`    |   ◎    | live phone / SSN / IBAN / ZIP validation with natural-language errors | regex → LLM                             |
-| `tab-complete`       |   ◎    | per-keystroke next-token completion                                | n-gram → tiny causal LM                    |
-| `cross-field-infer`  |   ◎    | fill related fields from one hint                                  | SmartForm rules + LLM                      |
+| task id              | what it does                                                       | backend layers                             |
+|----------------------|--------------------------------------------------------------------|--------------------------------------------|
+| `city-to-state`      | city → state, country, timezone, currency                          | gazetteer → fuzzy → LLM                    |
+| `spellcheck`         | misspellings + homophone-in-context                                | dictionary → context regex → masked LM     |
+| `paste-extract`      | contact blob → name / email / phone / company / website / twitter  | regex → heuristic → LLM                    |
 
-### Transform family
+### Transform tasks
 
-| task id              | status | what it does                                                       | backend layers                             |
-|----------------------|:------:|--------------------------------------------------------------------|--------------------------------------------|
-| `formula-transform`  |   ⬤    | rewrite a spreadsheet / ERP formula from a plain-English instruction | pattern rewrites → LLM                   |
-| `formula-explain`    |   ⬤    | explain what a formula does in plain English                       | function gloss table → LLM                 |
-| `formula-debug`      |   ⬤    | diagnose a formula error and suggest a fix                         | error-code advice → LLM                    |
-| `tone-rewrite`       |   ◎    | rewrite prose "more formal / shorter / friendlier"                 | small instruction-tuned LM                 |
-| `translate`          |   ◎    | translate a paragraph between languages                            | `window.ai` Translator API → LLM fallback  |
-| `code-refactor`      |   ◎    | refactor a code snippet following a natural-language instruction   | small code LM                              |
-| `code-explain`       |   ◎    | explain a code snippet in plain English                            | small code LM                              |
+| task id              | what it does                                                       | backend layers                             |
+|----------------------|--------------------------------------------------------------------|--------------------------------------------|
+| `formula-transform`  | rewrite a spreadsheet / ERP formula from a plain-English instruction | pattern rewrites → LLM                   |
+| `formula-explain`    | explain what a formula does in plain English                       | function gloss table → LLM                 |
+| `formula-debug`      | diagnose a formula error and suggest a fix                         | error-code advice → LLM                    |
 
-⬤ shipping  ·  ◎ planned
-
-`registerTask(customTask)` lets any app ship their own task on top of the same pipeline — any app's domain-specific transformation (refactoring your DSL, normalising your data, applying your style guide) can plug into Dhamaka's rules-first / model-fallback architecture without forking the SDK.
+`registerTask(customTask)` lets any app ship domain tools on top of the same pipeline. A product-specific transformation, parser, calculator, or validator can plug into Dhamaka without forking the SDK.
 
 ---
 
@@ -287,7 +298,7 @@ One `Engine` interface, four implementations, auto-selected by the factory in pr
 
 ```
   ┌───────────────────────┬────────────────────────────────────────────────┐
-  │ WindowAiBackend       │ Chrome 138+ Prompt API / Gemini Nano.          │
+  │ WindowAiBackend       │ Chrome Prompt API / Gemini Nano.               │
   │ (priority 1)          │ Resident, free, GPU-accelerated. Wins on       │
   │                       │ Chrome when available. Shared with the browser │
   │                       │ so the user pays nothing for the download.     │
@@ -314,9 +325,9 @@ One `Engine` interface, four implementations, auto-selected by the factory in pr
   └───────────────────────┴────────────────────────────────────────────────┘
 ```
 
-On a typical modern Chrome: `window.ai` wins, nothing downloads, spellcheck responds in ~100 ms. On Firefox / Safari / older Chromes: Transformers.js wins, first visit waits 30–90 seconds for the model download, every visit after that is instant and offline. On Node (tests, SSR): `MockEngine` wins so CI never tries to download a language model.
+On a typical modern Chrome with the Prompt API enabled: the browser-resident model wins, nothing downloads, and model calls stay local. On Firefox / Safari / older Chromes: Transformers.js wins, first visit waits 30–90 seconds for the model download, every visit after that is cached and offline. On Node (tests, SSR): `MockEngine` wins so CI never tries to download a language model.
 
-In browsers, the factory prefers `window.ai` when available and falls back to the WASM runtime otherwise. Same SDK surface either way. In Node (tests, SSR), the factory picks `MockEngine` so unit tests don't need a real model.
+In browsers, the factory prefers `LanguageModel`, falls back to the legacy `window.ai.languageModel` preview shape when present, then Transformers.js, WASM, and MockEngine. Same SDK surface either way.
 
 ---
 
@@ -329,12 +340,18 @@ npm install dhamaka
 ```
 
 ```js
-import { SmartField } from "dhamaka";
+import { Workflow } from "dhamaka";
 
-new SmartField(document.querySelector("#city"), {
-  task: "city-to-state",
-  onResult: (r) => console.log(r.fields), // { state, country, tz, currency, ... }
+const workflow = new Workflow({ backend: "auto" });
+
+const result = await workflow.run({
+  intent: "Map this pasted CSV row to our customer schema.",
+  input: pastedRow,
+  context: { schema: customerSchema },
+  validators: [(r) => r.output.email || "missing email"],
 });
+
+if (!result.needsReview) saveCustomer(result.output);
 ```
 
 The package is self-contained — the WASM runtime is bundled, no extra install step. See **[the API](#-the-api)** below for the full surface.
@@ -367,7 +384,47 @@ Open **http://localhost:5173** and click into any of the three demos. The playgr
 
 ## ✦ the API
 
-Dhamaka ships two capability families today. Pick the one that matches the shape of what you're building: **Reflex** for reactive keystroke-level intelligence on `<input>` and `<textarea>` elements, **Transform** for imperative one-shot "rewrite this X given instruction Y" calls.
+Dhamaka ships three product surfaces today. Pick the one that matches the shape of what you're building: **Workflow** for complex app work with private context, **Transform** for imperative one-shot "rewrite this X given instruction Y" calls, and **Reflex** for reactive keystroke-level intelligence on `<input>` and `<textarea>` elements.
+
+### Workflow — model-first app work
+
+```js
+import { Workflow } from "dhamaka";
+
+const workflow = new Workflow({
+  backend: "auto", // LanguageModel → Transformers.js → WASM → MockEngine
+});
+
+const result = await workflow.run({
+  intent: "Check whether this discount policy can apply to the selected order.",
+  input: policyText,
+  context: {
+    order,
+    customer,
+    activePriceBook,
+    userPermissions,
+  },
+  schema: {
+    allowed: "boolean",
+    reason: "string",
+    requiredApproval: "string|null",
+  },
+  tools: [{
+    name: "calculateMargin",
+    description: "Return margin after discount",
+    run: calculateMargin,
+  }],
+  validators: [
+    (r) => typeof r.output.allowed === "boolean" || "missing decision",
+    (r) => r.output.allowed !== true || r.confidence >= 0.8 || "approval required",
+  ],
+});
+
+if (result.needsReview) showReview(result);
+else applyDecision(result.output);
+```
+
+`Workflow.run()` always returns a structured object with `source`, `action`, `summary`, `output`, `toolCalls`, `confidence`, `needsReview`, `validation`, `raw`, and `backend`. That makes the browser LLM useful inside product flows instead of sitting beside them as a chat box.
 
 ### 🪞 Reflex family — reactive, continuous, rules-first
 
@@ -493,7 +550,7 @@ Every call runs 100% in the browser tab. No network, no API key, no per-call cos
 
 #### Registering your own transform task
 
-Every Dhamaka-powered app can register custom tasks on top of the same rules-first / model-fallback architecture:
+Every Dhamaka-powered app can register custom tasks that work as local tools, fast paths, or validators around the model workflow:
 
 ```js
 import { registerTask, Transform } from "dhamaka";
@@ -527,16 +584,16 @@ await new Transform().run({ task: "product-sku-normalize", input: "abc 123456" }
 import { reflex } from "dhamaka";
 
 reflex.configure({
-  backend: "auto",            // "window-ai" | "wasm" | "mock" | "auto"
+  backend: "auto",            // "window-ai" | "transformers" | "wasm" | "mock" | "auto"
   wasmUrl: "/runtime/dhamaka-runtime.wasm",
 });
 ```
 
-Most apps never call this — `auto` picks the fastest backend available (Chrome's `window.ai` → the compiled Rust `.wasm` → `MockEngine`).
+Most apps never call this. `auto` picks the fastest backend available: Chrome Prompt API, then Transformers.js, then the compiled Rust `.wasm`, then `MockEngine`.
 
 ### Legacy: raw `Dhamaka.load()` for direct model access
 
-For apps that want raw completion / streaming / chat (LLM chatbots, content generation, etc.) — not the SmartField surface — the lower-level class is still available:
+For apps that want raw completion / streaming / chat (LLM chatbots, content generation, etc.) instead of the workflow surface, the lower-level class is still available:
 
 ```js
 import { Dhamaka } from "dhamaka";
@@ -588,108 +645,39 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 ## ✦ what's real today
 
 ```
-  🪞 Reflex family  (the product surface for input-level reflexes)
-  [x]  SmartField       — task-routed oninput reflexes on a single <input>
-  [x]  SmartForm        — cross-field inference rules with manual-edit locks
-  [x]  SmartText        — contextual spellcheck on a <textarea>
-  [x]  attachSmartPaste — regex + heuristic extraction, onpaste
+  Workflow
+  [x]  Workflow.run() — model-first browser-local workflows with intent,
+       input, context, schema, tools, validators, confidence, review state,
+       raw model output, and backend metadata.
 
-  Built-in Reflex tasks  (rules-first for deterministic tasks,
-                          model-only for probabilistic ones)
-  [x]  city-to-state : 100+ city gazetteer with alias + diacritic
-                       normalisation, Levenshtein fuzzy fallback, LLM
-                       long-tail handler. Rules-first because a city's
-                       state is an objectively-correct lookup.
-  [x]  spellcheck    : model-only. Every call hits the on-device LLM
-                       (via Transformers.js or window.ai), prompts for
-                       a JSON array of {from, to, reason}, parses the
-                       response. NO hardcoded dictionary, NO homophone
-                       rules, NO confusables map. The whole thesis of
-                       Dhamaka is "let the LLM do the work" and a
-                       spellchecker is a paradigmatic model task.
-  [x]  paste-extract : email / phone / URL / Twitter regex + name
-                       heuristic + non-freemail-domain company inference,
-                       LLM fallback for gaps. Rules-first because contact
-                       field extraction is mostly regex-shaped; the
-                       model handles the long tail.
+  Transform
+  [x]  Transform.run()       — generic task-routed transforms
+  [x]  Transform.formula()   — rewrite formulas from natural language
+  [x]  Transform.explain()   — explain formulas in plain English
+  [x]  Transform.debug()     — diagnose formula errors and suggest fixes
 
-  🔧 Transform family  (the product surface for imperative one-shot calls)
-  [x]  Transform           — generic run({ task, input, instruction, context })
-  [x]  Transform.formula() — rewrite a formula from a plain-English instruction
-  [x]  Transform.explain() — explain a formula in plain English
-  [x]  Transform.debug()   — diagnose a formula error and suggest a fix
+  Reflex
+  [x]  SmartField            — task-routed input intelligence
+  [x]  SmartForm             — cross-field inference with manual-edit locks
+  [x]  SmartText             — contextual spellcheck on textareas
+  [x]  attachSmartPaste      — pasted blobs into structured fields
 
-  Built-in Transform tasks  (rules → pattern rewrites → model)
-  [x]  formula-transform : 10 structural rewrite patterns shipping at launch —
-                           percent discount, percent tax, round to N decimals,
-                           multiply / divide by N, IFERROR wrapping, null-safe
-                           wrapping, currency conversion, negate, absolute value.
-                           LLM fallback for anything the patterns can't match.
-  [x]  formula-explain   : function-gloss table covering SUM / AVERAGE / MIN /
-                           MAX / COUNT / IF / IFERROR / ROUND / VLOOKUP / XLOOKUP
-                           / SUMIFS / INDEX / MATCH / TEXT / LEN / TRIM / … plus
-                           arithmetic-tree detection. LLM fallback for composites.
-  [x]  formula-debug     : advice table for every common error code (#DIV/0!,
-                           #N/A, #REF!, #VALUE!, #NAME?, #NUM!, #NULL!, #SPILL!),
-                           static detection of divide-by-cell risk, LLM fallback.
+  Local backends
+  [x]  WindowAiBackend       — current LanguageModel Prompt API plus
+                               legacy window.ai.languageModel compatibility
+  [x]  TransformersBackend   — @huggingface/transformers v3 via esm.sh
+  [x]  WasmEngine            — compiled Rust fallback runtime
+  [x]  MockEngine            — deterministic Node/test stand-in
+  [x]  createEngine()        — LanguageModel → Transformers.js → WASM → mock
 
-  Shared infrastructure  (every family rides on top of this)
-  [x]  reflex service       — resident engine, lazy-loaded, one per page
-  [x]  task registry        — registerTask / getTask / runTask + built-ins
-  [x]  Engine abstract interface with four backends
-  [x]  WindowAiBackend      — Chrome 138+ Prompt API / Gemini Nano
-  [x]  TransformersBackend  — @huggingface/transformers v3 via esm.sh,
-                              real cross-browser LLM runtime, lazy import
-  [x]  WasmEngine           — 55 KB Rust runtime (architecture complete,
-                              waiting on Q4 + SIMD + real weights)
-  [x]  MockEngine           — deterministic stand-in for Node / tests
-  [x]  createEngine() auto-detection:
-                              window.ai → transformers → wasm → mock
-
-  Rust runtime  (the compiled fallback inference engine)
-  [x]  matmul, RMSNorm, softmax, rotary, KV-cached self-attention,
-       SwiGLU/SiLU, top-k + top-p + temperature sampling
-  [x]  #[no_mangle] extern "C" ABI exposed to WebAssembly
-  [x]  27 native cargo tests covering every primitive
-
-  Cross-site cache  (the moat)
-  [x]  hub ↔ sdk postMessage bridge (get / list / delete / progress)
-  [x]  IndexedDB-backed hub storage with SHA-256 integrity checks
-  [x]  zero-copy ArrayBuffer transfer from hub → consumer
-  [x]  fallback cache (real IndexedDB in browsers, in-memory in Node)
-  [x]  Storage Access API tier for unpartitioned storage
-  [x]  Manifest V3 browser extension (phase 2)
-  [x]  SDK auto-detection of the extension with tiered mode reporting
-
-  Playground + tests + CI
-  [x]  3 shipping demos: address autofill, contextual spellcheck, smart paste
-  [~]  formula demo (erp.ai-style spreadsheet) — in flight, next commit
-  [x]  zero-dependency dev server with correct MIME + CORS
-  [x]  OpenAI /v1/chat/completions shim (for legacy Dhamaka.load() users)
-  [x]  102 tests — 27 Rust (cargo test) + 75 JS (node --test), including
-       4 integration tests that drive the real compiled .wasm
-  [x]  GitHub Actions CI: Rust crate build → wasm artifact upload → JS
-       tests on Node 20 + 22, plus a dev-server smoke test
-
-  In flight (see docs/GOALS.md)
-  [ ]  Transform tests: Transform class, formula task patterns, explain table,
-       debug error-code table, model-escalation fallthrough
-  [ ]  Formula demo page in the playground (erp.ai-style spreadsheet with
-       live pattern-rewritten formula edits)
-  [ ]  Text family: tone-rewrite, translate, summarize
-  [ ]  Code family: code-refactor, code-explain, code-fix
-  [ ]  Search family: semantic search over in-memory data
-  [ ]  Agent family: multi-step tool use over app-exposed actions
-  [ ]  SharedWorker upgrade (current reflex is a module-level singleton;
-       same API, swap drop-in for multi-tab residency)
-  [ ]  Transformers.js adapter so the fallback engine can load HF models
-       instead of the tiny Rust-random model
-  [ ]  Real SmolLM2-360M Q4 weights hosted on the hub
-  [ ]  SIMD128 + WebGPU fast paths
-  [ ]  Extension published on the Chrome Web Store
+  Product proof
+  [x]  Address autofill, spellcheck, smart paste, and formula demos
+  [x]  Deterministic task evals and browser budgets on dhamaka.dev/evals
+  [x]  Node test suite covering runtime, tasks, SDK, Workflow, and shims
+  [x]  GitHub Actions CI for Rust, JS, wasm, and site smoke tests
 ```
 
-**v0.1 honesty note:** the Rust runtime does real transformer math end-to-end in WebAssembly, but the weights it loads for v0.1 are a 32-dim random-init demo model — so when a task escalates to the LLM layer, the model output isn't coherent English yet. **Every shipping task deliberately resolves entirely in its rules layer for the demo inputs** so you can feel the product without depending on the long-tail model. The formula family in particular was designed so the 10 most common ERP formula edits (discounts, taxes, rounding, multipliers, null-safety) are all pattern rewrites that produce correct output with no model call at all. When real weights arrive, the same task code transparently upgrades to handle the long tail.
+**Honesty note:** the strongest model path today is the browser Prompt API when available, then Transformers.js when the browser needs a cross-browser model runtime. The Rust WASM runtime is wired in as a fallback target and test surface, but it is not the primary quality path yet. Deterministic tasks remain valuable as tools and validators around model workflows, not as the headline product.
 
 ---
 
@@ -698,14 +686,7 @@ Modern browsers increasingly **partition third-party storage** by the top-level 
 ```
   ╭─────────────────────────────────────────────────────────────╮
   │                                                             │
-  │        ██████   ██████       ██████   █████   ██████        │
-  │        ╚════██ ██╔═══██╗     ╚════██╗██╔══██╗██╔════╝       │
-  │         █████╔╝ ╚██████║      █████╔╝███████║██║            │
-  │        ██╔═══╝ ██╗═══██║     ██╔═══╝ ██╔══██║██║            │
-  │        ███████╗╚██████╔╝     ███████╗██║  ██║╚██████╗       │
-  │        ╚══════╝ ╚═════╝      ╚══════╝╚═╝  ╚═╝ ╚═════╝       │
-  │                                                             │
-  │          27 rust tests  ·  75 js tests  ·  102 total        │
+  │          27 rust tests  ·  97 js tests  ·  124 total        │
   │                                                             │
   ╰─────────────────────────────────────────────────────────────╯
 ```
@@ -741,13 +722,14 @@ The hot path. Every tensor primitive, the sampler, the forward pass, and the mod
 | `src/transformer.rs`         |   3   | forward pass produces finite logits, is deterministic for same seed, **different positions produce different logits** (caught a real KV-cache bug) |
 | `src/model.rs`               |   5   | random-weights init is reproducible, different seeds differ, vocab table size, detokenize round-trip, empty prompt still yields a token |
 
-### JavaScript · `npm test` · 75 tests
+### JavaScript · `npm test` · 97 tests
 
 Drives the SmartField SDK, the hub, the tasks pipeline, and the real compiled `.wasm` end-to-end from Node using the built-in test runner. Zero dependencies.
 
 | file                                        | tests | what it covers                                                                    |
 |---------------------------------------------|:-----:|------------------------------------------------------------------------------------|
-| `packages/sdk/test/tasks.test.js`           |  22   | city-to-state (exact, alias, case/punct, fuzzy, international, nonsense); spellcheck (misspelling, homophone, clean text, "teh"); paste-extract (email/phone/website, freemail company rules, empty); task registry; runTask |
+| `packages/sdk/test/tasks.test.js`           |  30   | city-to-state, spellcheck, paste-extract, task registry, and runTask contracts |
+| `packages/sdk/test/workflow.test.js`        |   8   | structured model output, prompt construction, fenced/unstructured JSON, validators, tool execution, missing tools, intent validation |
 | `packages/sdk/test/smart-field.test.js`     |   5   | resolves on construction, fires `smart-field:resolved` event, re-runs on every input, `dispose` stops listening, bad-arg rejection |
 | `packages/sdk/test/smart-form.test.js`      |   5   | cross-field propagation (city → state/country/timezone), manual-edit locks, `unlock()` re-engages, `tasks` auto-attach, non-form rejection |
 | `packages/sdk/test/chat.test.js`            |   6   | history accumulation, system prompt, streaming transcript, reset with/without system |
@@ -757,6 +739,7 @@ Drives the SmartField SDK, the hub, the tasks pipeline, and the real compiled `.
 | `packages/runtime/test/mock-engine.test.js` |   7   | load gating, streaming, `complete()`, determinism, `AbortSignal`, unload          |
 | `packages/runtime/test/tokenizer.test.js`   |   8   | `split()` on words / punctuation / whitespace / empty, JSON `loadFromBytes`, encode/decode stubs |
 | `packages/runtime/test/wasm-engine.test.js` |   4   | **loads the real compiled `.wasm`**, streams real Rust forward-pass tokens, deterministic across identical prompts, honors `AbortSignal` |
+| `packages/runtime/test/window-ai-backend.test.js` |   4   | current `LanguageModel` Prompt API, legacy preview compatibility, unavailable model rejection, unavailable environment |
 | `packages/hub/test/manifest.test.js`        |   5   | canonical manifest parses, model ids + required fields, sha256 format, default model exists, served hub manifest mirrors shape |
 
 ### end-to-end
@@ -801,7 +784,7 @@ These four pass in Node, so every token in the README's "real today" list is rea
   │ job 2 · js              │
   │   download wasm artifact│
   │   node --check **/*.js  │
-  │   npm test              │─── 45 tests
+  │   npm test              │─── 97 tests
   │   smoke-test dev server │─── curl every endpoint
   └─────────────────────────┘
 

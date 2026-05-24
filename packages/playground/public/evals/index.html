@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dhamaka Evals - real task eval results</title>
-    <meta name="description" content="Dhamaka evals: latest deterministic task eval results, passing and failing cases, and what still needs model-quality scoring.">
+    <meta name="description" content="Dhamaka evals: latest deterministic task eval results, passing and failing cases, browser budgets, and model-quality scoring notes.">
     <link rel="canonical" href="https://dhamaka.dev/evals/">
     <meta name="theme-color" content="#fbfaf4">
     <style>
@@ -414,8 +414,8 @@
           </div>
           <div class="notice">
             <span class="label">Scope</span>
-            <p><strong>These are real evals, but they are task-fast-path evals.</strong> They do not download or call an LLM. They score the rules, regex, fuzzy, and structural rewrite layer that Dhamaka is supposed to use before a model is involved.</p>
-            <p>Model-quality scoring for Transformers.js and <code>window.ai</code> fallbacks is reported separately from this deterministic fast-path run.</p>
+            <p><strong>These are real evals, but they are task-fast-path evals.</strong> They do not download or call an LLM. They score the rules, regex, fuzzy, and structural rewrite layer that Dhamaka uses as tools and validators around model workflows.</p>
+            <p>Model-quality scoring for Transformers.js and browser Prompt API fallbacks is reported separately from this deterministic fast-path run.</p>
           </div>
         </section>
 

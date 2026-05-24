@@ -1,7 +1,7 @@
 {
   "name": "dhamaka",
   "version": "0.1.0",
-  "description": "A reflex layer for every input on the web. Drop in SmartField / SmartForm / SmartText and get on-device autofill, contextual spellcheck, smart paste, and cross-field inference — zero latency, zero cost, zero privacy exposure.",
+  "description": "Browser-local LLM workflows for complex web app use cases, with local model backends, app tools, validators, smart fields, and transforms that keep private data in the tab.",
   "type": "module",
   "main": "src/index.js",
   "exports": {
@@ -10,6 +10,7 @@
     "./smart-form": "./src/smart-form.js",
     "./smart-text": "./src/smart-text.js",
     "./tasks": "./src/tasks.js",
+    "./workflow": "./src/workflow.js",
     "./reflex": "./src/reflex.js",
     "./hub-client": "./src/hub-client.js",
     "./chat": "./src/chat.js",
@@ -27,6 +28,9 @@
     "on-device",
     "local-first",
     "privacy",
+    "workflow",
+    "browser-local",
+    "agentic",
     "form",
     "autofill",
     "spellcheck",
@@ -34,6 +38,6 @@
     "smart-field",
     "browser",
     "wasm",
-    "window.ai"
+    "prompt-api"
   ]
 }
