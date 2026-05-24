@@ -6,27 +6,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="A reflex layer for every input field on the web. Drop in SmartField and every form gets intelligent. Runs 100% on-device, zero network calls." />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./demos/demos.css" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A6%3C/text%3E%3C/svg%3E" />
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
-        <pre class="logo">
- ____  _                            _
-|  _ \| |__   __ _ _ __ ___   __ _| | ____ _
-| | | | '_ \ / _` | '_ ` _ \ / _` | |/ / _` |
-| |_| | | | | (_| | | | | | | (_| |   < (_| |
-|____/|_| |_|\__,_|_| |_| |_|\__,_|_|\_\__,_|
-</pre>
-        <div class="tagline">
-          reflex layer for every input &middot; on-device &middot; zero latency
-        </div>
-      </div>
+    <header class="topbar home-topbar">
+      <a class="brand home-brand" href="./" aria-label="Dhamaka home">
+        <span class="brand-glyph" aria-hidden="true">D</span>
+        <span class="brand-lockup">
+          <span class="brand-name">Dhamaka</span>
+          <span class="tagline">
+            on-device reflexes for every input
+          </span>
+        </span>
+      </a>
+
+      <nav class="site-menu" aria-label="Primary navigation">
+        <a class="menu-item" href="#capabilities">
+          <span class="menu-signal" aria-hidden="true">01</span>
+          <span class="menu-label">Capabilities</span>
+        </a>
+        <a class="menu-item" href="#architecture">
+          <span class="menu-signal" aria-hidden="true">02</span>
+          <span class="menu-label">Architecture</span>
+        </a>
+        <a class="menu-item" href="#demos">
+          <span class="menu-signal" aria-hidden="true">03</span>
+          <span class="menu-label">Demos</span>
+        </a>
+        <a class="menu-item menu-source" href="https://github.com/protosphinx/dhamaka" target="_blank" rel="noopener">
+          <span class="menu-signal" aria-hidden="true">git</span>
+          <span class="menu-label">Source</span>
+        </a>
+      </nav>
     </header>
 
-    <main class="layout">
-      <section class="demo-grid">
-        <a href="./demos/autofill.html" class="demo-card">
+    <main class="layout home-layout">
+      <section class="demo-grid" id="demos">
+        <a href="./demos/autofill.html" class="demo-card" id="capabilities">
           <div class="demo-icon">✦</div>
           <h2>Address autofill</h2>
           <p>
@@ -85,7 +102,7 @@ new SmartField(document.querySelector("#city"), {
 });</pre>
       </section>
 
-      <section class="notes">
+      <section class="notes" id="architecture">
         <h3>The architecture</h3>
         <pre class="diagram">
   every &lt;input&gt; and &lt;textarea&gt;
