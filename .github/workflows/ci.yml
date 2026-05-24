@@ -52,6 +52,9 @@ jobs:
           name: dhamaka-runtime-wasm
           path: packages/hub/public/runtime
 
+      - name: install workspace links
+        run: npm install
+
       - name: syntax check
         run: |
           find packages -name '*.js' -not -path '*/node_modules/*' \
