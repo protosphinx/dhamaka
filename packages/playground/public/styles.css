@@ -266,6 +266,23 @@ a { color: var(--accent-2); }
   scroll-margin-top: 96px;
 }
 
+.site-attribution {
+  display: flex;
+  justify-content: center;
+  padding: 0 1.5rem 2rem;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.site-attribution a {
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.site-attribution a:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 760px) {
   .home-topbar {
     align-items: stretch;
