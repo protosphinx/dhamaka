@@ -790,24 +790,105 @@
       }
 
       .demo-card {
+        --card-gradient: linear-gradient(137deg, #ff3d77 0%, #ffb1ce 45%, #ff9d3c 100%);
+        position: relative;
+        isolation: isolate;
         min-height: 260px;
         padding: 22px;
-        border-radius: 22px;
+        border: 3px solid transparent;
+        border-radius: 28px;
+        background:
+          linear-gradient(160deg, rgba(26, 26, 28, 0.98), rgba(15, 15, 17, 0.98)) padding-box,
+          var(--card-gradient) border-box;
         color: inherit;
         text-decoration: none;
-        transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 24px 80px rgba(0, 0, 0, 0.30);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .demo-card::before,
+      .tile::before,
+      .stat::before {
+        content: "";
+        position: absolute;
+        inset: 12px;
+        z-index: -1;
+        border-radius: inherit;
+        background: var(--card-gradient);
+        filter: blur(32px);
+        opacity: 0.20;
+        pointer-events: none;
+        transform: translateY(16px) scale(0.94);
+        transition: opacity 180ms ease, transform 180ms ease;
+      }
+
+      .demo-card::after,
+      .tile::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        z-index: 0;
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.10), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 64%);
+        pointer-events: none;
+      }
+
+      .demo-card > *,
+      .tile > * {
+        position: relative;
+        z-index: 1;
       }
 
       .demo-card:hover {
         transform: translateY(-2px);
-        border-color: rgba(255, 255, 255, 0.28);
-        background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04)),
-          rgba(255, 255, 255, 0.04);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 28px 96px rgba(0, 0, 0, 0.42);
+      }
+
+      .demo-card:hover::before,
+      .tile:hover::before {
+        opacity: 0.34;
+        transform: translateY(18px) scale(1);
       }
 
       .demo-card .tile-label {
         margin-bottom: 54px;
+      }
+
+      .demo-card-grid > :nth-child(1),
+      .capability-grid > :nth-child(1),
+      .faq-grid > :nth-child(1),
+      .stats > :nth-child(1) {
+        --card-gradient: linear-gradient(137deg, #ff3d77 0%, #ffb1ce 45%, #ff9d3c 100%);
+      }
+
+      .demo-card-grid > :nth-child(2),
+      .capability-grid > :nth-child(2),
+      .faq-grid > :nth-child(2),
+      .stats > :nth-child(2) {
+        --card-gradient: linear-gradient(137deg, #ffffff 0%, #7dd3fc 45%, #06b6d4 100%);
+      }
+
+      .demo-card-grid > :nth-child(3),
+      .capability-grid > :nth-child(3),
+      .faq-grid > :nth-child(3),
+      .stats > :nth-child(3) {
+        --card-gradient: linear-gradient(137deg, #4361ee 0%, #e0aeff 45%, #f72585 100%);
+      }
+
+      .demo-card-grid > :nth-child(4),
+      .capability-grid > :nth-child(4),
+      .stats > :nth-child(4) {
+        --card-gradient: linear-gradient(137deg, #14f195 0%, #7dd3fc 46%, #facc15 100%);
+      }
+
+      .stats > :nth-child(5) {
+        --card-gradient: linear-gradient(137deg, #fb7185 0%, #c084fc 48%, #38bdf8 100%);
       }
 
       .demo-open {
@@ -835,9 +916,27 @@
       }
 
       .tile {
+        --card-gradient: linear-gradient(137deg, #ff3d77 0%, #ffb1ce 45%, #ff9d3c 100%);
+        position: relative;
+        isolation: isolate;
         min-height: 230px;
         padding: 24px;
-        border-radius: 22px;
+        border: 2px solid transparent;
+        border-radius: 28px;
+        background:
+          linear-gradient(160deg, rgba(26, 26, 28, 0.98), rgba(15, 15, 17, 0.98)) padding-box,
+          var(--card-gradient) border-box;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 24px 80px rgba(0, 0, 0, 0.24);
+        transition: transform 180ms ease, box-shadow 180ms ease;
+      }
+
+      .tile:hover {
+        transform: translateY(-2px);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.12),
+          0 28px 96px rgba(0, 0, 0, 0.36);
       }
 
       .tile-label {
@@ -847,11 +946,15 @@
         min-width: 36px;
         height: 36px;
         margin-bottom: 32px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid transparent;
         border-radius: 12px;
-        color: rgba(255, 255, 255, 0.72);
+        background:
+          linear-gradient(#1a1a1c, #1a1a1c) padding-box,
+          var(--card-gradient) border-box;
+        color: rgba(255, 255, 255, 0.86);
         font-family: var(--mono);
         font-size: 12px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
       }
 
       .pill-row {
@@ -875,20 +978,23 @@
       .stats {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
-        border: 1px solid rgba(255, 255, 255, 0.10);
-        border-radius: 22px;
-        overflow: hidden;
+        gap: 12px;
       }
 
       .stat {
+        --card-gradient: linear-gradient(137deg, #ff3d77 0%, #ffb1ce 45%, #ff9d3c 100%);
+        position: relative;
+        isolation: isolate;
         min-height: 132px;
         padding: 20px;
-        border-right: 1px solid rgba(255, 255, 255, 0.10);
-        background: rgba(255, 255, 255, 0.025);
-      }
-
-      .stat:last-child {
-        border-right: 0;
+        border: 2px solid transparent;
+        border-radius: 22px;
+        background:
+          linear-gradient(160deg, rgba(26, 26, 28, 0.98), rgba(15, 15, 17, 0.98)) padding-box,
+          var(--card-gradient) border-box;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.08),
+          0 18px 64px rgba(0, 0, 0, 0.22);
       }
 
       .stat span {
@@ -1055,12 +1161,7 @@
         }
 
         .stat {
-          border-right: 0;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-        }
-
-        .stat:last-child {
-          border-bottom: 0;
+          border: 2px solid transparent;
         }
 
         .footer-inner {
