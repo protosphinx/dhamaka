@@ -449,6 +449,114 @@
         opacity: 0.82;
       }
 
+      .glow-feature-section {
+        padding: clamp(58px, 8vw, 112px) var(--pad) clamp(70px, 9vw, 128px);
+        background: #0a0a0b;
+      }
+
+      .glow-feature-header {
+        width: min(100%, 760px);
+        margin: 0 auto 46px;
+        text-align: center;
+      }
+
+      .glow-feature-header h2 {
+        margin-bottom: 16px;
+        font-size: clamp(2.25rem, 5vw, 4.4rem);
+      }
+
+      .glow-card-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 40px;
+        width: min(100%, 936px);
+        margin: 0 auto;
+      }
+
+      .glow-feature-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-start;
+        width: 100%;
+        max-width: 260px;
+        margin: 0 auto;
+        opacity: 0;
+        transform: translateY(30px);
+        animation: glowCardIn 800ms ease-out forwards;
+        animation-delay: var(--card-delay);
+      }
+
+      .glow-card-aura {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 260px;
+        border-radius: 40px;
+        opacity: 0.60;
+        pointer-events: none;
+        background: var(--card-gradient);
+        filter: blur(45px);
+      }
+
+      .glow-card-face {
+        position: relative;
+        z-index: 10;
+        align-self: stretch;
+        height: 260px;
+        overflow: hidden;
+        border: 8px solid transparent;
+        border-radius: 40px;
+        background:
+          linear-gradient(#1a1a1c, #1a1a1c) padding-box,
+          var(--card-gradient) border-box;
+      }
+
+      .glow-card-inner {
+        width: 100%;
+        height: 100%;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .glow-card-icon {
+        color: rgba(255, 255, 255, 0.90);
+      }
+
+      .glow-card-icon svg {
+        display: block;
+        width: 32px;
+        height: 32px;
+        stroke-width: 2.5;
+      }
+
+      .glow-feature-card h3 {
+        margin: 0 0 12px;
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: 500;
+        line-height: 1.15;
+        letter-spacing: 0;
+      }
+
+      .glow-feature-card p {
+        margin: 0;
+        color: #9ca3af;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.6;
+      }
+
+      @keyframes glowCardIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       .signal-strip {
         position: relative;
         z-index: 5;
@@ -871,6 +979,22 @@
         }
       }
 
+      @media (min-width: 768px) {
+        .glow-card-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+        }
+
+        .glow-feature-card {
+          max-width: 300px;
+        }
+
+        .glow-card-aura,
+        .glow-card-face {
+          height: 300px;
+        }
+      }
+
       @media (max-width: 640px) {
         .topbar {
           padding-top: 12px;
@@ -903,6 +1027,11 @@
 
         .button {
           width: 100%;
+        }
+
+        .glow-feature-header {
+          margin-bottom: 36px;
+          text-align: left;
         }
 
         .dashboard-preview {
@@ -951,6 +1080,11 @@
 
         .hero-video {
           display: none;
+        }
+
+        .glow-feature-card {
+          opacity: 1;
+          transform: none;
         }
       }
     </style>
@@ -1026,6 +1160,69 @@
           <figure class="dashboard-rise glass">
             <img src="/assets/next-level/dashboard.png" alt="Dark dashboard with browser-local workflow metrics and operating signals">
           </figure>
+        </section>
+
+        <section class="glow-feature-section" aria-label="Dhamaka local workflow pillars">
+          <div class="glow-feature-header">
+            <span class="kicker glass">Local loop</span>
+            <h2>Context, tools, and checks stay together.</h2>
+            <p class="copy large">Dhamaka is useful when the model can reason over private app state, call exact product tools, and return output your UI can validate before anything changes.</p>
+          </div>
+
+          <div class="glow-card-grid">
+            <article class="glow-feature-card" style="--card-gradient: linear-gradient(137deg, #FF3D77 0%, #FFB1CE 45%, #FF9D3C 100%); --card-delay: 100ms;">
+              <div class="glow-card-aura" aria-hidden="true"></div>
+              <div class="glow-card-face">
+                <div class="glow-card-inner">
+                  <div class="glow-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+                      <path d="M8 20h8"></path>
+                      <path d="M12 16v4"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Context</h3>
+                    <p>Bring schemas, selections, formulas, drafts, rows, and permissions into the workflow your app already owns.</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="glow-feature-card" style="--card-gradient: linear-gradient(137deg, #FFFFFF 0%, #7DD3FC 45%, #06B6D4 100%); --card-delay: 200ms;">
+              <div class="glow-card-aura" aria-hidden="true"></div>
+              <div class="glow-card-face">
+                <div class="glow-card-inner">
+                  <div class="glow-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-5.6 5.6a2.1 2.1 0 0 1-3-3l5.6-5.6a6 6 0 0 1 7.9-7.9l-3.1 3.1Z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Tools</h3>
+                    <p>Let the model request exact lookups, calculations, rewrites, and product actions without pretending to be the database.</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="glow-feature-card" style="--card-gradient: linear-gradient(137deg, #4361EE 0%, #E0AEFF 45%, #F72585 100%); --card-delay: 300ms;">
+              <div class="glow-card-aura" aria-hidden="true"></div>
+              <div class="glow-card-face">
+                <div class="glow-card-inner">
+                  <div class="glow-card-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M13 2 3 14h8l-1 8 11-14h-8l1-6Z"></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <h3>Validation</h3>
+                    <p>Apply only structured output that clears confidence gates, schema checks, and review rules before anything changes.</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="section" id="workflow" aria-label="Dhamaka workflow API">
