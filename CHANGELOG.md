@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.2.0] — 2026-07-24
+
 ### Added
+
+- **Workflow family.** `Workflow.run({ intent, input, context, schema,
+  tools, validators })` — model-first browser-local workflows with
+  structured output, tool execution through the task registry, validator
+  gates, confidence, and a `needsReview` state. This is now the headline
+  API surface.
+- **Deterministic task evals.** 65 golden cases across autofill,
+  spellcheck, smart paste, and the three formula tasks, published with
+  the failing case at [dhamaka.dev/evals](https://dhamaka.dev/evals/).
+- **Product site.** dhamaka.dev redesigned around demos, capabilities,
+  tests, and evals, built from this repository.
 
 - **The thesis.** `docs/GOALS.md` and `README.md` now lead with the
   manifesto: *stop sending the data to the model; ship the model to the
@@ -35,6 +50,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a company owns (pricing, margins, payroll, commission tiers) so shipping
   them to a remote AI provider is a non-starter, which makes local
   inference uniquely viable for this category.
+
+### Changed
+
+- **License switched to Apache-2.0.**
+- Model manifest entries whose weights are not yet published on the hub
+  are marked `"status": "planned"`, including `dhamaka-micro`; the
+  all-zero `sha256` placeholder convention is documented in `hub.js`
+  (`shouldVerify`).
 
 ### Positioning
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://hub.dhamaka.dev/manifest.schema.json",
   "version": 1,
-  "updated": "2026-04-11",
+  "updated": "2026-07-24",
   "default": "dhamaka-micro",
   "models": [
     {
@@ -29,8 +29,13 @@
         }
       },
       "license": "Apache-2.0",
-      "capabilities": ["chat", "completion", "streaming"],
-      "default": true
+      "capabilities": [
+        "chat",
+        "completion",
+        "streaming"
+      ],
+      "default": true,
+      "status": "planned"
     },
     {
       "id": "dhamaka-code",
@@ -43,12 +48,25 @@
       "quantization": "Q4_K_M",
       "size": 110100480,
       "artifacts": {
-        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-code/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-code/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-code/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-code/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "license": "Apache-2.0",
-      "capabilities": ["code", "completion", "streaming"],
+      "capabilities": [
+        "code",
+        "completion",
+        "streaming"
+      ],
       "status": "planned"
     },
     {
@@ -62,12 +80,24 @@
       "quantization": "Q4_K_M",
       "size": 108000000,
       "artifacts": {
-        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-sql/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-sql/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-sql/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-sql/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "license": "Apache-2.0",
-      "capabilities": ["sql", "text-to-sql"],
+      "capabilities": [
+        "sql",
+        "text-to-sql"
+      ],
       "status": "planned"
     },
     {
@@ -81,12 +111,25 @@
       "quantization": "Q4_K_M",
       "size": 105000000,
       "artifacts": {
-        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-json/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-json/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-json/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-json/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "license": "Apache-2.0",
-      "capabilities": ["json", "function-calling", "structured-output"],
+      "capabilities": [
+        "json",
+        "function-calling",
+        "structured-output"
+      ],
       "status": "planned"
     },
     {
@@ -100,12 +143,24 @@
       "quantization": "Q4_K_M",
       "size": 112000000,
       "artifacts": {
-        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/weights.q4.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/weights.q4.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-summarize/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "license": "Apache-2.0",
-      "capabilities": ["summarization", "long-context"],
+      "capabilities": [
+        "summarization",
+        "long-context"
+      ],
       "status": "planned"
     },
     {
@@ -119,12 +174,24 @@
       "quantization": "Q8_0",
       "size": 23068672,
       "artifacts": {
-        "weights": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/weights.q8.bin", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "tokenizer": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/tokenizer.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" },
-        "config": { "url": "https://hub.dhamaka.dev/models/dhamaka-embed/config.json", "sha256": "0000000000000000000000000000000000000000000000000000000000000000" }
+        "weights": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-embed/weights.q8.bin",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "tokenizer": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-embed/tokenizer.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "config": {
+          "url": "https://hub.dhamaka.dev/models/dhamaka-embed/config.json",
+          "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+        }
       },
       "license": "Apache-2.0",
-      "capabilities": ["embeddings", "rag"],
+      "capabilities": [
+        "embeddings",
+        "rag"
+      ],
       "status": "planned"
     }
   ]

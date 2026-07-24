@@ -1,6 +1,6 @@
 {
   "name": "dhamaka",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Browser-local LLM workflows for complex web app use cases, with local model backends, app tools, validators, smart fields, and transforms that keep private data in the tab.",
   "type": "module",
   "main": "src/index.js",
